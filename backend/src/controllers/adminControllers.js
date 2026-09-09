@@ -1,5 +1,6 @@
 import User from "../models/User.js";
 import Employee from "../models/Employee.js";
+import {generateEmployeeId} from "../utils/generateEmployeeId.js";
 
 export const getAllUsers = async (req, res) => {
   try {
@@ -39,15 +40,17 @@ export const createUser = async (req, res) => {
       user,
     });
   } catch (error) {
+    console.error("Error creating user:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
 export const createEmployee = async (req, res) => {
   try {
+    const empId = await generateEmployeeId();
     const {
-      userId,
       phone,
+      email,
       dateOfBirth,
       gender,
       address,
@@ -56,21 +59,35 @@ export const createEmployee = async (req, res) => {
       salary,
       profileImage,
     } = req.body;
-    if (!userId || !designation || !joiningDate) {
+    if (!designation || !joiningDate || !email) {
       return res.status(400).json({
         success: false,
-        message: "User ID, designation, and joining date are required",
+        message: "Email, designation, and joining date are required",
       });
     }
-    const existingEmployee = await Employee.findOne({ userId });
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+    const userId = user._id;
+    const existingEmployee = await Employee.findById(userId);
     if (existingEmployee) {
       return res.status(400).json({
         success: false,
-        message: "Employee with this user ID already exists",
+        message: "Employee with this email already exists",
+      });
+    }
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
       });
     }
     const employee = await Employee.create({
-      userId,
+      userId ,
       phone: phone || null,
       dateOfBirth: dateOfBirth || null,
       gender: gender || null,
@@ -79,6 +96,7 @@ export const createEmployee = async (req, res) => {
       joiningDate,
       salary: salary || null,
       profileImage: profileImage || null,
+      employeeId: empId,
     });
     await employee.save();
     res.status(201).json({
@@ -87,6 +105,7 @@ export const createEmployee = async (req, res) => {
       employee,
     });
   } catch (error) {
+    console.error("Error creating employee:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 };

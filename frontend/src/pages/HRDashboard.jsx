@@ -1,34 +1,17 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Users,
   Building2,
-  Briefcase,
-  UserCheck,
   FileCheck,
   Plus,
   Search,
-  MoreVertical,
   Mail,
   CheckCircle2,
   XCircle,
-  TrendingUp,
-  CalendarCheck,
-  CalendarDays,
-  FileText,
-  Megaphone,
   Bell,
-  Upload,
-  Download,
-  Filter,
   Percent,
-  Phone,
-  MapPin,
-  Calendar,
-  DollarSign,
-  Eye,
   UserPlus
 } from 'lucide-react'
-import { Line } from 'react-chartjs-2'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -46,7 +29,6 @@ import TopHeader from '../components/TopHeader'
 import MetricStatCard from '../components/MetricStatCard'
 import TaskStatisticsCard from '../components/TaskStatisticsCard'
 import PerformanceCard from '../components/PerformanceCard'
-import MiniCalendarCard from '../components/MiniCalendarCard'
 import Modal from '../components/Modal'
 import {
   getStoredEmployees,

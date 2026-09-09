@@ -18,17 +18,33 @@ import {
 import { useToast } from "../components/ToastProvider";
 import { auth } from "../apis/axios";
 import useAuth from "../context/useAuth";
+import { useEffect } from "react";
+
+const dashboardByRole = {
+  employee: "/employee-dashboard",
+  hr: "/hr-dashboard",
+  admin: "/admin-dashboard",
+};
 
 const Login = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
-  const { setUser } = useAuth();
+  const { setUser, user } = useAuth();
   const [role, setRole] = useState("employee");
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  useEffect(() => {
+    if (user) {
+      const dashboardPath = dashboardByRole[user.role];
+
+      if (dashboardPath) {
+        navigate(dashboardPath, { replace: true });
+      }
+    }
+  }, [user, navigate]);
   const handleRequestOTP = async (e) => {
     e.preventDefault();
     if (!email) {

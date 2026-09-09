@@ -1,3 +1,4 @@
+import Employee from "../models/Employee.js";
 export const generateEmployeeId = async () => {
   let employeeId;
   let exists = true;
@@ -11,6 +12,7 @@ export const generateEmployeeId = async () => {
       employeeId,
     });
   }
+  console.log("Generated Employee ID:", employeeId);
 
   return employeeId;
 };

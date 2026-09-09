@@ -22,7 +22,7 @@ const employeeSchema = new mongoose.Schema(
     },
 
     dateOfBirth: {
-      type: Date,
+      type: String,
     },
 
     gender: {
@@ -41,7 +41,8 @@ const employeeSchema = new mongoose.Schema(
     },
 
     joiningDate: {
-      type: Date,
+      type: String,
+      required: true,
     },
 
     salary: {
@@ -52,6 +53,12 @@ const employeeSchema = new mongoose.Schema(
     profileImage: {
       type: String,
     },
+    profileStatus: {
+      type: String,
+      enum: ["active", "inactive"],
+      default: "active",
+    },
+
   },
   {
     timestamps: true,

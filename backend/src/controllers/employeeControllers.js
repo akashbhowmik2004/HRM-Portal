@@ -1,4 +1,5 @@
 import User from "../models/User.js";
+
 export const fetchUserDetails = async (req, res) => {
   try {
     const userId = req.user.id; 
@@ -21,3 +22,4 @@ export const fetchUserDetails = async (req, res) => {
     });
   }
 };
+

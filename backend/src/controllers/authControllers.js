@@ -33,20 +33,14 @@ export const requestOTP = async (req, res) => {
       });
     }
     const user = await User.findOne({ email, role });
-    if(!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found or not registered",
-      });
-    }
-    console.log("Found user:", user);
     if (!user) {
       return res.status(404).json({
         success: false,
         message: "User not found or not registered",
       });
     }
-  
+    await OTP.deleteMany({ email });
+
     const otp = generateOTP();
     const otpHash = await bcrypt.hash(otp, 10);
 
@@ -133,7 +127,6 @@ export const requestOTP = async (req, res) => {
 
     res.json({
       message: "OTP sent successfully",
-      
     });
   } catch (error) {
     console.error("Email sending failed:", error);
@@ -148,40 +141,80 @@ export const verifyOTP = async (req, res) => {
   const { otp, email } = req.body;
 
   try {
-    const otpRecord = await OTP.findOne({ email });
+    const normalizedEmail = email.trim().toLowerCase();
 
+    const otpRecord = await OTP.findOne({
+      email: normalizedEmail,
+    });
+
+    // No OTP found
     if (!otpRecord) {
-      otpRecord.attempts += 1;
-      await otpRecord.save();
       return res.status(400).json({
+        success: false,
         message: "No OTP request found for this email",
       });
     }
 
+    // Maximum attempts reached
+    if (otpRecord.attempts >= 5) {
+      await OTP.deleteOne({ _id: otpRecord._id });
+
+      return res.status(429).json({
+        success: false,
+        message: "Too many incorrect attempts. Please request a new OTP.",
+      });
+    }
+
+    // OTP expired
     if (new Date() > otpRecord.expiresAt) {
       await OTP.deleteOne({ _id: otpRecord._id });
 
       return res.status(400).json({
-        message: "OTP has expired",
+        success: false,
+        message: "OTP has expired. Please request a new OTP.",
       });
     }
+    console.log(otp, typeof otp, otpRecord.otpHash, typeof otpRecord.otpHash);
 
+    // Verify OTP
     const isValidOTP = await bcrypt.compare(otp, otpRecord.otpHash);
-
+    // Invalid OTP
     if (!isValidOTP) {
+      otpRecord.attempts += 1;
+      await otpRecord.save();
+
       return res.status(400).json({
+        success: false,
         message: "Invalid OTP",
+        attemptsLeft: 5 - otpRecord.attempts,
       });
     }
 
-    const user = await User.findOne({ email });
+    // Find user
+    const user = await User.findOne({
+      email: normalizedEmail,
+    });
 
     if (!user) {
+      await OTP.deleteOne({ _id: otpRecord._id });
+
       return res.status(404).json({
+        success: false,
         message: "User not found",
       });
     }
 
+    // Check whether account is active
+    if (!user.isActive) {
+      await OTP.deleteOne({ _id: otpRecord._id });
+
+      return res.status(403).json({
+        success: false,
+        message: "Your account has been disabled",
+      });
+    }
+
+    // Create JWT
     const token = createToken(user._id, user.name, user.email, user.role);
 
     res.cookie("jwt", token, {
@@ -190,6 +223,7 @@ export const verifyOTP = async (req, res) => {
       path: "/",
     });
 
+    // Delete OTP after successful verification
     await OTP.deleteOne({ _id: otpRecord._id });
 
     return res.status(200).json({
@@ -199,8 +233,9 @@ export const verifyOTP = async (req, res) => {
         id: user._id,
         name: user.name,
         role: user.role,
+        employmentType: user.employmentType,
         email: user.email,
-      }
+      },
     });
   } catch (error) {
     console.error("OTP verification failed:", error);
@@ -232,7 +267,7 @@ export const logout = (req, res) => {
 
 export const verifyUsers = async (req, res) => {
   try {
-    if(!req.user) {
+    if (!req.user) {
       return res.status(401).json({
         success: false,
         message: "Unauthorized",

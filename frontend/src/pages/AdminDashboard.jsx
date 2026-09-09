@@ -1,257 +1,324 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from "react";
 import {
   Users,
   Building2,
-  Briefcase,
   UserCheck,
-  ShieldCheck,
-  CalendarCheck,
-  CalendarDays,
-  CheckSquare,
-  TrendingUp,
-  CreditCard,
-  FileText,
-  Megaphone,
   Bell,
-  FileSpreadsheet,
-  Settings,
   Plus,
-  Search,
-  MoreVertical,
-  Lock,
-  Unlock,
-  Key,
-  Database,
   Server,
-  Activity,
-  Download,
-  AlertTriangle,
   CheckCircle2,
   XCircle,
-  RefreshCw,
   Percent,
-  UserPlus
-} from 'lucide-react'
+  UserPlus,
+} from "lucide-react";
 
-import Sidebar from '../components/Sidebar'
-import TopHeader from '../components/TopHeader'
-import MetricStatCard from '../components/MetricStatCard'
-import TaskStatisticsCard from '../components/TaskStatisticsCard'
-import PerformanceCard from '../components/PerformanceCard'
-import MiniCalendarCard from '../components/MiniCalendarCard'
-import Modal from '../components/Modal'
+import Sidebar from "../components/Sidebar";
+import TopHeader from "../components/TopHeader";
+import MetricStatCard from "../components/MetricStatCard";
+import TaskStatisticsCard from "../components/TaskStatisticsCard";
+import PerformanceCard from "../components/PerformanceCard";
+import Modal from "../components/Modal";
+import { admin } from "../apis/axios.js";
+import { useToast } from "../components/ToastProvider.jsx";
 import {
   getStoredEmployees,
   saveStoredEmployees,
   getStoredLeaves,
-  saveStoredLeaves
-} from '../data/portalData'
+  saveStoredLeaves,
+} from "../data/portalData";
 
 const AdminDashboard = () => {
-  const [activeSection, setActiveSection] = useState('Dashboard')
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [activeSection, setActiveSection] = useState("Dashboard");
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => {
-    return localStorage.getItem('hrm_dark_mode') === 'true'
-  })
+    return localStorage.getItem("hrm_dark_mode") === "true";
+  });
+  const { showToast } = useToast();
 
   // Synchronize dark class on document element
   useEffect(() => {
     if (isDarkMode) {
-      document.documentElement.classList.add('dark')
-      localStorage.setItem('hrm_dark_mode', 'true')
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("hrm_dark_mode", "true");
     } else {
-      document.documentElement.classList.remove('dark')
-      localStorage.setItem('hrm_dark_mode', 'false')
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("hrm_dark_mode", "false");
     }
-  }, [isDarkMode])
+  }, [isDarkMode]);
 
   // Modals state
-  const [isAddUserOpen, setIsAddUserOpen] = useState(false)
-  const [isAddEmployeeOpen, setIsAddEmployeeOpen] = useState(false)
-  const [selectedEmployeeDetails, setSelectedEmployeeDetails] = useState(null)
-  const [isBroadcastNoticeOpen, setIsBroadcastNoticeOpen] = useState(false)
-  const [isProcessPayrollOpen, setIsProcessPayrollOpen] = useState(false)
+  const [isAddUserOpen, setIsAddUserOpen] = useState(false);
+  const [isAddEmployeeOpen, setIsAddEmployeeOpen] = useState(false);
+  const [selectedEmployeeDetails, setSelectedEmployeeDetails] = useState(null);
+  const [isBroadcastNoticeOpen, setIsBroadcastNoticeOpen] = useState(false);
+  const [isProcessPayrollOpen, setIsProcessPayrollOpen] = useState(false);
 
   // Persistent Employees State
-  const [employees, setEmployees] = useState([])
+  const [employees, setEmployees] = useState([]);
   useEffect(() => {
-    setEmployees(getStoredEmployees())
-  }, [])
+    setEmployees(getStoredEmployees());
+  }, []);
 
   // Persistent Leaves State
-  const [leaveRequests, setLeaveRequests] = useState([])
+  const [leaveRequests, setLeaveRequests] = useState([]);
   useEffect(() => {
-    setLeaveRequests(getStoredLeaves())
-  }, [])
+    setLeaveRequests(getStoredLeaves());
+  }, []);
 
   // Users data
   const [userList, setUserList] = useState([
-    { id: 1, name: 'John Wick', email: 'john.wick@company.com', role: 'Super Admin', status: 'Active', twoFa: true, lastLogin: '5 mins ago' },
-    { id: 2, name: 'Sarah Jenkins', email: 'sarah.jenkins@company.com', role: 'HR Manager', status: 'Active', twoFa: true, lastLogin: '1 hour ago' },
-    { id: 3, name: 'Priya Sharma', email: 'priya.sharma@company.com', role: 'Employee', status: 'Active', twoFa: false, lastLogin: '3 hours ago' },
-    { id: 4, name: 'Robert Howard', email: 'robert.howard@company.com', role: 'Employee', status: 'Active', twoFa: false, lastLogin: 'Yesterday' },
-    { id: 5, name: 'Marcus Vance', email: 'marcus.v@company.com', role: 'HR Manager', status: 'Suspended', twoFa: true, lastLogin: '4 days ago' },
-  ])
+    {
+      id: 1,
+      name: "John Wick",
+      email: "john.wick@company.com",
+      role: "Super Admin",
+      status: "Active",
+      twoFa: true,
+      lastLogin: "5 mins ago",
+    },
+    {
+      id: 2,
+      name: "Sarah Jenkins",
+      email: "sarah.jenkins@company.com",
+      role: "HR Manager",
+      status: "Active",
+      twoFa: true,
+      lastLogin: "1 hour ago",
+    },
+    {
+      id: 3,
+      name: "Priya Sharma",
+      email: "priya.sharma@company.com",
+      role: "Employee",
+      status: "Active",
+      twoFa: false,
+      lastLogin: "3 hours ago",
+    },
+    {
+      id: 4,
+      name: "Robert Howard",
+      email: "robert.howard@company.com",
+      role: "Employee",
+      status: "Active",
+      twoFa: false,
+      lastLogin: "Yesterday",
+    },
+    {
+      id: 5,
+      name: "Marcus Vance",
+      email: "marcus.v@company.com",
+      role: "HR Manager",
+      status: "Suspended",
+      twoFa: true,
+      lastLogin: "4 days ago",
+    },
+  ]);
 
   // Add User Form State
   const [userForm, setUserForm] = useState({
-    name: '',
-    email: '',
-    role: 'Employee',
-    password: ''
-  })
+    name: "",
+    email: "",
+    role: "employee",
+  });
 
   // Add Employee Form State with all required fields
   const [employeeForm, setEmployeeForm] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    dateOfBirth: '',
-    gender: 'Male',
-    address: '',
-    department: 'Software Engineering',
-    designation: '',
-    joiningDate: '',
-    salary: ''
-  })
+    email: "",
+    phone: "",
+    dateOfBirth: "",
+    gender: "male",
+    address: "",
+    department: "Software Engineering",
+    designation: "",
+    joiningDate: "",
+    salary: "",
+  });
 
   // Audit logs data
   const [auditLogs, setAuditLogs] = useState([
-    { id: 1, timestamp: 'Today, 18:42:10', user: 'John Wick', event: 'Modified System Authentication Policy', ip: '192.168.1.105', status: 'Success' },
-    { id: 2, timestamp: 'Today, 16:15:02', user: 'Sarah Jenkins', event: 'Approved Leave Request for EMP-2048', ip: '192.168.1.84', status: 'Success' },
-    { id: 3, timestamp: 'Today, 14:02:55', user: 'System', event: 'Automated Daily Database Snapshot', ip: '10.0.0.1', status: 'Success' },
-    { id: 4, timestamp: 'Yesterday, 22:30:19', user: 'Unknown', event: 'Failed SSH Attempt on Gateway', ip: '185.220.101.5', status: 'Blocked' },
-    { id: 5, timestamp: 'Yesterday, 19:10:44', user: 'Marcus Vance', event: 'Account Suspended by Admin', ip: '192.168.1.105', status: 'Warning' },
-  ])
+    {
+      id: 1,
+      timestamp: "Today, 18:42:10",
+      user: "John Wick",
+      event: "Modified System Authentication Policy",
+      ip: "192.168.1.105",
+      status: "Success",
+    },
+    {
+      id: 2,
+      timestamp: "Today, 16:15:02",
+      user: "Sarah Jenkins",
+      event: "Approved Leave Request for EMP-2048",
+      ip: "192.168.1.84",
+      status: "Success",
+    },
+    {
+      id: 3,
+      timestamp: "Today, 14:02:55",
+      user: "System",
+      event: "Automated Daily Database Snapshot",
+      ip: "10.0.0.1",
+      status: "Success",
+    },
+    {
+      id: 4,
+      timestamp: "Yesterday, 22:30:19",
+      user: "Unknown",
+      event: "Failed SSH Attempt on Gateway",
+      ip: "185.220.101.5",
+      status: "Blocked",
+    },
+    {
+      id: 5,
+      timestamp: "Yesterday, 19:10:44",
+      user: "Marcus Vance",
+      event: "Account Suspended by Admin",
+      ip: "192.168.1.105",
+      status: "Warning",
+    },
+  ]);
 
   // Exact Sidebar items required by user for Admin:
   const adminSidebarItems = [
-    'Dashboard',
-    'Users',
-    'Employees',
-    'HR Management',
-    'Departments',
-    'Attendance',
-    'Leave',
-    'Tasks',
-    'Performance',
-    'Payroll',
-    'Documents',
-    'Announcements',
-    'Notifications',
-    'Audit Logs',
-    'System Settings',
-    'Logout'
-  ]
+    "Dashboard",
+    "Users",
+    "Employees",
+    "HR Management",
+    "Departments",
+    "Attendance",
+    "Leave",
+    "Tasks",
+    "Performance",
+    "Payroll",
+    "Documents",
+    "Announcements",
+    "Notifications",
+    "Audit Logs",
+    "System Settings",
+    "Logout",
+  ];
 
   const toggleUserStatus = (id) => {
-    setUserList(userList.map(u => {
-      if (u.id === id) {
-        return { ...u, status: u.status === 'Active' ? 'Suspended' : 'Active' }
-      }
-      return u
-    }))
-  }
+    setUserList(
+      userList.map((u) => {
+        if (u.id === id) {
+          return {
+            ...u,
+            status: u.status === "Active" ? "Suspended" : "Active",
+          };
+        }
+        return u;
+      }),
+    );
+  };
 
   // Grant Leave Handler
   const handleGrantLeave = (id) => {
-    const updated = leaveRequests.map(l => l.id === id ? { ...l, status: 'Granted' } : l)
-    setLeaveRequests(updated)
-    saveStoredLeaves(updated)
-    alert('Leave request Granted!')
-  }
+    const updated = leaveRequests.map((l) =>
+      l.id === id ? { ...l, status: "Granted" } : l,
+    );
+    setLeaveRequests(updated);
+    saveStoredLeaves(updated);
+    showToast("Leave request Granted!", "success");
+  };
 
   // Reject Leave Handler
   const handleRejectLeave = (id) => {
-    const updated = leaveRequests.map(l => l.id === id ? { ...l, status: 'Rejected' } : l)
-    setLeaveRequests(updated)
-    saveStoredLeaves(updated)
-    alert('Leave request Rejected.')
-  }
+    const updated = leaveRequests.map((l) =>
+      l.id === id ? { ...l, status: "Rejected" } : l,
+    );
+    setLeaveRequests(updated);
+    saveStoredLeaves(updated);
+    alert("Leave request Rejected.");
+  };
 
   // Handle Add User
-  const handleAddUser = (e) => {
-    e.preventDefault()
+  const handleAddUser = async (e) => {
+    e.preventDefault();
     if (!userForm.name || !userForm.email) {
-      alert('Please fill out the name and email address.')
-      return
+      alert("Please fill out the name and email address.");
+      return;
     }
 
-    const newUser = {
-      id: Date.now(),
-      name: userForm.name,
-      email: userForm.email,
-      role: userForm.role,
-      status: 'Active',
-      twoFa: false,
-      lastLogin: 'Just created'
+    try {
+      const displayRole = userForm.role === "employee" ? "Employee" : userForm.role === "hr" ? "HR Manager" : "Admin";
+      const payload = { ...userForm, role: displayRole };
+      const response = await admin.post("/create-user", payload);
+      
+      const newUser = response.data.user || {
+        id: Date.now(),
+        name: userForm.name,
+        email: userForm.email,
+        role: displayRole,
+        status: "Active",
+        twoFa: false,
+        lastLogin: "Just now"
+      };
+
+      setUserList([newUser, ...userList]);
+      setEmployeeForm((prev) => ({
+        ...prev,
+        name: userForm.name,
+        email: userForm.email,
+        designation:
+          displayRole === "Employee" ? "Software Engineer" : displayRole,
+      }));
+
+      setIsAddUserOpen(false);
+      setIsAddEmployeeOpen(true);
+      showToast(
+        "User created successfully! Now add profile details.",
+        "success",
+      );
+    } catch (error) {
+      console.error("Error adding user:", error);
     }
-
-    setUserList([newUser, ...userList])
-    setEmployeeForm(prev => ({
-      ...prev,
-      name: userForm.name,
-      email: userForm.email,
-      designation: userForm.role === 'Employee' ? 'Software Engineer' : userForm.role
-    }))
-
-    setIsAddUserOpen(false)
-    setIsAddEmployeeOpen(true)
-    alert(`User account for ${userForm.name} created! Now enter their employee profile details.`)
-  }
+  };
 
   // Handle Add Employee Details
-  const handleAddEmployee = (e) => {
-    e.preventDefault()
-    if (!employeeForm.name || !employeeForm.email || !employeeForm.phone) {
-      alert('Please fill out all required employee details.')
-      return
-    }
+  const handleAddEmployee = async (e) => {
+    try {
+      e.preventDefault();
+      if (!employeeForm.name || !employeeForm.email || !employeeForm.phone) {
+        alert("Please fill out all required employee details.");
+        return;
+      }
+      const response = await admin.post("/create-employee", employeeForm);
 
-    const newEmp = {
-      id: Date.now(),
-      name: employeeForm.name,
-      email: employeeForm.email,
-      phone: employeeForm.phone,
-      dateOfBirth: employeeForm.dateOfBirth || '1996-03-22',
-      gender: employeeForm.gender || 'Male',
-      address: employeeForm.address || 'Bengaluru, Karnataka',
-      department: employeeForm.department || 'Software Engineering',
-      designation: employeeForm.designation || 'Software Engineer',
-      joiningDate: employeeForm.joiningDate || new Date().toISOString().split('T')[0],
-      salary: employeeForm.salary || '₹12,00,000 / yr',
-      status: 'Active',
-      attendancePercentage: 96.5
-    }
+      const newEmp = response.data.employee;
 
-    const updated = [newEmp, ...employees]
-    setEmployees(updated)
-    saveStoredEmployees(updated)
-    setIsAddEmployeeOpen(false)
-    setEmployeeForm({
-      name: '',
-      email: '',
-      phone: '',
-      dateOfBirth: '',
-      gender: 'Male',
-      address: '',
-      department: 'Software Engineering',
-      designation: '',
-      joiningDate: '',
-      salary: ''
-    })
-    alert('Employee profile added with complete details!')
-  }
+      const updated = [newEmp, ...employees];
+      setEmployees(updated);
+      saveStoredEmployees(updated);
+      setIsAddEmployeeOpen(false);
+      setEmployeeForm({
+        email: "",
+        phone: "",
+        dateOfBirth: "",
+        gender: "Male",
+        address: "",
+        department: "Software Engineering",
+        designation: "",
+        joiningDate: "",
+        salary: "",
+      });
+      showToast("Employee details added successfully!", "success");
+    } catch (error) {
+      console.error("Error adding employee details:", error);
+      showToast("Error creating employee");
+    }
+  };
 
   const renderContent = () => {
     switch (activeSection) {
-      case 'Dashboard':
+      case "Dashboard":
         return (
           <div className="space-y-6">
             {/* Header */}
             <div>
               <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-gray-800 dark:text-gray-100">
-                Good Morning, <span className="text-gray-800 dark:text-gray-100">John</span> !
+                Good Morning,{" "}
+                <span className="text-gray-800 dark:text-gray-100">John</span> !
               </h1>
               <p className="mt-1 text-sm font-medium text-gray-500 dark:text-gray-400">
                 Welcome back, Let's get back to work.
@@ -282,8 +349,6 @@ const AdminDashboard = () => {
               />
             </div>
 
-
-
             {/* Bottom Row */}
             <div className="grid gap-6 xl:grid-cols-[1.8fr_1.1fr]">
               <div className="rounded-xl bg-white/80 dark:bg-[#151d2e] p-6 border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
@@ -292,7 +357,9 @@ const AdminDashboard = () => {
                     <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100">
                       Active Portal Users
                     </h3>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Authenticated system accounts</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Authenticated system accounts
+                    </p>
                   </div>
                   <button
                     onClick={() => setIsAddUserOpen(true)}
@@ -316,25 +383,34 @@ const AdminDashboard = () => {
                     </thead>
                     <tbody className="divide-y divide-gray-100/80 dark:divide-gray-800/50">
                       {userList.map((u) => (
-                        <tr key={u.id} className="text-gray-700 dark:text-gray-300 hover:bg-gray-50/50 dark:hover:bg-gray-800/30">
+                        <tr
+                          key={u.id}
+                          className="text-gray-700 dark:text-gray-300 hover:bg-gray-50/50 dark:hover:bg-gray-800/30"
+                        >
                           <td className="py-3.5">
                             <p className="font-medium text-gray-800 dark:text-gray-100">
                               {u.name}
                             </p>
-                            <p className="text-[10px] text-gray-400 dark:text-gray-500">{u.email}</p>
+                            <p className="text-[10px] text-gray-400 dark:text-gray-500">
+                              {u.email}
+                            </p>
                           </td>
                           <td className="py-3.5 font-medium">{u.role}</td>
                           <td className="py-3.5">
-                            <span className={`text-[10px] font-medium ${u.twoFa ? 'text-emerald-500 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500'}`}>
-                              {u.twoFa ? 'Enabled' : 'Off'}
+                            <span
+                              className={`text-[10px] font-medium ${u.twoFa ? "text-emerald-500 dark:text-emerald-400" : "text-gray-400 dark:text-gray-500"}`}
+                            >
+                              {u.twoFa ? "Enabled" : "Off"}
                             </span>
                           </td>
                           <td className="py-3.5">
-                            <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium ${
-                              u.status === 'Active'
-                                ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400'
-                                : 'bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400'
-                            }`}>
+                            <span
+                              className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium ${
+                                u.status === "Active"
+                                  ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400"
+                                  : "bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400"
+                              }`}
+                            >
                               {u.status}
                             </span>
                           </td>
@@ -343,7 +419,7 @@ const AdminDashboard = () => {
                               onClick={() => toggleUserStatus(u.id)}
                               className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
                             >
-                              {u.status === 'Active' ? 'Suspend' : 'Activate'}
+                              {u.status === "Active" ? "Suspend" : "Activate"}
                             </button>
                           </td>
                         </tr>
@@ -359,26 +435,39 @@ const AdminDashboard = () => {
                   <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100">
                     Leave Requests ({leaveRequests.length})
                   </h3>
-                  <button onClick={() => setActiveSection('Leave')} className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline">View All</button>
+                  <button
+                    onClick={() => setActiveSection("Leave")}
+                    className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
+                  >
+                    View All
+                  </button>
                 </div>
 
                 <div className="space-y-3">
                   {leaveRequests.slice(0, 3).map((req) => (
-                    <div key={req.id} className="p-3.5 rounded-lg border border-gray-100/80 dark:border-gray-800/50 bg-gray-50/50 dark:bg-[#0c1222] text-xs">
+                    <div
+                      key={req.id}
+                      className="p-3.5 rounded-lg border border-gray-100/80 dark:border-gray-800/50 bg-gray-50/50 dark:bg-[#0c1222] text-xs"
+                    >
                       <div className="flex justify-between items-start">
                         <div>
                           <p className="font-medium text-gray-800 dark:text-gray-100">
                             {req.employeeName}
                           </p>
-                          <p className="text-[10px] text-gray-400 dark:text-gray-500">{req.type} • {req.dates}</p>
+                          <p className="text-[10px] text-gray-400 dark:text-gray-500">
+                            {req.type} • {req.dates}
+                          </p>
                         </div>
-                        <span className={`rounded-full px-2 py-0.5 text-[9px] font-medium ${
-                          req.status === 'Granted' || req.status === 'Approved'
-                            ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400'
-                            : req.status === 'Rejected'
-                            ? 'bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400'
-                            : 'bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400'
-                        }`}>
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[9px] font-medium ${
+                            req.status === "Granted" ||
+                            req.status === "Approved"
+                              ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400"
+                              : req.status === "Rejected"
+                                ? "bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400"
+                                : "bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400"
+                          }`}
+                        >
                           {req.status}
                         </span>
                       </div>
@@ -402,9 +491,9 @@ const AdminDashboard = () => {
               </div>
             </div>
           </div>
-        )
+        );
 
-      case 'Users':
+      case "Users":
         return (
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -412,7 +501,9 @@ const AdminDashboard = () => {
                 <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
                   Portal User Accounts
                 </h2>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Add users and manage permissions</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Add users and manage permissions
+                </p>
               </div>
               <button
                 onClick={() => setIsAddUserOpen(true)}
@@ -437,24 +528,39 @@ const AdminDashboard = () => {
                 </thead>
                 <tbody className="divide-y divide-gray-100/80 dark:divide-gray-800/50">
                   {userList.map((u) => (
-                    <tr key={u.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30">
+                    <tr
+                      key={u.id}
+                      className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30"
+                    >
                       <td className="py-3.5">
                         <p className="font-medium text-gray-800 dark:text-gray-100">
                           {u.name}
                         </p>
-                        <p className="text-[10px] text-gray-400 dark:text-gray-500">{u.email}</p>
+                        <p className="text-[10px] text-gray-400 dark:text-gray-500">
+                          {u.email}
+                        </p>
                       </td>
-                      <td className="py-3.5 font-medium text-gray-700 dark:text-gray-300">{u.role}</td>
+                      <td className="py-3.5 font-medium text-gray-700 dark:text-gray-300">
+                        {u.role}
+                      </td>
                       <td className="py-3.5">
-                        <span className={`text-[10px] font-medium ${u.twoFa ? 'text-emerald-500 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500'}`}>
-                          {u.twoFa ? 'Enforced' : 'Disabled'}
+                        <span
+                          className={`text-[10px] font-medium ${u.twoFa ? "text-emerald-500 dark:text-emerald-400" : "text-gray-400 dark:text-gray-500"}`}
+                        >
+                          {u.twoFa ? "Enforced" : "Disabled"}
                         </span>
                       </td>
-                      <td className="py-3.5 text-gray-500 dark:text-gray-400 font-medium">{u.lastLogin}</td>
+                      <td className="py-3.5 text-gray-500 dark:text-gray-400 font-medium">
+                        {u.lastLogin}
+                      </td>
                       <td className="py-3.5">
-                        <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium ${
-                          u.status === 'Active' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400' : 'bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400'
-                        }`}>
+                        <span
+                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium ${
+                            u.status === "Active"
+                              ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400"
+                              : "bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400"
+                          }`}
+                        >
                           {u.status}
                         </span>
                       </td>
@@ -463,7 +569,7 @@ const AdminDashboard = () => {
                           onClick={() => toggleUserStatus(u.id)}
                           className="rounded-lg bg-gray-100 dark:bg-gray-800 px-2.5 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
                         >
-                          {u.status === 'Active' ? 'Suspend' : 'Activate'}
+                          {u.status === "Active" ? "Suspend" : "Activate"}
                         </button>
                       </td>
                     </tr>
@@ -472,9 +578,9 @@ const AdminDashboard = () => {
               </table>
             </div>
           </div>
-        )
+        );
 
-      case 'Employees':
+      case "Employees":
         return (
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -482,7 +588,9 @@ const AdminDashboard = () => {
                 <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
                   Organization Master Employee Records
                 </h2>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Complete staff profiles with phone, DOB, address, salary</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Complete staff profiles with phone, DOB, address, salary
+                </p>
               </div>
               <div className="flex gap-2">
                 <button
@@ -517,22 +625,35 @@ const AdminDashboard = () => {
                 </thead>
                 <tbody className="divide-y divide-gray-100/80 dark:divide-gray-800/50">
                   {employees.map((emp) => (
-                    <tr key={emp.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30">
+                    <tr
+                      key={emp.id}
+                      className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30"
+                    >
                       <td className="py-3.5">
                         <p className="font-medium text-gray-800 dark:text-gray-100">
                           {emp.name}
                         </p>
-                        <p className="text-[10px] text-gray-400 dark:text-gray-500">{emp.email}</p>
+                        <p className="text-[10px] text-gray-400 dark:text-gray-500">
+                          {emp.email}
+                        </p>
                       </td>
-                      <td className="py-3.5 text-gray-600 dark:text-gray-300 font-medium">{emp.phone}</td>
-                      <td className="py-3.5 text-gray-600 dark:text-gray-300 font-medium">{emp.department}</td>
-                      <td className="py-3.5 font-medium text-gray-700 dark:text-gray-300">{emp.designation}</td>
+                      <td className="py-3.5 text-gray-600 dark:text-gray-300 font-medium">
+                        {emp.phone}
+                      </td>
+                      <td className="py-3.5 text-gray-600 dark:text-gray-300 font-medium">
+                        {emp.department}
+                      </td>
+                      <td className="py-3.5 font-medium text-gray-700 dark:text-gray-300">
+                        {emp.designation}
+                      </td>
                       <td className="py-3.5">
                         <span className="rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium">
                           {emp.attendancePercentage}%
                         </span>
                       </td>
-                      <td className="py-3.5 font-medium text-emerald-600 dark:text-emerald-400">{emp.salary}</td>
+                      <td className="py-3.5 font-medium text-emerald-600 dark:text-emerald-400">
+                        {emp.salary}
+                      </td>
                       <td className="py-3.5 text-right">
                         <button
                           onClick={() => setSelectedEmployeeDetails(emp)}
@@ -547,9 +668,9 @@ const AdminDashboard = () => {
               </table>
             </div>
           </div>
-        )
+        );
 
-      case 'Leave':
+      case "Leave":
         return (
           <div className="space-y-6">
             <div>
@@ -577,21 +698,29 @@ const AdminDashboard = () => {
                         <h4 className="font-semibold text-sm text-gray-800 dark:text-gray-100">
                           {req.employeeName}
                         </h4>
-                        <span className="text-xs text-gray-400 dark:text-gray-500">({req.department})</span>
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                          req.status === 'Granted' || req.status === 'Approved'
-                            ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400'
-                            : req.status === 'Rejected'
-                            ? 'bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400'
-                            : 'bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400'
-                        }`}>
+                        <span className="text-xs text-gray-400 dark:text-gray-500">
+                          ({req.department})
+                        </span>
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                            req.status === "Granted" ||
+                            req.status === "Approved"
+                              ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400"
+                              : req.status === "Rejected"
+                                ? "bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400"
+                                : "bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400"
+                          }`}
+                        >
                           {req.status}
                         </span>
                       </div>
                       <p className="text-xs text-gray-600 dark:text-gray-300 mt-1 font-medium">
-                        <strong>{req.type}</strong>: {req.dates} ({req.days} days)
+                        <strong>{req.type}</strong>: {req.dates} ({req.days}{" "}
+                        days)
                       </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Reason: "{req.reason}"</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        Reason: "{req.reason}"
+                      </p>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -615,9 +744,9 @@ const AdminDashboard = () => {
               </div>
             </div>
           </div>
-        )
+        );
 
-      case 'Attendance':
+      case "Attendance":
         return (
           <div className="space-y-6">
             <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
@@ -625,47 +754,115 @@ const AdminDashboard = () => {
             </h2>
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="p-5 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
-                <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">Average Organization Attendance</p>
-                <p className="mt-2 text-3xl font-semibold text-emerald-500 dark:text-emerald-400">95.2%</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">
+                  Average Organization Attendance
+                </p>
+                <p className="mt-2 text-3xl font-semibold text-emerald-500 dark:text-emerald-400">
+                  95.2%
+                </p>
               </div>
               <div className="p-5 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
-                <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">Total Work Days This Month</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">
+                  Total Work Days This Month
+                </p>
                 <p className="mt-2 text-3xl font-semibold text-gray-800 dark:text-gray-100">
                   22 Days
                 </p>
               </div>
               <div className="p-5 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
-                <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">Biometric Sync Status</p>
-                <p className="mt-2 text-xl font-semibold text-indigo-500 dark:text-indigo-400">All Terminals Online</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">
+                  Biometric Sync Status
+                </p>
+                <p className="mt-2 text-xl font-semibold text-indigo-500 dark:text-indigo-400">
+                  All Terminals Online
+                </p>
               </div>
             </div>
           </div>
-        )
+        );
 
-      case 'HR Management':
+      case "HR Management":
+        const hrUsers = userList.filter(u => u.role === "HR Manager");
         return (
           <div className="space-y-6">
-            <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
-              HR Leadership & Permissions
-            </h2>
-            <div className="p-6 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
-              <p className="font-semibold text-sm text-gray-800 dark:text-gray-100">
-                Sarah Jenkins (Head of HR)
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">sarah.jenkins@company.com • Full HR Authority</p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
+                  HR Leadership & Permissions
+                </h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Manage Human Resources staff and authorities
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setUserForm({ name: "", email: "", role: "hr" });
+                  setIsAddUserOpen(true);
+                }}
+                className="flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 px-4 py-2 text-xs font-medium text-white shadow-sm transition"
+              >
+                <UserPlus className="h-4 w-4" />
+                Add HR Member
+              </button>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {hrUsers.map((hr, idx) => (
+                <div key={hr.id || idx} className="p-5 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft flex flex-col gap-3 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-bold">
+                        {hr.name.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-sm text-gray-800 dark:text-gray-100">
+                          {hr.name}
+                        </p>
+                        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
+                          hr.status === 'Active' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400' : 'bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400'
+                        }`}>
+                          {hr.status}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 font-medium break-all">
+                      {hr.email}
+                    </p>
+                    <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
+                      {idx === 0 ? "Head of HR • Full Authority" : "HR Associate • Standard Authority"}
+                    </p>
+                  </div>
+                </div>
+              ))}
+              {hrUsers.length === 0 && (
+                <div className="col-span-full p-8 text-center text-gray-500 dark:text-gray-400 border border-dashed border-gray-200 dark:border-gray-700 rounded-xl text-sm">
+                  No HR members found. Add an HR member to delegate permissions.
+                </div>
+              )}
             </div>
           </div>
-        )
+        );
 
-      case 'Departments':
+      case "Departments":
         return (
           <div className="space-y-6">
             <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
               Departments
             </h2>
             <div className="grid gap-4 sm:grid-cols-3">
-              {['Software Engineering', 'Marketing', 'Product Design', 'Human Resources', 'Sales'].map((d, i) => (
-                <div key={i} className="p-5 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
+              {[
+                "Software Engineering",
+                "Marketing",
+                "Product Design",
+                "Human Resources",
+                "Sales",
+              ].map((d, i) => (
+                <div
+                  key={i}
+                  className="p-5 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft"
+                >
                   <Building2 className="h-5 w-5 text-indigo-500 dark:text-indigo-400 mb-2" />
                   <p className="font-semibold text-sm text-gray-800 dark:text-gray-100">
                     {d}
@@ -674,9 +871,9 @@ const AdminDashboard = () => {
               ))}
             </div>
           </div>
-        )
+        );
 
-      case 'Tasks':
+      case "Tasks":
         return (
           <div className="space-y-6">
             <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
@@ -684,9 +881,9 @@ const AdminDashboard = () => {
             </h2>
             <TaskStatisticsCard totalTask={245} overdueTask={17} />
           </div>
-        )
+        );
 
-      case 'Performance':
+      case "Performance":
         return (
           <div className="space-y-6">
             <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
@@ -694,24 +891,31 @@ const AdminDashboard = () => {
             </h2>
             <PerformanceCard />
           </div>
-        )
+        );
 
-      case 'Payroll':
+      case "Payroll":
         return (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
                 Master Payroll
               </h2>
-              <button onClick={() => setIsProcessPayrollOpen(true)} className="rounded-xl bg-indigo-600 hover:bg-indigo-700 px-4 py-2 text-xs font-medium text-white">Process Payroll</button>
+              <button
+                onClick={() => setIsProcessPayrollOpen(true)}
+                className="rounded-xl bg-indigo-600 hover:bg-indigo-700 px-4 py-2 text-xs font-medium text-white"
+              >
+                Process Payroll
+              </button>
             </div>
             <div className="p-6 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
-              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">October Payroll Batch: ₹32,45,000 (Ready)</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                October Payroll Batch: ₹32,45,000 (Ready)
+              </p>
             </div>
           </div>
-        )
+        );
 
-      case 'Documents':
+      case "Documents":
         return (
           <div className="space-y-6">
             <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
@@ -723,27 +927,34 @@ const AdminDashboard = () => {
               </p>
             </div>
           </div>
-        )
+        );
 
-      case 'Announcements':
+      case "Announcements":
         return (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
                 Announcements
               </h2>
-              <button onClick={() => setIsBroadcastNoticeOpen(true)} className="rounded-xl bg-indigo-600 hover:bg-indigo-700 px-4 py-2 text-xs font-medium text-white">Broadcast Notice</button>
+              <button
+                onClick={() => setIsBroadcastNoticeOpen(true)}
+                className="rounded-xl bg-indigo-600 hover:bg-indigo-700 px-4 py-2 text-xs font-medium text-white"
+              >
+                Broadcast Notice
+              </button>
             </div>
             <div className="p-5 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
               <h4 className="font-semibold text-gray-800 dark:text-gray-100">
                 System Notice
               </h4>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-medium">Scheduled database maintenance this Sunday.</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-medium">
+                Scheduled database maintenance this Sunday.
+              </p>
             </div>
           </div>
-        )
+        );
 
-      case 'Notifications':
+      case "Notifications":
         return (
           <div className="space-y-4 max-w-2xl">
             <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
@@ -755,13 +966,15 @@ const AdminDashboard = () => {
                 <p className="font-semibold text-xs text-gray-800 dark:text-gray-100">
                   System Security Status
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">All SSL certificates and encryption keys are verified.</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                  All SSL certificates and encryption keys are verified.
+                </p>
               </div>
             </div>
           </div>
-        )
+        );
 
-      case 'Audit Logs':
+      case "Audit Logs":
         return (
           <div className="space-y-6">
             <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
@@ -780,27 +993,42 @@ const AdminDashboard = () => {
                 </thead>
                 <tbody className="divide-y divide-gray-100/80 dark:divide-gray-800/50">
                   {auditLogs.map((log) => (
-                    <tr key={log.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30">
-                      <td className="py-3.5 font-medium text-gray-700 dark:text-gray-300">{log.timestamp}</td>
+                    <tr
+                      key={log.id}
+                      className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30"
+                    >
+                      <td className="py-3.5 font-medium text-gray-700 dark:text-gray-300">
+                        {log.timestamp}
+                      </td>
                       <td className="py-3.5 font-medium text-gray-800 dark:text-gray-100">
                         {log.user}
                       </td>
-                      <td className="py-3.5 font-medium text-gray-700 dark:text-gray-300">{log.event}</td>
-                      <td className="py-3.5 font-mono text-[11px] text-gray-500 dark:text-gray-400">{log.ip}</td>
-                      <td className={`py-3.5 text-right font-medium ${
-                        log.status === 'Success' ? 'text-emerald-500 dark:text-emerald-400' :
-                        log.status === 'Warning' ? 'text-amber-500 dark:text-amber-400' :
-                        'text-rose-500 dark:text-rose-400'
-                      }`}>{log.status}</td>
+                      <td className="py-3.5 font-medium text-gray-700 dark:text-gray-300">
+                        {log.event}
+                      </td>
+                      <td className="py-3.5 font-mono text-[11px] text-gray-500 dark:text-gray-400">
+                        {log.ip}
+                      </td>
+                      <td
+                        className={`py-3.5 text-right font-medium ${
+                          log.status === "Success"
+                            ? "text-emerald-500 dark:text-emerald-400"
+                            : log.status === "Warning"
+                              ? "text-amber-500 dark:text-amber-400"
+                              : "text-rose-500 dark:text-rose-400"
+                        }`}
+                      >
+                        {log.status}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           </div>
-        )
+        );
 
-      case 'System Settings':
+      case "System Settings":
         return (
           <div className="max-w-2xl space-y-4">
             <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
@@ -808,21 +1036,34 @@ const AdminDashboard = () => {
             </h2>
             <div className="p-6 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft space-y-4 text-xs">
               <div>
-                <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1">Company Name</label>
-                <input type="text" defaultValue="Acme HRM Enterprise" className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 outline-none font-medium text-gray-800 dark:text-gray-100 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500" />
+                <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Company Name
+                </label>
+                <input
+                  type="text"
+                  defaultValue="Acme HRM Enterprise"
+                  className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 outline-none font-medium text-gray-800 dark:text-gray-100 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
+                />
               </div>
-              <button onClick={() => alert('Settings saved!')} className="rounded-xl bg-indigo-600 hover:bg-indigo-700 px-5 py-2 font-medium text-white">Save</button>
+              <button
+                onClick={() => alert("Settings saved!")}
+                className="rounded-xl bg-indigo-600 hover:bg-indigo-700 px-5 py-2 font-medium text-white"
+              >
+                Save
+              </button>
             </div>
           </div>
-        )
+        );
 
       default:
-        return null
+        return null;
     }
-  }
+  };
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'dark bg-[#0c1222]' : 'bg-[#f5f6f8]'}`}>
+    <div
+      className={`min-h-screen ${isDarkMode ? "dark bg-[#0c1222]" : "bg-[#f5f6f8]"}`}
+    >
       <div className="flex min-h-screen">
         <Sidebar
           role="admin"
@@ -838,17 +1079,15 @@ const AdminDashboard = () => {
         <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden p-4 sm:p-6 lg:p-8">
           <TopHeader
             user={{
-              name: 'John Wick',
-              role: 'Admin',
-              avatar: null
+              name: "John Wick",
+              role: "Admin",
+              avatar: null,
             }}
             onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
             isDarkMode={isDarkMode}
           />
 
-          <main className="flex-1">
-            {renderContent()}
-          </main>
+          <main className="flex-1">{renderContent()}</main>
         </div>
       </div>
 
@@ -876,46 +1115,63 @@ const AdminDashboard = () => {
       >
         <form onSubmit={handleAddUser} className="space-y-4 text-xs">
           <div>
-            <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">User Full Name</label>
+            <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              User Full Name
+            </label>
             <input
               type="text"
               value={userForm.name}
-              onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
+              onChange={(e) =>
+                setUserForm({ ...userForm, name: e.target.value })
+              }
               placeholder="e.g. Robert Howard"
               className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
             />
           </div>
           <div>
-            <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">Email Address</label>
+            <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Email Address
+            </label>
             <input
               type="email"
               value={userForm.email}
-              onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+              onChange={(e) =>
+                setUserForm({ ...userForm, email: e.target.value })
+              }
               placeholder="user@company.com"
               className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
             />
           </div>
           <div>
-            <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">Role Tier</label>
+            <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Role Tier
+            </label>
             <select
               value={userForm.role}
-              onChange={(e) => setUserForm({ ...userForm, role: e.target.value })}
+              onChange={(e) =>
+                setUserForm({ ...userForm, role: e.target.value })
+              }
               className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500 cursor-pointer"
             >
-              <option className="bg-white dark:bg-[#151d2e] text-gray-800 dark:text-gray-100">Employee</option>
-              <option className="bg-white dark:bg-[#151d2e] text-gray-800 dark:text-gray-100">HR Manager</option>
-              <option className="bg-white dark:bg-[#151d2e] text-gray-800 dark:text-gray-100">Super Admin</option>
+              <option
+                className="bg-white dark:bg-[#151d2e] text-gray-800 dark:text-gray-100"
+                value="employee"
+              >
+                Employee
+              </option>
+              <option
+                className="bg-white dark:bg-[#151d2e] text-gray-800 dark:text-gray-100"
+                value="hr"
+              >
+                HR
+              </option>
+              <option
+                className="bg-white dark:bg-[#151d2e] text-gray-800 dark:text-gray-100"
+                value="admin"
+              >
+                Admin
+              </option>
             </select>
-          </div>
-          <div>
-            <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">Temporary Password</label>
-            <input
-              type="password"
-              value={userForm.password}
-              onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
-              placeholder="••••••••"
-              className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
-            />
           </div>
         </form>
       </Modal>
@@ -946,21 +1202,28 @@ const AdminDashboard = () => {
         <form onSubmit={handleAddEmployee} className="space-y-4 text-xs">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">Full Name</label>
+              <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Full Name
+              </label>
               <input
                 type="text"
                 value={employeeForm.name}
-                onChange={(e) => setEmployeeForm({ ...employeeForm, name: e.target.value })}
+                disabled
                 placeholder="Full Name"
                 className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
               />
             </div>
             <div>
-              <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">Email Address</label>
+              <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Email Address
+              </label>
               <input
                 type="email"
                 value={employeeForm.email}
-                onChange={(e) => setEmployeeForm({ ...employeeForm, email: e.target.value })}
+                disabled
+                onChange={(e) =>
+                  setEmployeeForm({ ...employeeForm, email: e.target.value })
+                }
                 placeholder="email@company.com"
                 className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
               />
@@ -969,59 +1232,114 @@ const AdminDashboard = () => {
 
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">Phone Number</label>
+              <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Phone Number
+              </label>
               <input
                 type="text"
                 value={employeeForm.phone}
-                onChange={(e) => setEmployeeForm({ ...employeeForm, phone: e.target.value })}
+                onChange={(e) =>
+                  setEmployeeForm({ ...employeeForm, phone: e.target.value })
+                }
                 placeholder="+91 98765 43210"
                 className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
               />
             </div>
             <div>
-              <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">Date of Birth</label>
+              <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Date of Birth
+              </label>
               <input
                 type="date"
                 value={employeeForm.dateOfBirth}
-                onChange={(e) => setEmployeeForm({ ...employeeForm, dateOfBirth: e.target.value })}
+                onChange={(e) =>
+                  setEmployeeForm({
+                    ...employeeForm,
+                    dateOfBirth: e.target.value,
+                  })
+                }
                 className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
               />
             </div>
             <div>
-              <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">Gender</label>
+              <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Gender
+              </label>
               <select
                 value={employeeForm.gender}
-                onChange={(e) => setEmployeeForm({ ...employeeForm, gender: e.target.value })}
+                onChange={(e) =>
+                  setEmployeeForm({ ...employeeForm, gender: e.target.value })
+                }
                 className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500 cursor-pointer"
               >
-                <option className="bg-white dark:bg-[#151d2e] text-gray-800 dark:text-gray-100">Male</option>
-                <option className="bg-white dark:bg-[#151d2e] text-gray-800 dark:text-gray-100">Female</option>
-                <option className="bg-white dark:bg-[#151d2e] text-gray-800 dark:text-gray-100">Non-Binary / Other</option>
+                <option
+                  className="bg-white dark:bg-[#151d2e] text-gray-800 dark:text-gray-100"
+                  value="male"
+                >
+                  Male
+                </option>
+                <option
+                  className="bg-white dark:bg-[#151d2e] text-gray-800 dark:text-gray-100"
+                  value="female"
+                >
+                  Female
+                </option>
+                <option
+                  className="bg-white dark:bg-[#151d2e] text-gray-800 dark:text-gray-100"
+                  value="other"
+                >
+                  Non-Binary / Other
+                </option>
               </select>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">Department</label>
+              <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Department
+              </label>
               <select
                 value={employeeForm.department}
-                onChange={(e) => setEmployeeForm({ ...employeeForm, department: e.target.value })}
+                onChange={(e) =>
+                  setEmployeeForm({
+                    ...employeeForm,
+                    department: e.target.value,
+                  })
+                }
                 className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500 cursor-pointer"
               >
-                <option className="bg-white dark:bg-[#151d2e] text-gray-800 dark:text-gray-100">Software Engineering</option>
-                <option className="bg-white dark:bg-[#151d2e] text-gray-800 dark:text-gray-100">Product Design</option>
-                <option className="bg-white dark:bg-[#151d2e] text-gray-800 dark:text-gray-100">Marketing</option>
-                <option className="bg-white dark:bg-[#151d2e] text-gray-800 dark:text-gray-100">Human Resources</option>
-                <option className="bg-white dark:bg-[#151d2e] text-gray-800 dark:text-gray-100">Sales</option>
+                <option className="bg-white dark:bg-[#151d2e] text-gray-800 dark:text-gray-100">
+                  Software Engineering
+                </option>
+                <option className="bg-white dark:bg-[#151d2e] text-gray-800 dark:text-gray-100">
+                  Product Design
+                </option>
+                <option className="bg-white dark:bg-[#151d2e] text-gray-800 dark:text-gray-100">
+                  Marketing
+                </option>
+                <option className="bg-white dark:bg-[#151d2e] text-gray-800 dark:text-gray-100">
+                  Human Resources
+                </option>
+                <option className="bg-white dark:bg-[#151d2e] text-gray-800 dark:text-gray-100">
+                  Sales
+                </option>
               </select>
             </div>
             <div>
-              <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">Designation</label>
+              <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Designation
+              </label>
               <input
                 type="text"
+                disabled
                 value={employeeForm.designation}
-                onChange={(e) => setEmployeeForm({ ...employeeForm, designation: e.target.value })}
+                onChange={(e) =>
+                  setEmployeeForm({
+                    ...employeeForm,
+                    designation: e.target.value,
+                  })
+                }
                 placeholder="Designation..."
                 className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
               />
@@ -1030,20 +1348,31 @@ const AdminDashboard = () => {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">Joining Date</label>
+              <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Joining Date
+              </label>
               <input
                 type="date"
                 value={employeeForm.joiningDate}
-                onChange={(e) => setEmployeeForm({ ...employeeForm, joiningDate: e.target.value })}
+                onChange={(e) =>
+                  setEmployeeForm({
+                    ...employeeForm,
+                    joiningDate: e.target.value,
+                  })
+                }
                 className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
               />
             </div>
             <div>
-              <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">Salary (Annual)</label>
+              <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Salary (Annual)
+              </label>
               <input
                 type="text"
                 value={employeeForm.salary}
-                onChange={(e) => setEmployeeForm({ ...employeeForm, salary: e.target.value })}
+                onChange={(e) =>
+                  setEmployeeForm({ ...employeeForm, salary: e.target.value })
+                }
                 placeholder="e.g. ₹15,00,000 / yr"
                 className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
               />
@@ -1051,11 +1380,15 @@ const AdminDashboard = () => {
           </div>
 
           <div>
-            <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">Address</label>
+            <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Address
+            </label>
             <textarea
               rows={2}
               value={employeeForm.address}
-              onChange={(e) => setEmployeeForm({ ...employeeForm, address: e.target.value })}
+              onChange={(e) =>
+                setEmployeeForm({ ...employeeForm, address: e.target.value })
+              }
               placeholder="Residential address..."
               className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
             />
@@ -1085,8 +1418,12 @@ const AdminDashboard = () => {
                 <p className="font-semibold text-base text-gray-800 dark:text-gray-100">
                   {selectedEmployeeDetails.name}
                 </p>
-                <p className="text-indigo-500 dark:text-indigo-400 font-medium">{selectedEmployeeDetails.designation}</p>
-                <p className="text-[10px] text-gray-500 dark:text-gray-400">{selectedEmployeeDetails.email}</p>
+                <p className="text-indigo-500 dark:text-indigo-400 font-medium">
+                  {selectedEmployeeDetails.designation}
+                </p>
+                <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                  {selectedEmployeeDetails.email}
+                </p>
               </div>
               <span className="rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400 px-2.5 py-1 text-xs font-medium">
                 {selectedEmployeeDetails.attendancePercentage}% Attendance
@@ -1095,45 +1432,61 @@ const AdminDashboard = () => {
 
             <div className="grid grid-cols-2 gap-3">
               <div className="p-3 rounded-xl border border-gray-100/80 dark:border-gray-800/50">
-                <p className="text-gray-500 dark:text-gray-400 font-medium">Phone Number</p>
+                <p className="text-gray-500 dark:text-gray-400 font-medium">
+                  Phone Number
+                </p>
                 <p className="font-medium mt-0.5 text-gray-800 dark:text-gray-100">
-                  {selectedEmployeeDetails.phone || 'N/A'}
+                  {selectedEmployeeDetails.phone || "N/A"}
                 </p>
               </div>
               <div className="p-3 rounded-xl border border-gray-100/80 dark:border-gray-800/50">
-                <p className="text-gray-500 dark:text-gray-400 font-medium">Date of Birth</p>
+                <p className="text-gray-500 dark:text-gray-400 font-medium">
+                  Date of Birth
+                </p>
                 <p className="font-medium mt-0.5 text-gray-800 dark:text-gray-100">
-                  {selectedEmployeeDetails.dateOfBirth || 'N/A'}
+                  {selectedEmployeeDetails.dateOfBirth || "N/A"}
                 </p>
               </div>
               <div className="p-3 rounded-xl border border-gray-100/80 dark:border-gray-800/50">
-                <p className="text-gray-500 dark:text-gray-400 font-medium">Gender</p>
+                <p className="text-gray-500 dark:text-gray-400 font-medium">
+                  Gender
+                </p>
                 <p className="font-medium mt-0.5 text-gray-800 dark:text-gray-100">
-                  {selectedEmployeeDetails.gender || 'N/A'}
+                  {selectedEmployeeDetails.gender || "N/A"}
                 </p>
               </div>
               <div className="p-3 rounded-xl border border-gray-100/80 dark:border-gray-800/50">
-                <p className="text-gray-500 dark:text-gray-400 font-medium">Joining Date</p>
+                <p className="text-gray-500 dark:text-gray-400 font-medium">
+                  Joining Date
+                </p>
                 <p className="font-medium mt-0.5 text-gray-800 dark:text-gray-100">
-                  {selectedEmployeeDetails.joiningDate || 'N/A'}
+                  {selectedEmployeeDetails.joiningDate || "N/A"}
                 </p>
               </div>
               <div className="p-3 rounded-xl border border-gray-100/80 dark:border-gray-800/50">
-                <p className="text-gray-500 dark:text-gray-400 font-medium">Department</p>
+                <p className="text-gray-500 dark:text-gray-400 font-medium">
+                  Department
+                </p>
                 <p className="font-medium mt-0.5 text-gray-800 dark:text-gray-100">
-                  {selectedEmployeeDetails.department || 'N/A'}
+                  {selectedEmployeeDetails.department || "N/A"}
                 </p>
               </div>
               <div className="p-3 rounded-xl border border-gray-100/80 dark:border-gray-800/50">
-                <p className="text-gray-500 dark:text-gray-400 font-medium">Salary</p>
-                <p className="font-medium text-emerald-500 mt-0.5">{selectedEmployeeDetails.salary || 'N/A'}</p>
+                <p className="text-gray-500 dark:text-gray-400 font-medium">
+                  Salary
+                </p>
+                <p className="font-medium text-emerald-500 mt-0.5">
+                  {selectedEmployeeDetails.salary || "N/A"}
+                </p>
               </div>
             </div>
 
             <div className="p-3 rounded-xl border border-gray-100/80 dark:border-gray-800/50">
-              <p className="text-gray-500 dark:text-gray-400 font-medium">Address</p>
+              <p className="text-gray-500 dark:text-gray-400 font-medium">
+                Address
+              </p>
               <p className="font-medium mt-0.5 text-gray-800 dark:text-gray-100">
-                {selectedEmployeeDetails.address || 'N/A'}
+                {selectedEmployeeDetails.address || "N/A"}
               </p>
             </div>
           </div>
@@ -1147,19 +1500,44 @@ const AdminDashboard = () => {
         title="Broadcast System Notice"
         footer={
           <>
-            <button onClick={() => setIsBroadcastNoticeOpen(false)} className="rounded-xl px-4 py-2 text-xs font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800">Cancel</button>
-            <button onClick={() => { alert('Notice broadcasted to all users!'); setIsBroadcastNoticeOpen(false); }} className="rounded-xl bg-indigo-600 hover:bg-indigo-700 px-5 py-2 text-xs font-medium text-white">Broadcast</button>
+            <button
+              onClick={() => setIsBroadcastNoticeOpen(false)}
+              className="rounded-xl px-4 py-2 text-xs font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                alert("Notice broadcasted to all users!");
+                setIsBroadcastNoticeOpen(false);
+              }}
+              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 px-5 py-2 text-xs font-medium text-white"
+            >
+              Broadcast
+            </button>
           </>
         }
       >
         <div className="space-y-4 text-xs">
           <div>
-            <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1">Headline</label>
-            <input type="text" placeholder="Headline..." className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 outline-none text-gray-800 dark:text-gray-100 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500" />
+            <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Headline
+            </label>
+            <input
+              type="text"
+              placeholder="Headline..."
+              className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 outline-none text-gray-800 dark:text-gray-100 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
+            />
           </div>
           <div>
-            <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1">Body</label>
-            <textarea rows={4} placeholder="Details..." className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 outline-none text-gray-800 dark:text-gray-100 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500" />
+            <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Body
+            </label>
+            <textarea
+              rows={4}
+              placeholder="Details..."
+              className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 outline-none text-gray-800 dark:text-gray-100 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
+            />
           </div>
         </div>
       </Modal>
@@ -1171,21 +1549,42 @@ const AdminDashboard = () => {
         title="Execute Payroll Batch"
         footer={
           <>
-            <button onClick={() => setIsProcessPayrollOpen(false)} className="rounded-xl px-4 py-2 text-xs font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800">Cancel</button>
-            <button onClick={() => { alert('Payroll processing initiated successfully!'); setIsProcessPayrollOpen(false); }} className="rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:hover:bg-emerald-900/30 px-5 py-2 text-xs font-medium">Confirm Disbursement</button>
+            <button
+              onClick={() => setIsProcessPayrollOpen(false)}
+              className="rounded-xl px-4 py-2 text-xs font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                alert("Payroll processing initiated successfully!");
+                setIsProcessPayrollOpen(false);
+              }}
+              className="rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:hover:bg-emerald-900/30 px-5 py-2 text-xs font-medium"
+            >
+              Confirm Disbursement
+            </button>
           </>
         }
       >
         <div className="space-y-3 text-xs">
-          <p className="text-gray-600 dark:text-gray-300 font-medium">Initiate salary disbursement for <strong>{employees.length} employees</strong> for <strong>October 2026</strong>.</p>
+          <p className="text-gray-600 dark:text-gray-300 font-medium">
+            Initiate salary disbursement for{" "}
+            <strong>{employees.length} employees</strong> for{" "}
+            <strong>October 2026</strong>.
+          </p>
           <div className="p-3 rounded-xl bg-gray-50/50 dark:bg-[#0c1222] border border-gray-200 dark:border-gray-700">
-            <p className="font-medium text-gray-800 dark:text-gray-100">Total Net Amount: ₹32,45,000</p>
-            <p className="text-[11px] text-gray-500 dark:text-gray-400">Account: HDFC Corporate Primary (Ending in 9802)</p>
+            <p className="font-medium text-gray-800 dark:text-gray-100">
+              Total Net Amount: ₹32,45,000
+            </p>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400">
+              Account: HDFC Corporate Primary (Ending in 9802)
+            </p>
           </div>
         </div>
       </Modal>
     </div>
-  )
-}
+  );
+};
 
-export default AdminDashboard
+export default AdminDashboard;

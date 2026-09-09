@@ -6,7 +6,7 @@ dotenv.config();
 
 const requireAuth = (req, res, next) => {
   const token = req.cookies.jwt;
-  console.log("Token from cookies:", token); // Debugging line
+  console.log("Token from cookies:", token); 
   try {
     if (!token) {
       return res.status(401).json({
