@@ -9,3 +9,8 @@ export const admin = axios.create({
     baseURL: "http://localhost:3000/api/admin",
     withCredentials: true
 });
+
+export const employee = axios.create({
+    baseURL: "http://localhost:3000/api/employee",
+    withCredentials: true
+});

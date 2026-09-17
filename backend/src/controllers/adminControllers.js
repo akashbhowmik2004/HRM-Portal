@@ -1,5 +1,6 @@
 import User from "../models/User.js";
 import Employee from "../models/Employee.js";
+import Leave from "../models/Leave.js";
 import {generateEmployeeId} from "../utils/generateEmployeeId.js";
 
 export const getAllUsers = async (req, res) => {
@@ -106,6 +107,66 @@ export const createEmployee = async (req, res) => {
     });
   } catch (error) {
     console.error("Error creating employee:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getLeaveRequests = async (req, res) => {
+  try {
+    const leaveRequests = await Leave.find({status: "Pending"}).populate("employeeId", "name email");
+    res.status(200).json({
+      success: true,
+      message: "Leave requests retrieved successfully",
+      leaveRequests,
+    });
+  } catch (error) {
+    console.error("Error retrieving leave requests:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const acceptLeaveRequest = async (req, res) => {
+  try {
+    const leaveId = req.params.leaveId;
+    const leaveRequest = await Leave.findById(leaveId);
+    if (!leaveRequest) {
+      return res.status(404).json({
+        success: false,
+        message: "Leave request not found",
+      });
+    }
+    leaveRequest.status = "approved";
+    await leaveRequest.save();
+    res.status(200).json({
+      success: true,
+      message: "Leave request approved successfully",
+      leaveRequest,
+    });
+  } catch (error) {
+    console.error("Error approving leave request:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const rejectLeaveRequest = async (req, res) => {
+  try {
+    const leaveId = req.params.leaveId;
+    const leaveRequest = await Leave.findById(leaveId);
+    if (!leaveRequest) {
+      return res.status(404).json({
+        success: false,
+        message: "Leave request not found",
+      });
+    }
+    leaveRequest.status = "Rejected";
+    await leaveRequest.save();
+    res.status(200).json({
+      success: true,
+      message: "Leave request rejected successfully",
+      leaveRequest,
+    });
+  } catch (error) {
+    console.error("Error rejecting leave request:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
