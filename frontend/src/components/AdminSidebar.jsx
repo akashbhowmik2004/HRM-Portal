@@ -12,6 +12,7 @@ const adminSidebarItems = [
   'Tasks',
   'Performance',
   'Payroll',
+  'Projects',
   'Documents',
   'Announcements',
   'Notifications',

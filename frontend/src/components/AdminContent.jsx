@@ -10,6 +10,8 @@ import {
   XCircle,
   Percent,
   UserPlus,
+  FileText,
+  FilePenIcon,
 } from "lucide-react";
 
 import MetricStatCard from "../components/MetricStatCard";
@@ -18,25 +20,73 @@ import PerformanceCard from "../components/PerformanceCard";
 import Modal from "../components/Modal";
 import { admin } from "../apis/axios.js";
 import { useToast } from "../components/ToastProvider.jsx";
-import {
-  getStoredEmployees,
-  saveStoredEmployees,
-  getStoredLeaves,
-  saveStoredLeaves,
-} from "../data/portalData";
 
-const AdminContent = ({ activeSection }) => {
+
+const AdminContent = ({ activeSection, setActiveSection }) => {
   const { showToast } = useToast();
 
   // Modals state
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [isAddEmployeeOpen, setIsAddEmployeeOpen] = useState(false);
+  
+  const [projects, setProjects] = useState([]);
+  const [isReviewProjectOpen, setIsReviewProjectOpen] = useState(false);
+  const [reviewingProject, setReviewingProject] = useState(null);
+  const [projectReviewForm, setProjectReviewForm] = useState({ score: "", feedback: "" });
+
+  const fetchProjects = async () => {
+    try {
+      const response = await admin.get("/projects");
+      if (response.data.success) {
+        setProjects(response.data.projects);
+      }
+    } catch (error) {
+      console.error("Error fetching projects:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchProjects();
+  }, []);
+  const [editingEmployeeId, setEditingEmployeeId] = useState(null);
   const [selectedEmployeeDetails, setSelectedEmployeeDetails] = useState(null);
   const [isBroadcastNoticeOpen, setIsBroadcastNoticeOpen] = useState(false);
   const [isProcessPayrollOpen, setIsProcessPayrollOpen] = useState(false);
+  const [isAssignTaskOpen, setIsAssignTaskOpen] = useState(false);
+  const [isCreateDepartmentOpen, setIsCreateDepartmentOpen] = useState(false);
+  const [rejectLeaveId, setRejectLeaveId] = useState(null);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [departmentForm, setDepartmentForm] = useState({ name: "" });
+  const [departments, setDepartments] = useState([]);
+  const [assignableEmployees, setAssignableEmployees] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [noticesData, setNoticesData] = useState({
+    headline: "",
+    body: "",
+  });
+  const [announcements, setAnnouncements] = useState([]);
+  const fetchAnnouncements = async () => {
+    try {
+      const response = await admin.get("/announcements");
+      if (response.data.success) {
+        setAnnouncements(response.data.announcements || []);
+      }
+    } catch (error) {
+      console.error("Error fetching announcements:", error);
+    }
+  };
+  const [taskForm, setTaskForm] = useState({
+    title: "",
+    description: "",
+    priority: "Normal",
+    deadline: "",
+    assignee: "",
+  });
+  const [userList, setUserList] = useState([]);
 
   // Persistent Employees State
   const [employees, setEmployees] = useState([]);
+  const [leaveRequests, setLeaveRequests] = useState([]);
   const fetchLeaveRequests = async () => {
     try {
       const response = await admin.get("/leave-requests");
@@ -52,65 +102,85 @@ const AdminContent = ({ activeSection }) => {
     }
   };
 
+  const fetchTasks = async () => {
+    try {
+      const response = await admin.get("/tasks");
+      if (response.data.success) {
+        setTasks(response.data.tasks);
+      }
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
+      showToast("Error fetching assigned tasks", "error");
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const response = await admin.get("/users");
+      if (response.data.success) {
+        setUserList(response.data.users);
+      }
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      showToast("Error fetching users", "error");
+    }
+  };
+
+  const fetchEmployees = async () => {
+    try {
+      const response = await admin.get("/employees");
+      if (response.data.success) {
+        setEmployees(
+          response.data.employees.map((employee) => ({
+            ...employee,
+            name: employee.userId?.name || "Unnamed employee",
+            email: employee.userId?.email || "No email",
+            role: employee.userId?.role || "employee",
+            status: employee.userId?.isActive === false ? "Inactive" : "Active",
+          })),
+        );
+      }
+      console.log("Employees Response:", response.data);
+    } catch (error) {
+      console.error("Error fetching employees:", error);
+      showToast("Error fetching employees", "error");
+    }
+  };
+
+  const fetchDepartments = async () => {
+    try {
+      const response = await admin.get("/departments");
+      if (response.data.success) {
+        setDepartments(response.data.departments);
+      }
+    } catch (error) {
+      console.error("Error fetching departments:", error);
+      showToast("Error fetching departments", "error");
+    }
+  };
+
   useEffect(() => {
     fetchLeaveRequests();
+    fetchTasks();
+    fetchUsers();
+    fetchEmployees();
+    fetchDepartments();
+    fetchAnnouncements();
+    admin
+      .get("/users")
+      .then((response) => {
+        setAssignableEmployees(
+          (response.data.users || []).filter(
+            (user) => user.role === "employee",
+          ),
+        );
+      })
+      .catch((error) => console.error("Error fetching employees:", error));
   }, []);
 
 
-  // Persistent Leaves State
-  const [leaveRequests, setLeaveRequests] = useState([]);
-  useEffect(() => {
-    setLeaveRequests(getStoredLeaves());
-  }, []);
 
   // Users data
-  const [userList, setUserList] = useState([
-    {
-      id: 1,
-      name: "John Wick",
-      email: "john.wick@company.com",
-      role: "Super Admin",
-      status: "Active",
-      twoFa: true,
-      lastLogin: "5 mins ago",
-    },
-    {
-      id: 2,
-      name: "Sarah Jenkins",
-      email: "sarah.jenkins@company.com",
-      role: "HR Manager",
-      status: "Active",
-      twoFa: true,
-      lastLogin: "1 hour ago",
-    },
-    {
-      id: 3,
-      name: "Priya Sharma",
-      email: "priya.sharma@company.com",
-      role: "Employee",
-      status: "Active",
-      twoFa: false,
-      lastLogin: "3 hours ago",
-    },
-    {
-      id: 4,
-      name: "Robert Howard",
-      email: "robert.howard@company.com",
-      role: "Employee",
-      status: "Active",
-      twoFa: false,
-      lastLogin: "Yesterday",
-    },
-    {
-      id: 5,
-      name: "Marcus Vance",
-      email: "marcus.v@company.com",
-      role: "HR Manager",
-      status: "Suspended",
-      twoFa: true,
-      lastLogin: "4 days ago",
-    },
-  ]);
 
   // Add User Form State
   const [userForm, setUserForm] = useState({
@@ -126,88 +196,119 @@ const AdminContent = ({ activeSection }) => {
     dateOfBirth: "",
     gender: "male",
     address: "",
-    department: "Software Engineering",
+    department: "",
     designation: "",
     joiningDate: "",
     salary: "",
   });
 
   // Audit logs data
-  const [auditLogs, setAuditLogs] = useState([
-    {
-      id: 1,
-      timestamp: "Today, 18:42:10",
-      user: "John Wick",
-      event: "Modified System Authentication Policy",
-      ip: "192.168.1.105",
-      status: "Success",
-    },
-    {
-      id: 2,
-      timestamp: "Today, 16:15:02",
-      user: "Sarah Jenkins",
-      event: "Approved Leave Request for EMP-2048",
-      ip: "192.168.1.84",
-      status: "Success",
-    },
-    {
-      id: 3,
-      timestamp: "Today, 14:02:55",
-      user: "System",
-      event: "Automated Daily Database Snapshot",
-      ip: "10.0.0.1",
-      status: "Success",
-    },
-    {
-      id: 4,
-      timestamp: "Yesterday, 22:30:19",
-      user: "Unknown",
-      event: "Failed SSH Attempt on Gateway",
-      ip: "185.220.101.5",
-      status: "Blocked",
-    },
-    {
-      id: 5,
-      timestamp: "Yesterday, 19:10:44",
-      user: "Marcus Vance",
-      event: "Account Suspended by Admin",
-      ip: "192.168.1.105",
-      status: "Warning",
-    },
-  ]);
+  const [auditLogs, setAuditLogs] = useState([]);
 
-  const toggleUserStatus = (id) => {
-    setUserList(
-      userList.map((u) => {
-        if (u.id === id) {
-          return {
-            ...u,
-            status: u.status === "Active" ? "Suspended" : "Active",
-          };
-        }
-        return u;
-      }),
-    );
+  const toggleUserStatus = async (id) => {
+    try {
+      await admin.put(`/toggle-user-status/${id}`);
+      await fetchUsers();
+    } catch (error) {
+      showToast("Error toggling user status", "error");
+      console.error("Error toggling user status:", error);
+    }
+  };
+
+  const handleProjectReview = async (e) => {
+    e.preventDefault();
+    if (!projectReviewForm.score) {
+      return showToast("Please provide a score.", "error");
+    }
+    try {
+      const response = await admin.put(`/projects/${reviewingProject._id}/review`, {
+        score: projectReviewForm.score,
+        feedback: projectReviewForm.feedback
+      });
+      if (response.data.success) {
+        await fetchProjects();
+        setIsReviewProjectOpen(false);
+        setReviewingProject(null);
+        setProjectReviewForm({ score: "", feedback: "" });
+        showToast("Project reviewed successfully!", "success");
+      }
+    } catch (error) {
+      console.error("Error reviewing project:", error);
+      showToast(
+        error.response?.data?.message || "Error reviewing project. Please try again.",
+        "error"
+      );
+    }
   };
 
   // Grant Leave Handler
-  const handleGrantLeave = (id) => {
-    const updated = leaveRequests.map((l) =>
-      l.id === id ? { ...l, status: "Granted" } : l,
-    );
-    setLeaveRequests(updated);
-    saveStoredLeaves(updated);
-    showToast("Leave request Granted!", "success");
+  const handleGrantLeave = async (leaveId) => {
+    try {
+      await admin.put(`/leave-requests/accept/${leaveId}`);
+      await fetchLeaveRequests(); // Refresh leave requests from the server
+      showToast("Leave request Granted!", "success");
+    } catch (err) {
+      console.error("Error granting leave:", err);
+      showToast(err.response?.data?.message || "Error granting leave", "error");
+    }
   };
 
   // Reject Leave Handler
-  const handleRejectLeave = (id) => {
-    const updated = leaveRequests.map((l) =>
-      l.id === id ? { ...l, status: "Rejected" } : l,
-    );
-    setLeaveRequests(updated);
-    saveStoredLeaves(updated);
-    showToast("Leave request Rejected.", "error");
+  const handleRejectLeave = (leaveId) => {
+    setRejectLeaveId(leaveId);
+    setRejectionReason("");
+  };
+
+  const submitLeaveRejection = async (event) => {
+    event.preventDefault();
+    const reason = rejectionReason.trim();
+    if (!reason) {
+      showToast("Please provide a reason for rejecting this leave request.", "error");
+      return;
+    }
+
+    try {
+      await admin.put(`/leave-requests/reject/${rejectLeaveId}`, {
+        rejectionReason: reason,
+      });
+      await fetchLeaveRequests(); // Refresh leave requests from the server
+      setRejectLeaveId(null);
+      setRejectionReason("");
+      showToast("Leave request Rejected.", "error");
+    } catch (err) {
+      console.error("Error rejecting leave:", err);
+      showToast(
+        err.response?.data?.message || "Error rejecting leave",
+        "error",
+      );
+    }
+  };
+
+  const handleAssignTask = async (event) => {
+    event.preventDefault();
+    if (!taskForm.title || !taskForm.assignee) {
+      showToast("Task title and employee are required.", "error");
+      return;
+    }
+
+    try {
+      await admin.post("/tasks", taskForm);
+      await fetchTasks();
+      setTaskForm({
+        title: "",
+        description: "",
+        priority: "Normal",
+        deadline: "",
+        assignee: "",
+      });
+      setIsAssignTaskOpen(false);
+      showToast("Task assigned successfully.", "success");
+    } catch (error) {
+      showToast(
+        error.response?.data?.message || "Unable to assign task.",
+        "error",
+      );
+    }
   };
 
   // Handle Add User
@@ -223,7 +324,7 @@ const AdminContent = ({ activeSection }) => {
         userForm.role === "employee"
           ? "Employee"
           : userForm.role === "hr"
-            ? "HR Manager"
+            ? "hr"
             : "Admin";
       const payload = { ...userForm, role: displayRole };
       const response = await admin.post("/create-user", payload);
@@ -262,39 +363,113 @@ const AdminContent = ({ activeSection }) => {
   const handleAddEmployee = async (e) => {
     try {
       e.preventDefault();
-      if (!employeeForm.name || !employeeForm.email || !employeeForm.phone) {
+      if (!employeeForm.email || !employeeForm.phone) {
         showToast("Please fill out all required employee details.", "error");
         return;
       }
-      const response = await admin.post("/create-employee", employeeForm);
-
-      const newEmp = response.data.employee;
-
-      const updated = [newEmp, ...employees];
-      setEmployees(updated);
-      saveStoredEmployees(updated);
+      if (editingEmployeeId) {
+        await admin.put(`/employees/${editingEmployeeId}`, employeeForm);
+      } else {
+        const response = await admin.post("/create-employee", employeeForm);
+        const selectedDepartment = departments.find(
+          (department) => department.name === employeeForm.department,
+        );
+        if (selectedDepartment && response.data.employee?._id) {
+          await admin.post("/assign-department", {
+            employeeId: response.data.employee._id,
+            departmentId: selectedDepartment._id,
+          });
+        }
+      }
+      await fetchEmployees();
+      await fetchDepartments();
       setIsAddEmployeeOpen(false);
+      setEditingEmployeeId(null);
       setEmployeeForm({
         email: "",
         phone: "",
         dateOfBirth: "",
         gender: "Male",
         address: "",
-        department: "Software Engineering",
+        department: "",
         designation: "",
         joiningDate: "",
         salary: "",
       });
-      showToast("Employee details added successfully!", "success");
+      showToast(
+        editingEmployeeId
+          ? "Employee details updated successfully!"
+          : "Employee details added successfully!",
+        "success",
+      );
     } catch (error) {
       console.error("Error adding employee details:", error);
       showToast("Error creating employee", "error");
     }
   };
 
+  const onChangeBroadcastNotice = (e) => {
+    setNoticesData((prev) => ({
+      ...prev,
+      [e.target.name]: e.target.value,
+    }));
+  };
+
+  const sendBroadcastNotice = async () => {
+    try {
+      const response = await admin.post("/announcements", noticesData);
+      if (response.data.success) {
+        await fetchAnnouncements();
+        showToast("Broadcast notice sent successfully!", "success");
+        setNoticesData({ headline: "", body: "" });
+      }
+    } catch (error) {
+      console.error("Error sending broadcast notice:", error);
+    }
+  };
+
+  const handleEditEmployee = (employee) => {
+    setEditingEmployeeId(employee._id);
+    setEmployeeForm({
+      name: employee.name || "",
+      email: employee.email || "",
+      phone: employee.phone || "",
+      dateOfBirth: employee.dateOfBirth || "",
+      gender: employee.gender || "male",
+      address: employee.address || "",
+      department: employee.department || "",
+      designation: employee.designation || "",
+      joiningDate: employee.joiningDate || "",
+      salary: employee.salary || "",
+    });
+    setIsAddEmployeeOpen(true);
+  };
+
+  const handleCreateDepartment = async (event) => {
+    event.preventDefault();
+    const name = departmentForm.name.trim();
+    if (!name) {
+      showToast("Department name is required.", "error");
+      return;
+    }
+
+    try {
+      await admin.post("/departments", { name });
+      await fetchDepartments();
+      setDepartmentForm({ name: "" });
+      setIsCreateDepartmentOpen(false);
+      showToast("Department created successfully.", "success");
+    } catch (error) {
+      showToast(
+        error.response?.data?.message || "Unable to create department.",
+        "error",
+      );
+    }
+  };
+
   const renderContent = () => {
     switch (activeSection) {
-      case "Dashboard":
+      case "Dashboard": {
         return (
           <div className="space-y-6">
             {/* Header */}
@@ -365,48 +540,55 @@ const AdminContent = ({ activeSection }) => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100/80 dark:divide-gray-800/50">
-                      {userList.map((u) => (
-                        <tr
-                          key={u.id}
-                          className="text-gray-700 dark:text-gray-300 hover:bg-gray-50/50 dark:hover:bg-gray-800/30"
-                        >
-                          <td className="py-3.5">
-                            <p className="font-medium text-gray-800 dark:text-gray-100">
-                              {u.name}
-                            </p>
-                            <p className="text-[10px] text-gray-400 dark:text-gray-500">
-                              {u.email}
-                            </p>
-                          </td>
-                          <td className="py-3.5 font-medium">{u.role}</td>
-                          <td className="py-3.5">
-                            <span
-                              className={`text-[10px] font-medium ${u.twoFa ? "text-emerald-500 dark:text-emerald-400" : "text-gray-400 dark:text-gray-500"}`}
+                      {userList.map(
+                        (u) => (
+                          console.log("Rendering user:", u),
+                          (
+                            <tr
+                              key={u._id}
+                              className="text-gray-700 dark:text-gray-300 hover:bg-gray-50/50 dark:hover:bg-gray-800/30"
                             >
-                              {u.twoFa ? "Enabled" : "Off"}
-                            </span>
-                          </td>
-                          <td className="py-3.5">
-                            <span
-                              className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium ${
-                                u.status === "Active"
-                                  ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400"
-                                  : "bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400"
-                              }`}
-                            >
-                              {u.status}
-                            </span>
-                          </td>
-                          <td className="py-3.5 text-right">
-                            <button
-                              onClick={() => toggleUserStatus(u.id)}
-                              className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
-                            >
-                              {u.status === "Active" ? "Suspend" : "Activate"}
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                              <td className="py-3.5">
+                                <p className="font-medium text-gray-800 dark:text-gray-100">
+                                  {u.name}
+                                </p>
+                                <p className="text-[10px] text-gray-400 dark:text-gray-500">
+                                  {u.email}
+                                </p>
+                              </td>
+                              <td className="py-3.5 font-medium">{u.role}</td>
+                              <td className="py-3.5">
+                                <span
+                                  className={`text-[10px] font-medium ${u.twoFa ? "text-emerald-500 dark:text-emerald-400" : "text-gray-400 dark:text-gray-500"}`}
+                                >
+                                  {u.twoFa ? "Enabled" : "Off"}
+                                </span>
+                              </td>
+                              <td className="py-3.5">
+                                <span
+                                  className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium ${
+                                    u.status === "Active"
+                                      ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400"
+                                      : "bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400"
+                                  }`}
+                                >
+                                  {u.status}
+                                </span>
+                              </td>
+                              <td className="py-3.5 text-right">
+                                <button
+                                  onClick={() => toggleUserStatus(u._id)}
+                                  className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
+                                >
+                                  {u.status === "Active"
+                                    ? "Suspend"
+                                    : "Activate"}
+                                </button>
+                              </td>
+                            </tr>
+                          )
+                        ),
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -427,59 +609,88 @@ const AdminContent = ({ activeSection }) => {
                 </div>
 
                 <div className="space-y-3">
-                  {leaveRequests.map(
-                    (req) => (
-                      console.log("Rendering leave request:", req.employeeId.name),
-                      (
-                        <div
-                          key={req._id}
-                          className="p-3.5 rounded-lg border border-gray-100/80 dark:border-gray-800/50 bg-gray-50/50 dark:bg-[#0c1222] text-xs"
-                        >
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <p className="font-medium text-gray-800 dark:text-gray-100">
-                                {req.employeeId.name} ({req.employeeId.email})
-                              </p>
-                              <p className="text-[10px] text-gray-400 dark:text-gray-500">
-                                {req.type} • {req.dates}
-                              </p>
-                            </div>
-                            <span
-                              className={`rounded-full px-2 py-0.5 text-[9px] font-medium ${
-                                req.status === "Granted" ||
-                                req.status === "Approved"
-                                  ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400"
-                                  : req.status === "Rejected"
-                                    ? "bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400"
-                                    : "bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400"
-                              }`}
-                            >
-                              {req.status}
-                            </span>
-                          </div>
-                          <div className="mt-2.5 flex items-center justify-end gap-2 pt-2 border-t border-gray-100/80 dark:border-gray-800/50">
-                            <button
-                              onClick={() => handleRejectLeave(req.id)}
-                              className="px-2.5 py-1 rounded border border-gray-200 dark:border-gray-700 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 font-medium text-[10px]"
-                            >
-                              Reject
-                            </button>
-                            <button
-                              onClick={() => handleGrantLeave(req.id)}
-                              className="px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-[10px]"
-                            >
-                              Grant
-                            </button>
-                          </div>
+                  {leaveRequests.map((req) => (
+                    <div
+                      key={req._id}
+                      className="p-3.5 rounded-lg border border-gray-100/80 dark:border-gray-800/50 bg-gray-50/50 dark:bg-[#0c1222] text-xs"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-medium text-gray-800 dark:text-gray-100">
+                            {req.employeeId?.name || "Unknown Employee"} (
+                            {req.employeeId?.email || "No email"})
+                          </p>
+                          <p className="text-[10px] text-gray-400 dark:text-gray-500">
+                            {req.type} • {req.dates}
+                          </p>
                         </div>
-                      )
-                    ),
-                  )}
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[9px] font-medium ${
+                            req.status === "Granted" ||
+                            req.status === "Approved"
+                              ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400"
+                              : req.status === "Rejected"
+                                ? "bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400"
+                                : "bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400"
+                          }`}
+                        >
+                          {req.status}
+                        </span>
+                      </div>
+
+                      <div className="mt-2.5 flex items-center justify-end gap-2 pt-2 border-t border-gray-100/80 dark:border-gray-800/50">
+                        <button
+                          onClick={() => handleRejectLeave(req._id)}
+                          className="px-2.5 py-1 rounded border border-gray-200 dark:border-gray-700 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 font-medium text-[10px]"
+                        >
+                          Reject
+                        </button>
+                        <button
+                          onClick={() => handleGrantLeave(req._id)}
+                          className="px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-[10px]"
+                        >
+                          Grant
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
+              </div>
+            </div>
+
+            <div className="rounded-xl bg-white/80 dark:bg-[#151d2e] p-6 border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100">
+                  Announcements
+                </h3>
+                <button
+                  onClick={() => setActiveSection("Announcements")}
+                  className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
+                >
+                  View All
+                </button>
+              </div>
+              <div className="space-y-3">
+                {announcements.slice(0, 3).map((announcement) => (
+                  <div key={announcement._id}>
+                    <p className="text-xs font-semibold text-gray-800 dark:text-gray-100">
+                      {announcement.headline}
+                    </p>
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+                      {announcement.body}
+                    </p>
+                  </div>
+                ))}
+                {announcements.length === 0 && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    No announcements yet.
+                  </p>
+                )}
               </div>
             </div>
           </div>
         );
+      }
 
       case "Users":
         return (
@@ -517,7 +728,7 @@ const AdminContent = ({ activeSection }) => {
                 <tbody className="divide-y divide-gray-100/80 dark:divide-gray-800/50">
                   {userList.map((u) => (
                     <tr
-                      key={u.id}
+                      key={u._id}
                       className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30"
                     >
                       <td className="py-3.5">
@@ -554,7 +765,7 @@ const AdminContent = ({ activeSection }) => {
                       </td>
                       <td className="py-3.5 text-right">
                         <button
-                          onClick={() => toggleUserStatus(u.id)}
+                          onClick={() => toggleUserStatus(u._id)}
                           className="rounded-lg bg-gray-100 dark:bg-gray-800 px-2.5 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
                         >
                           {u.status === "Active" ? "Suspend" : "Activate"}
@@ -614,7 +825,7 @@ const AdminContent = ({ activeSection }) => {
                 <tbody className="divide-y divide-gray-100/80 dark:divide-gray-800/50">
                   {employees.map((emp) => (
                     <tr
-                      key={emp.id}
+                      key={emp._id}
                       className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30"
                     >
                       <td className="py-3.5">
@@ -629,26 +840,37 @@ const AdminContent = ({ activeSection }) => {
                         {emp.phone}
                       </td>
                       <td className="py-3.5 text-gray-600 dark:text-gray-300 font-medium">
-                        {emp.department}
+                        {emp.department || "Unassigned"}
                       </td>
                       <td className="py-3.5 font-medium text-gray-700 dark:text-gray-300">
                         {emp.designation}
                       </td>
                       <td className="py-3.5">
                         <span className="rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium">
-                          {emp.attendancePercentage}%
+                          {emp.attendancePercentage != null
+                            ? `${emp.attendancePercentage}%`
+                            : "Not available"}
                         </span>
                       </td>
                       <td className="py-3.5 font-medium text-emerald-600 dark:text-emerald-400">
-                        {emp.salary}
+                        {emp.salary != null ? `₹${emp.salary}` : "Not provided"}
                       </td>
                       <td className="py-3.5 text-right">
-                        <button
-                          onClick={() => setSelectedEmployeeDetails(emp)}
-                          className="rounded-lg bg-gray-100 dark:bg-gray-800 px-3 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
-                        >
-                          View Details
-                        </button>
+                        <div className="flex justify-end gap-2">
+                          <button
+                            onClick={() => handleEditEmployee(emp)}
+                            className="flex items-center gap-1 rounded-lg bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-400 dark:hover:bg-indigo-900/30"
+                          >
+                            <FilePenIcon className="h-3.5 w-3.5" />
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => setSelectedEmployeeDetails(emp)}
+                            className="rounded-lg bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                          >
+                            View Details
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -678,17 +900,15 @@ const AdminContent = ({ activeSection }) => {
               <div className="space-y-4">
                 {leaveRequests.map((req) => (
                   <div
-                    key={req.id}
+                    key={req._id}
                     className="flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-xl border border-gray-200 dark:border-gray-700 p-4 bg-gray-50/50 dark:bg-[#0c1222]"
                   >
                     <div>
                       <div className="flex items-center gap-2">
                         <h4 className="font-semibold text-sm text-gray-800 dark:text-gray-100">
-                          {req.employeeName}
+                          {req.employeeId?.name || "Unknown Employee"} (
+                          {req.employeeId?.email || "No email"})
                         </h4>
-                        <span className="text-xs text-gray-400 dark:text-gray-500">
-                          ({req.department})
-                        </span>
                         <span
                           className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
                             req.status === "Granted" ||
@@ -713,14 +933,25 @@ const AdminContent = ({ activeSection }) => {
 
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => handleRejectLeave(req.id)}
+                        onClick={() => handleRejectLeave(req._id || req.id)}
                         className="flex items-center gap-1.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-rose-50 hover:bg-rose-100 dark:bg-rose-900/20 px-4 py-2 text-xs font-medium text-rose-600 dark:text-rose-400 transition"
                       >
                         <XCircle className="h-4 w-4" />
                         Reject
                       </button>
+                      {req.documentLink && (
+                        <a
+                          href={req.documentLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-xs font-medium text-indigo-600 transition hover:bg-indigo-100 dark:border-indigo-900/40 dark:bg-indigo-900/20 dark:text-indigo-400 dark:hover:bg-indigo-900/30"
+                        >
+                          <FileText className="h-4 w-4" />
+                          View Document
+                        </a>
+                      )}
                       <button
-                        onClick={() => handleGrantLeave(req.id)}
+                        onClick={() => handleGrantLeave(req._id || req.id)}
                         className="flex items-center gap-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:hover:bg-emerald-900/30 px-4 py-2 text-xs font-medium text-emerald-600 dark:text-emerald-400 shadow-sm transition"
                       >
                         <CheckCircle2 className="h-4 w-4" />
@@ -770,7 +1001,7 @@ const AdminContent = ({ activeSection }) => {
         );
 
       case "HR Management":
-        const hrUsers = userList.filter((u) => u.role === "HR Manager");
+        const hrUsers = userList.filter((u) => u.role === "hr");
         return (
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -845,27 +1076,43 @@ const AdminContent = ({ activeSection }) => {
       case "Departments":
         return (
           <div className="space-y-6">
-            <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
-              Departments
-            </h2>
+            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+              <div>
+                <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
+                  Departments
+                </h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Create departments and manage employee assignment separately.
+                </p>
+              </div>
+              <button
+                onClick={() => setIsCreateDepartmentOpen(true)}
+                className="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-medium text-white shadow-sm transition hover:bg-indigo-700"
+              >
+                <Plus className="h-4 w-4" />
+                Create Department
+              </button>
+            </div>
             <div className="grid gap-4 sm:grid-cols-3">
-              {[
-                "Software Engineering",
-                "Marketing",
-                "Product Design",
-                "Human Resources",
-                "Sales",
-              ].map((d, i) => (
+              {departments.map((department) => (
                 <div
-                  key={i}
+                  key={department._id}
                   className="p-5 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft"
                 >
                   <Building2 className="h-5 w-5 text-indigo-500 dark:text-indigo-400 mb-2" />
                   <p className="font-semibold text-sm text-gray-800 dark:text-gray-100">
-                    {d}
+                    {department.name}
+                  </p>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    {department.employees?.length || 0} employee(s)
                   </p>
                 </div>
               ))}
+              {departments.length === 0 && (
+                <p className="col-span-full rounded-xl border border-dashed border-gray-200 p-8 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                  No departments created yet.
+                </p>
+              )}
             </div>
           </div>
         );
@@ -873,10 +1120,85 @@ const AdminContent = ({ activeSection }) => {
       case "Tasks":
         return (
           <div className="space-y-6">
-            <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
-              Organization Tasks Matrix
-            </h2>
+            <div className="flex items-center justify-between gap-4">
+              <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
+                Organization Tasks Matrix
+              </h2>
+              <button
+                onClick={() => setIsAssignTaskOpen(true)}
+                className="flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-medium text-white transition hover:bg-indigo-700"
+              >
+                <Plus className="h-4 w-4" />
+                Assign Task
+              </button>
+            </div>
             <TaskStatisticsCard totalTask={245} overdueTask={17} />
+            <div className="rounded-xl border border-gray-100/80 bg-white/80 p-6 shadow-soft dark:border-gray-800/50 dark:bg-[#151d2e]">
+              <h3 className="mb-4 text-base font-semibold text-gray-800 dark:text-gray-100">
+                Assigned Tasks ({tasks.length})
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[680px] text-left text-xs">
+                  <thead className="border-b border-gray-100 text-gray-500 dark:border-gray-800 dark:text-gray-400">
+                    <tr>
+                      <th className="pb-3 font-medium">Task</th>
+                      <th className="pb-3 font-medium">Assigned Employee</th>
+                      <th className="pb-3 font-medium">Priority</th>
+                      <th className="pb-3 font-medium">Deadline</th>
+                      <th className="pb-3 text-right font-medium">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800/50">
+                    {tasks.map((task) => (
+                      <tr key={task._id}>
+                        <td className="py-3 pr-4">
+                          <p className="font-semibold text-gray-800 dark:text-gray-100">
+                            {task.title}
+                          </p>
+                          {task.description && (
+                            <p className="mt-0.5 text-gray-500 dark:text-gray-400">
+                              {task.description}
+                            </p>
+                          )}
+                        </td>
+                        <td className="py-3 pr-4 text-gray-600 dark:text-gray-300">
+                          <p className="font-medium">
+                            {task.assignee?.name || "Unknown"}
+                          </p>
+                          <p className="text-[11px] text-gray-400 dark:text-gray-500">
+                            {task.assignee?.email || "No email"}
+                          </p>
+                        </td>
+                        <td className="py-3 text-gray-600 dark:text-gray-300">
+                          {task.priority}
+                        </td>
+                        <td className="py-3 text-gray-600 dark:text-gray-300">
+                          {task.deadline || "Not set"}
+                        </td>
+                        <td className="py-3 text-right">
+                          <span
+                            className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${
+                              task.status === "Completed"
+                                ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400"
+                                : "bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400"
+                            }`}
+                          >
+                            {task.status === "Completed"
+                              ? "Completed"
+                              : "Not completed"}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {tasks.length === 0 && (
+                <p className="py-6 text-center text-xs text-gray-500 dark:text-gray-400">
+                  No tasks have been assigned yet.
+                </p>
+              )}
+            </div>
           </div>
         );
 
@@ -940,13 +1262,24 @@ const AdminContent = ({ activeSection }) => {
                 Broadcast Notice
               </button>
             </div>
-            <div className="p-5 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
-              <h4 className="font-semibold text-gray-800 dark:text-gray-100">
-                System Notice
-              </h4>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-medium">
-                Scheduled database maintenance this Sunday.
-              </p>
+            <div className="space-y-4">
+              {announcements.length === 0 ? (
+                <div className="p-5 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft text-sm text-gray-500 dark:text-gray-400">
+                  No announcements yet.
+                </div>
+              ) : (
+                announcements.map((announcement) => (
+                  <div key={announcement._id} className="p-5 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
+                    <span className="text-[10px] font-semibold text-indigo-500 uppercase">Notice</span>
+                    <h4 className="font-semibold text-gray-800 dark:text-gray-100 mt-1">
+                      {announcement.headline}
+                    </h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-medium">
+                      {announcement.body}
+                    </p>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         );
@@ -1052,6 +1385,87 @@ const AdminContent = ({ activeSection }) => {
           </div>
         );
 
+      case "Projects":
+        return (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">
+                Project Reviews
+              </h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Review and score employee projects
+              </p>
+            </div>
+            {projects.length === 0 ? (
+              <div className="p-8 text-center rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  No projects available to review.
+                </p>
+              </div>
+            ) : (
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {projects.map((project) => (
+                  <div
+                    key={project._id}
+                    className="flex flex-col rounded-xl bg-white/80 dark:bg-[#151d2e] p-5 border border-gray-100/80 dark:border-gray-800/50 shadow-soft"
+                  >
+                    <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">
+                      {project.title}
+                    </h3>
+                    <p className="mt-1 text-[11px] font-semibold text-indigo-500 uppercase">
+                      By {project.employeeId?.userId?.name || "Unknown Employee"}
+                    </p>
+                    <p className="mt-2 text-xs text-gray-600 dark:text-gray-400 line-clamp-3">
+                      {project.content}
+                    </p>
+                    <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800/50 flex flex-wrap gap-3">
+                      {project.githubLink && (
+                        <a
+                          href={project.githubLink}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[11px] font-semibold text-indigo-600 hover:underline"
+                        >
+                          GitHub
+                        </a>
+                      )}
+                      {project.liveLink && (
+                        <a
+                          href={project.liveLink}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[11px] font-semibold text-emerald-600 hover:underline"
+                        >
+                          Live Link
+                        </a>
+                      )}
+                    </div>
+                    <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800/50">
+                      {project.score ? (
+                        <div>
+                          <p className="text-xs font-semibold text-gray-800 dark:text-gray-100">Score: {project.score}/5</p>
+                          <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">"{project.feedback}"</p>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setReviewingProject(project);
+                            setProjectReviewForm({ score: "", feedback: "" });
+                            setIsReviewProjectOpen(true);
+                          }}
+                          className="w-full rounded-lg bg-indigo-50 dark:bg-indigo-900/20 py-2 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition"
+                        >
+                          Review Project
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+
       default:
         return null;
     }
@@ -1060,6 +1474,86 @@ const AdminContent = ({ activeSection }) => {
   return (
     <>
       {renderContent()}
+
+      <Modal
+        isOpen={Boolean(rejectLeaveId)}
+        onClose={() => setRejectLeaveId(null)}
+        title="Reject Leave Request"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setRejectLeaveId(null)}
+              className="rounded-xl px-4 py-2 text-xs font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="reject-leave-form"
+              className="rounded-xl bg-rose-600 px-5 py-2 text-xs font-medium text-white hover:bg-rose-700"
+            >
+              Reject Request
+            </button>
+          </>
+        }
+      >
+        <form id="reject-leave-form" onSubmit={submitLeaveRejection} className="space-y-2 text-xs">
+          <label htmlFor="rejection-reason" className="block font-medium text-gray-700 dark:text-gray-300">
+            Reason for rejection
+          </label>
+          <textarea
+            id="rejection-reason"
+            value={rejectionReason}
+            onChange={(event) => setRejectionReason(event.target.value)}
+            rows={4}
+            maxLength={500}
+            required
+            placeholder="Explain why this leave request is being rejected"
+            className="w-full rounded-xl border border-gray-200 bg-gray-50/50 p-3 text-sm text-gray-800 outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-500/10 dark:border-gray-700 dark:bg-[#0c1222] dark:text-gray-100"
+          />
+        </form>
+      </Modal>
+
+      <Modal
+        isOpen={isCreateDepartmentOpen}
+        onClose={() => setIsCreateDepartmentOpen(false)}
+        title="Create Department"
+        footer={
+          <>
+            <button
+              onClick={() => setIsCreateDepartmentOpen(false)}
+              className="rounded-xl px-4 py-2 text-xs font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleCreateDepartment}
+              className="rounded-xl bg-indigo-600 px-5 py-2 text-xs font-medium text-white hover:bg-indigo-700"
+            >
+              Create Department
+            </button>
+          </>
+        }
+      >
+        <form onSubmit={handleCreateDepartment} className="space-y-4 text-xs">
+          <div>
+            <label className="mb-1.5 block font-medium text-gray-700 dark:text-gray-300">
+              Department Name
+            </label>
+            <input
+              type="text"
+              value={departmentForm.name}
+              onChange={(event) =>
+                setDepartmentForm({ name: event.target.value })
+              }
+              placeholder="e.g. Customer Success"
+              autoFocus
+              className="w-full rounded-xl border border-gray-200 bg-gray-50/50 p-2.5 text-xs font-medium text-gray-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:border-gray-700 dark:bg-[#0c1222] dark:text-gray-100 dark:focus:border-indigo-500"
+            />
+          </div>
+        </form>
+      </Modal>
 
       {/* Step 1: Add User Modal */}
       <Modal
@@ -1150,7 +1644,11 @@ const AdminContent = ({ activeSection }) => {
       <Modal
         isOpen={isAddEmployeeOpen}
         onClose={() => setIsAddEmployeeOpen(false)}
-        title="Add Employee Profile Details"
+        title={
+          editingEmployeeId
+            ? "Edit Employee Profile"
+            : "Add Employee Profile Details"
+        }
         maxWidth="max-w-2xl"
         footer={
           <>
@@ -1164,7 +1662,7 @@ const AdminContent = ({ activeSection }) => {
               onClick={handleAddEmployee}
               className="rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:hover:bg-emerald-900/30 px-5 py-2 text-xs font-medium shadow-sm"
             >
-              Save Employee Profile
+              {editingEmployeeId ? "Save Changes" : "Save Employee Profile"}
             </button>
           </>
         }
@@ -1264,38 +1762,30 @@ const AdminContent = ({ activeSection }) => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                Department
-              </label>
-              <select
-                value={employeeForm.department}
-                onChange={(e) =>
-                  setEmployeeForm({
-                    ...employeeForm,
-                    department: e.target.value,
-                  })
-                }
-                className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500 cursor-pointer"
-              >
-                <option className="bg-white dark:bg-[#151d2e] text-gray-800 dark:text-gray-100">
-                  Software Engineering
+          <div>
+            <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Department
+            </label>
+            <select
+              value={employeeForm.department}
+              onChange={(e) =>
+                setEmployeeForm({
+                  ...employeeForm,
+                  department: e.target.value,
+                })
+              }
+              className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500 cursor-pointer"
+            >
+              <option value="">No department</option>
+              {departments.map((department) => (
+                <option key={department._id} value={department.name}>
+                  {department.name}
                 </option>
-                <option className="bg-white dark:bg-[#151d2e] text-gray-800 dark:text-gray-100">
-                  Product Design
-                </option>
-                <option className="bg-white dark:bg-[#151d2e] text-gray-800 dark:text-gray-100">
-                  Marketing
-                </option>
-                <option className="bg-white dark:bg-[#151d2e] text-gray-800 dark:text-gray-100">
-                  Human Resources
-                </option>
-                <option className="bg-white dark:bg-[#151d2e] text-gray-800 dark:text-gray-100">
-                  Sales
-                </option>
-              </select>
-            </div>
+              ))}
+            </select>
+          </div>
+
+          <div>
             <div>
               <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                 Designation
@@ -1459,6 +1949,27 @@ const AdminContent = ({ activeSection }) => {
                 {selectedEmployeeDetails.address || "N/A"}
               </p>
             </div>
+            
+            <div className="pt-2">
+              <p className="text-gray-500 dark:text-gray-400 font-medium mb-2">Uploaded Projects</p>
+              {projects.filter(p => p.employeeId?._id === selectedEmployeeDetails._id).length === 0 ? (
+                <p className="text-xs text-gray-400">No projects uploaded by this employee.</p>
+              ) : (
+                <div className="space-y-3">
+                  {projects.filter(p => p.employeeId?._id === selectedEmployeeDetails._id).map(project => (
+                    <div key={project._id} className="p-3 rounded-xl border border-gray-100/80 dark:border-gray-800/50 bg-gray-50/50 dark:bg-gray-800/20">
+                      <h4 className="font-bold text-gray-800 dark:text-gray-100">{project.title}</h4>
+                      <p className="text-[11px] text-gray-500 mt-1 line-clamp-2">{project.content}</p>
+                      {project.score ? (
+                        <p className="text-[11px] font-semibold text-emerald-600 mt-2">Score: {project.score}/5</p>
+                      ) : (
+                        <p className="text-[11px] font-semibold text-amber-500 mt-2">Pending Review - Go to Projects tab</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </Modal>
       )}
@@ -1479,6 +1990,7 @@ const AdminContent = ({ activeSection }) => {
             <button
               onClick={() => {
                 showToast("Notice broadcasted to all users!", "success");
+                sendBroadcastNotice();
                 setIsBroadcastNoticeOpen(false);
               }}
               className="rounded-xl bg-indigo-600 hover:bg-indigo-700 px-5 py-2 text-xs font-medium text-white"
@@ -1495,6 +2007,9 @@ const AdminContent = ({ activeSection }) => {
             </label>
             <input
               type="text"
+              name="headline"
+              value={noticesData.headline}
+              onChange={(e) => onChangeBroadcastNotice(e)}
               placeholder="Headline..."
               className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 outline-none text-gray-800 dark:text-gray-100 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
             />
@@ -1505,11 +2020,125 @@ const AdminContent = ({ activeSection }) => {
             </label>
             <textarea
               rows={4}
+              name="body"
+              value={noticesData.body}
+              onChange={(e) => onChangeBroadcastNotice(e)}
               placeholder="Details..."
               className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 outline-none text-gray-800 dark:text-gray-100 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
             />
           </div>
         </div>
+      </Modal>
+
+      {/* Assign Task Modal */}
+      <Modal
+        isOpen={isAssignTaskOpen}
+        onClose={() => setIsAssignTaskOpen(false)}
+        title="Assign Task"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setIsAssignTaskOpen(false)}
+              className="rounded-xl px-4 py-2 text-xs font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="assign-task-form"
+              className="rounded-xl bg-indigo-600 px-5 py-2 text-xs font-medium text-white transition hover:bg-indigo-700"
+            >
+              Assign Task
+            </button>
+          </>
+        }
+      >
+        <form
+          id="assign-task-form"
+          onSubmit={handleAssignTask}
+          className="space-y-4 text-xs"
+        >
+          <div>
+            <label className="mb-1.5 block font-medium text-gray-700 dark:text-gray-300">
+              Task title
+            </label>
+            <input
+              required
+              value={taskForm.title}
+              onChange={(event) =>
+                setTaskForm({ ...taskForm, title: event.target.value })
+              }
+              placeholder="e.g. Prepare monthly report"
+              className="w-full rounded-xl border border-gray-200 bg-gray-50/50 p-2.5 text-gray-800 outline-none focus:border-indigo-400 dark:border-gray-700 dark:bg-[#0c1222] dark:text-gray-100"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block font-medium text-gray-700 dark:text-gray-300">
+              Assign to
+            </label>
+            <select
+              required
+              value={taskForm.assignee}
+              onChange={(event) =>
+                setTaskForm({ ...taskForm, assignee: event.target.value })
+              }
+              className="w-full rounded-xl border border-gray-200 bg-gray-50/50 p-2.5 text-gray-800 outline-none focus:border-indigo-400 dark:border-gray-700 dark:bg-[#0c1222] dark:text-gray-100"
+            >
+              <option value="">Select an employee</option>
+              {assignableEmployees.map((employee) => (
+                <option key={employee._id} value={employee._id}>
+                  {employee.name} ({employee.email})
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block font-medium text-gray-700 dark:text-gray-300">
+                Priority
+              </label>
+              <select
+                value={taskForm.priority}
+                onChange={(event) =>
+                  setTaskForm({ ...taskForm, priority: event.target.value })
+                }
+                className="w-full rounded-xl border border-gray-200 bg-gray-50/50 p-2.5 text-gray-800 outline-none focus:border-indigo-400 dark:border-gray-700 dark:bg-[#0c1222] dark:text-gray-100"
+              >
+                <option>Low</option>
+                <option>Normal</option>
+                <option>High</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-1.5 block font-medium text-gray-700 dark:text-gray-300">
+                Deadline
+              </label>
+              <input
+                type="date"
+                value={taskForm.deadline}
+                onChange={(event) =>
+                  setTaskForm({ ...taskForm, deadline: event.target.value })
+                }
+                className="w-full rounded-xl border border-gray-200 bg-gray-50/50 p-2.5 text-gray-800 outline-none focus:border-indigo-400 dark:border-gray-700 dark:bg-[#0c1222] dark:text-gray-100"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="mb-1.5 block font-medium text-gray-700 dark:text-gray-300">
+              Description
+            </label>
+            <textarea
+              rows={3}
+              value={taskForm.description}
+              onChange={(event) =>
+                setTaskForm({ ...taskForm, description: event.target.value })
+              }
+              placeholder="Add task details..."
+              className="w-full rounded-xl border border-gray-200 bg-gray-50/50 p-2.5 text-gray-800 outline-none focus:border-indigo-400 dark:border-gray-700 dark:bg-[#0c1222] dark:text-gray-100"
+            />
+          </div>
+        </form>
       </Modal>
 
       {/* Process Payroll Modal */}
@@ -1555,6 +2184,61 @@ const AdminContent = ({ activeSection }) => {
             </p>
           </div>
         </div>
+      </Modal>
+      <Modal
+        isOpen={isReviewProjectOpen}
+        onClose={() => setIsReviewProjectOpen(false)}
+        title="Review Project"
+        footer={
+          <>
+            <button
+              onClick={() => setIsReviewProjectOpen(false)}
+              className="rounded-xl px-4 py-2 text-xs font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleProjectReview}
+              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 px-5 py-2 text-xs font-medium text-white transition"
+            >
+              Save Review
+            </button>
+          </>
+        }
+      >
+        <form onSubmit={handleProjectReview} className="space-y-4 text-xs">
+          <div>
+            <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Score (out of 5)
+            </label>
+            <input
+              type="number"
+              min="0"
+              max="5"
+              required
+              value={projectReviewForm.score}
+              onChange={(e) =>
+                setProjectReviewForm({ ...projectReviewForm, score: e.target.value })
+              }
+              placeholder="e.g. 8"
+              className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-gray-800 dark:text-gray-100 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10"
+            />
+          </div>
+          <div>
+            <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Feedback / Comments
+            </label>
+            <textarea
+              rows={3}
+              value={projectReviewForm.feedback}
+              onChange={(e) =>
+                setProjectReviewForm({ ...projectReviewForm, feedback: e.target.value })
+              }
+              placeholder="Provide comments on the project..."
+              className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-gray-800 dark:text-gray-100 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10"
+            />
+          </div>
+        </form>
       </Modal>
     </>
   );

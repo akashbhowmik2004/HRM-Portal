@@ -55,7 +55,7 @@ const categorizeItems = (role, items) => {
       },
       {
         title: 'COMPANY',
-        items: items.filter(i => ['Attendance', 'Leave', 'Tasks', 'Payroll', 'Documents'].includes(i))
+        items: items.filter(i => ['Attendance', 'Leave', 'Tasks', 'Payroll', 'Documents', 'Projects'].includes(i))
       },
       {
         title: 'OTHERS',
@@ -72,7 +72,7 @@ const categorizeItems = (role, items) => {
       },
       {
         title: 'COMPANY',
-        items: items.filter(i => ['Employees', 'Departments', 'Attendance', 'Leave Management', 'Tasks', 'Performance'].includes(i))
+        items: items.filter(i => ['Employees', 'Departments', 'Attendance', 'Leave Management', 'Tasks', 'Performance', 'Projects'].includes(i))
       },
       {
         title: 'OTHERS',
@@ -88,7 +88,7 @@ const categorizeItems = (role, items) => {
     },
     {
       title: 'COMPANY',
-      items: items.filter(i => ['Users', 'Employees', 'HR Management', 'Departments', 'Attendance', 'Leave', 'Tasks', 'Performance', 'Payroll'].includes(i))
+      items: items.filter(i => ['Users', 'Employees', 'HR Management', 'Departments', 'Attendance', 'Leave', 'Tasks', 'Performance', 'Payroll', 'Projects'].includes(i))
     },
     {
       title: 'OTHERS',

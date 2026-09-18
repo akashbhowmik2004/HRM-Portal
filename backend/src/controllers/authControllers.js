@@ -205,7 +205,7 @@ export const verifyOTP = async (req, res) => {
     }
 
     // Check whether account is active
-    if (!user.isActive) {
+    if (user.status !== "Active") {
       await OTP.deleteOne({ _id: otpRecord._id });
 
       return res.status(403).json({

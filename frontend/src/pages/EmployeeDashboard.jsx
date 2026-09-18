@@ -3,22 +3,40 @@ import EmployeeSidebar from "../components/EmployeeSidebar";
 import TopHeader from "../components/TopHeader";
 import EmployeeContent from "../components/EmployeeContent";
 import { useToast } from "../components/ToastProvider.jsx";
+import { employee } from "../apis/axios.js";
 
 const EmployeeDashboard = () => {
+  const {showToast} = useToast();
   const [activeSection, setActiveSection] = useState("Dashboard");
+  const [userDetails, setUserDetails] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem("hrm_dark_mode") === "true");
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
 
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add("dark");
-      localStorage.setItem("hrm_dark_mode", "true");
     } else {
       document.documentElement.classList.remove("dark");
-      localStorage.setItem("hrm_dark_mode", "false");
     }
   }, [isDarkMode]);
+
+  const fetchUserDetails = async () => {
+    try {
+      const response = await employee.get("/get-details");
+      setUserDetails({
+        ...response.data.user,
+        employee: response.data.employee,
+      });
+      console.log("User details:", response.data);
+    } catch (error) {
+      console.error("Error fetching user details:", error);
+      showToast("Failed to fetch user details.", "error");
+    }
+  }
+  useEffect(() => {
+    fetchUserDetails();
+  }, []);
 
   return (
     <div className={`min-h-screen ${isDarkMode ? "dark bg-[#0c1222]" : "bg-[#f5f6f8]"}`}>
@@ -33,12 +51,20 @@ const EmployeeDashboard = () => {
         />
         <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden p-4 sm:p-6 lg:p-8">
           <TopHeader
-            user={{ name: "Akash Bhowmik", role: "Employee", avatar: null }}
+            user={{
+              name: userDetails?.name || "Employee",
+              role: userDetails?.role || "Employee",
+              avatar: null,
+            }}
             onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
             isDarkMode={isDarkMode}
           />
           <main className="flex-1">
-            <EmployeeContent activeSection={activeSection} setActiveSection={setActiveSection}/>
+            <EmployeeContent
+              activeSection={activeSection}
+              setActiveSection={setActiveSection}
+              userDetails={userDetails}
+            />
           </main>
         </div>
       </div>

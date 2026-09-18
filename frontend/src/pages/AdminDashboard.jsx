@@ -7,19 +7,15 @@ import { useToast } from "../components/ToastProvider.jsx";
 const AdminDashboard = () => {
   const [activeSection, setActiveSection] = useState("Dashboard");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    return localStorage.getItem("hrm_dark_mode") === "true";
-  });
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
   const { showToast } = useToast();
 
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add("dark");
-      localStorage.setItem("hrm_dark_mode", "true");
     } else {
       document.documentElement.classList.remove("dark");
-      localStorage.setItem("hrm_dark_mode", "false");
     }
   }, [isDarkMode]);
 
@@ -41,7 +37,10 @@ const AdminDashboard = () => {
             isDarkMode={isDarkMode}
           />
           <main className="flex-1">
-            <AdminContent activeSection={activeSection} />
+            <AdminContent
+              activeSection={activeSection}
+              setActiveSection={setActiveSection}
+            />
           </main>
         </div>
       </div>

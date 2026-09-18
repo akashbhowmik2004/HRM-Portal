@@ -1,32 +1,14 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
-  Users,
-  Building2,
-  Briefcase,
-  CheckCircle2,
   CalendarCheck,
-  Clock,
   Download,
-  Upload,
   Plus,
   Bell,
   Megaphone,
   FileText,
-  DollarSign,
-  AlertCircle,
-  MoreVertical,
   Check,
-  Calendar,
-  Layers,
-  Sparkles,
-  ExternalLink,
-  Percent,
-  Video,
-  Share2,
-  Code,
   ChevronRight,
   Sun,
-  MessageCircle,
   ClipboardList,
   Phone,
   CheckSquare,
@@ -37,9 +19,9 @@ import {
   Plane,
   Tent,
   Trash2,
-  FilePenIcon
+  FilePenIcon,
 } from "lucide-react";
-import { employee } from "../apis/axios";
+import { auth, employee } from "../apis/axios";
 
 // Brand Icons
 const GithubIcon = ({ className = "h-3.5 w-3.5" }) => (
@@ -67,16 +49,12 @@ const LinkedinIcon = ({ className = "h-3.5 w-3.5" }) => (
 import { Doughnut } from "react-chartjs-2";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 import Modal from "../components/Modal";
-import {
-  saveStoredLeaves,
-  getStoredProjects,
-  saveStoredProjects,
-} from "../data/portalData";
+
 import { useToast } from "../components/ToastProvider";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
-const EmployeeContent = ({ activeSection, setActiveSection }) => {
+const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
   const { showToast } = useToast();
 
   const [isApplyLeaveOpen, setIsApplyLeaveOpen] = useState(false);
@@ -84,24 +62,81 @@ const EmployeeContent = ({ activeSection, setActiveSection }) => {
   const [editingLeaveId, setEditingLeaveId] = useState(null);
   const [isAddProjectOpen, setIsAddProjectOpen] = useState(false);
   const [isCheckedIn, setIsCheckedIn] = useState(true);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [projects, setProjects] = useState([]);
+  const [projectForm, setProjectForm] = useState({
+    title: "",
+    content: "",
+    githubLink: "",
+    linkedinLink: "",
+    liveLink: "",
+  });
 
   const [profile, setProfile] = useState({
-    firstName: "Akash",
-    lastName: "Bhowmik",
-    email: "akash.bhowmik@company.com",
-    phone: "+91 98765 43210",
-    role: "Employee",
-    empId: "EMP-2048",
-    department: "Software Engineering",
-    manager: "Rahul Nair",
-    joinDate: "15 March 2022",
-    dateOfBirth: "2004-08-14",
-    gender: "Male",
-    address: "42 Lotus Boulevard, Indiranagar, Bengaluru, KA",
-    salary: "₹14,50,000 / yr",
-    attendancePercentage: 92,
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    role: "",
+    designation: "",
+    empId: "",
+    department: "",
+    manager: "",
+    joinDate: "",
+    dateOfBirth: "",
+    gender: "",
+    address: "",
+    salary: "",
+    attendancePercentage: 0,
   });
+
+  useEffect(() => {
+    if (!userDetails) return;
+
+    const nameParts = (userDetails.name || "Employee").trim().split(/\s+/);
+    setProfile((currentProfile) => ({
+      ...currentProfile,
+      firstName: nameParts[0] || currentProfile.firstName,
+      lastName: nameParts.slice(1).join(" "),
+      email: userDetails.email || currentProfile.email,
+      role: userDetails.role || currentProfile.role,
+      phone: userDetails.employee?.phone || currentProfile.phone,
+      empId: userDetails.employee?.employeeId || currentProfile.empId,
+      department: userDetails.employee?.department || currentProfile.department,
+      designation:
+        userDetails.employee?.designation || currentProfile.designation,
+      manager: currentProfile.manager,
+      joinDate: userDetails.employee?.joiningDate || currentProfile.joinDate,
+      dateOfBirth:
+        userDetails.employee?.dateOfBirth || currentProfile.dateOfBirth,
+      gender: userDetails.employee?.gender || currentProfile.gender,
+      address: userDetails.employee?.address || currentProfile.address,
+      salary: userDetails.employee?.salary ?? currentProfile.salary,
+    }));
+  }, [userDetails]);
   const [leaveRequests, setLeaveRequests] = useState([]);
+  const [announcements, setAnnouncements] = useState([]);
+  const fetchAnnouncements = async () => {
+    try {
+      const response = await auth.get("/announcements");
+      if (response.data.success) {
+        setAnnouncements(response.data.announcements || []);
+      }
+    } catch (error) {
+      console.error("Error fetching announcements:", error);
+    }
+  };
+
+  const fetchProjects = async () => {
+    try {
+      const response = await employee.get("/projects");
+      if (response.data.success) {
+        setProjects(response.data.projects);
+      }
+    } catch (error) {
+      console.error("Error fetching projects:", error);
+    }
+  };
 
   const fetchLeaveHistory = async () => {
     try {
@@ -134,6 +169,8 @@ const EmployeeContent = ({ activeSection, setActiveSection }) => {
 
   useEffect(() => {
     fetchLeaveHistory();
+    fetchAnnouncements();
+    fetchProjects();
   }, []);
 
   const [newLeave, setNewLeave] = useState({
@@ -143,77 +180,46 @@ const EmployeeContent = ({ activeSection, setActiveSection }) => {
     reason: "",
     documentLink: "",
   });
-  const [projects, setProjects] = useState([]);
+
+  const [tasks, setTasks] = useState([]);
+
+  const fetchTasks = async () => {
+    try {
+      const response = await employee.get("/tasks");
+      if (response.data.success) {
+        setTasks(response.data.tasks);
+      }
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
+    }
+  };
+
   useEffect(() => {
-    setProjects(getStoredProjects());
+    fetchTasks();
   }, []);
 
-  const [projectForm, setProjectForm] = useState({
-    title: "",
-    content: "",
-    githubLink: "",
-    youtubeLink: "",
-    linkedinLink: "",
-  });
+  const handleTaskStatusChange = async (task) => {
+    const nextStatus =
+      task.status === "Completed" ? "In Progress" : "Completed";
+    try {
+      const response = await employee.put(`/tasks/${task._id}/status`, {
+        status: nextStatus,
+      });
+      if (response.data.success) {
+        setTasks((currentTasks) =>
+          currentTasks.map((currentTask) =>
+            currentTask._id === task._id
+              ? { ...currentTask, status: nextStatus }
+              : currentTask,
+          ),
+        );
+      }
+    } catch (error) {
+      showToast("Unable to update task status.", "error");
+    }
+  };
 
-  const [tasks, setTasks] = useState([
-    {
-      id: 1,
-      title: "Complete API integration",
-      project: "Core Platform",
-      priority: "High",
-      status: "In Progress",
-      deadline: "Today, 6:00 PM",
-    },
-    {
-      id: 2,
-      title: "Update documentation",
-      project: "Design System",
-      priority: "Normal",
-      status: "Pending",
-      deadline: "Tomorrow",
-    },
-    {
-      id: 3,
-      title: "Fix UI bugs",
-      project: "HR Engine",
-      priority: "Normal",
-      status: "Pending",
-      deadline: "5 Sep 2025",
-    },
-    {
-      id: 4,
-      title: "Team meeting preparation",
-      project: "Management",
-      priority: "Normal",
-      status: "Not Started",
-      deadline: "6 Sep 2025",
-    },
-  ]);
-
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      title: "Leave Application Update",
-      desc: "Check your leave status in the Leave section.",
-      time: "20 mins ago",
-      read: false,
-    },
-    {
-      id: 2,
-      title: "Payroll Released",
-      desc: "September payslip has been credited and is ready for download.",
-      time: "2 hours ago",
-      read: false,
-    },
-    {
-      id: 3,
-      title: "Company Townhall Notice",
-      desc: "All-hands meeting scheduled for this Friday at 4 PM.",
-      time: "1 day ago",
-      read: true,
-    },
-  ]);
+  const [notifications, setNotifications] = useState([]);
 
   const handleApplyLeave = async (e) => {
     e.preventDefault();
@@ -261,15 +267,24 @@ const EmployeeContent = ({ activeSection, setActiveSection }) => {
 
   const handleUpdateLeave = async (e) => {
     e.preventDefault();
-    if (!newLeave.type || !newLeave.fromDate || !newLeave.toDate || !newLeave.reason) {
+    if (
+      !newLeave.type ||
+      !newLeave.fromDate ||
+      !newLeave.toDate ||
+      !newLeave.reason
+    ) {
       return showToast("Please fill out all leave fields.", "error");
     }
 
     try {
-      const response = await employee.put(`/edit-leave/${editingLeaveId}`, newLeave);
-      if(!response.data.success) {
+      const response = await employee.put(
+        `/edit-leave/${editingLeaveId}`,
+        newLeave,
+      );
+      if (!response.data.success) {
         return showToast(
-          response.data.message || "Error editing leave request. Please try again.",
+          response.data.message ||
+            "Error editing leave request. Please try again.",
           "error",
         );
       }
@@ -280,43 +295,47 @@ const EmployeeContent = ({ activeSection, setActiveSection }) => {
     } catch (error) {
       console.error("Error editing leave request:", error);
       showToast(
-        error.response?.data?.message || "Error editing leave request. Please try again.",
+        error.response?.data?.message ||
+          "Error editing leave request. Please try again.",
         "error",
       );
     }
   };
 
-  const handleAddProject = (e) => {
+  const handleAddProject = async (e) => {
     e.preventDefault();
-    if (!projectForm.title || !projectForm.content)
-      return showToast(
-        "Please enter a project title and description content.",
+    try {
+      if (!projectForm.title || !projectForm.content) {
+        return showToast(
+          "Please enter a project title and description content.",
+          "error",
+        );
+      }
+      if(!projectForm.githubLink && !projectForm.linkedinLink && !projectForm.liveLink) {
+        return showToast(
+          "Please provide at least one link for the project.",
+          "error",
+        );
+      }
+      await employee.post("/create-project", projectForm);
+      await fetchProjects();
+      setIsAddProjectOpen(false);
+      setProjectForm({
+        title: "",
+        content: "",
+        githubLink: "",
+        linkedinLink: "",
+        liveLink: "",
+      });
+      showToast("Project added successfully!", "success");
+    } catch (error) {
+      console.error("Error adding project:", error);
+      showToast(
+        error.response?.data?.message ||
+          "Error adding project. Please try again.",
         "error",
       );
-    const newProject = {
-      id: Date.now(),
-      title: projectForm.title,
-      content: projectForm.content,
-      githubLink: projectForm.githubLink || "https://github.com",
-      youtubeLink: projectForm.youtubeLink || "https://youtube.com",
-      linkedinLink: projectForm.linkedinLink || "https://linkedin.com",
-      author: `${profile.firstName} ${profile.lastName}`,
-      progress: 60,
-      status: "In Progress",
-      createdAt: "Just now",
-    };
-    const updated = [newProject, ...projects];
-    setProjects(updated);
-    saveStoredProjects(updated);
-    setIsAddProjectOpen(false);
-    setProjectForm({
-      title: "",
-      content: "",
-      githubLink: "",
-      youtubeLink: "",
-      linkedinLink: "",
-    });
-    showToast("Project added successfully!", "success");
+    }
   };
 
   const statusBadge = (status) => {
@@ -355,6 +374,14 @@ const EmployeeContent = ({ activeSection, setActiveSection }) => {
 
   const renderDashboard = () => {
     const now = new Date();
+    const activeTasks = tasks.filter((task) => task.status !== "Completed");
+    const pendingLeaves = leaveRequests.filter(
+      (leaveRequest) => leaveRequest.status === "Pending",
+    );
+    const currentSalary =
+      typeof profile.salary === "number"
+        ? `₹${profile.salary.toLocaleString("en-IN")}`
+        : profile.salary || "Not available";
     const timeStr = now.toLocaleTimeString("en-IN", {
       hour: "2-digit",
       minute: "2-digit",
@@ -365,32 +392,6 @@ const EmployeeContent = ({ activeSection, setActiveSection }) => {
       month: "long",
       year: "numeric",
     });
-    const recentAnnouncements = [
-      {
-        icon: (
-          <Megaphone className="h-5 w-5 text-blue-500 dark:text-blue-400" />
-        ),
-        title: "Office Closure on Independence Day",
-        date: "14 Aug 2025",
-        iconBg: "bg-blue-50 dark:bg-blue-900/20",
-      },
-      {
-        icon: (
-          <Tent className="h-5 w-5 text-emerald-500 dark:text-emerald-400" />
-        ),
-        title: "Team Outing This Month",
-        date: "10 Aug 2025",
-        iconBg: "bg-emerald-50 dark:bg-emerald-900/20",
-      },
-      {
-        icon: (
-          <ClipboardList className="h-5 w-5 text-amber-500 dark:text-amber-400" />
-        ),
-        title: "New HR Policy Update",
-        date: "5 Aug 2025",
-        iconBg: "bg-amber-50 dark:bg-amber-900/20",
-      },
-    ];
     const displayLeaves = leaveRequests.slice(0, 3);
 
     return (
@@ -446,12 +447,14 @@ const EmployeeContent = ({ activeSection, setActiveSection }) => {
               <ChevronRight className="h-6 w-6 text-gray-300 dark:text-gray-600" />
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">
-              Leave Balance
+              Leave Requests
             </p>
             <p className="text-2xl font-bold text-gray-800 dark:text-gray-100 leading-tight">
-              12 Days
+              {pendingLeaves.length} Pending
             </p>
-            <p className="text-xs text-gray-400 mt-1">Available</p>
+            <p className="text-xs text-gray-400 mt-1">
+              {leaveRequests.length} submitted
+            </p>
           </div>
           <div className="rounded-xl bg-white/80 dark:bg-[#151d2e] p-5 border border-gray-100/80 dark:border-gray-800/50 shadow-soft flex flex-col justify-between">
             <div className="flex items-center justify-between mb-3">
@@ -464,9 +467,11 @@ const EmployeeContent = ({ activeSection, setActiveSection }) => {
               My Tasks
             </p>
             <p className="text-2xl font-bold text-gray-800 dark:text-gray-100 leading-tight">
-              3 Active
+              {activeTasks.length} Active
             </p>
-            <p className="text-xs text-gray-400 mt-1">1 Due Soon</p>
+            <p className="text-xs text-gray-400 mt-1">
+              {tasks.length - activeTasks.length} completed
+            </p>
           </div>
           <div className="rounded-xl bg-white/80 dark:bg-[#151d2e] p-5 border border-gray-100/80 dark:border-gray-800/50 shadow-soft flex flex-col justify-between">
             <div className="flex items-center justify-between mb-3">
@@ -479,9 +484,9 @@ const EmployeeContent = ({ activeSection, setActiveSection }) => {
               Next Payroll
             </p>
             <p className="text-2xl font-bold text-gray-800 dark:text-gray-100 leading-tight">
-              ₹ 58,940
+              {currentSalary}
             </p>
-            <p className="text-xs text-gray-400 mt-1">30 Sep 2025</p>
+            <p className="text-xs text-gray-400 mt-1">From employee record</p>
           </div>
         </div>
 
@@ -590,24 +595,30 @@ const EmployeeContent = ({ activeSection, setActiveSection }) => {
               </button>
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400 mb-1 font-medium">
-              April 2025
+              Current employee record
             </p>
             <p className="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-2">
-              ₹ 58,940
+              {currentSalary}
             </p>
             <div className="flex items-center gap-2 mb-6">
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-semibold px-2.5 py-0.5">
-                <Check className="h-3 w-3" /> Paid
+                <Check className="h-3 w-3" /> Salary
               </span>
               <p className="text-[10px] text-gray-400 dark:text-gray-500">
-                Paid on 30 Apr 2025
+                Loaded from employee record
               </p>
             </div>
             <div className="space-y-3.5 border-t border-gray-100 dark:border-gray-800/50 pt-5">
               {[
-                { label: "Basic Salary", val: "₹ 50,000" },
-                { label: "Allowances", val: "₹ 10,000" },
-                { label: "Deductions", val: "₹ 1,060" },
+                {
+                  label: "Designation",
+                  val: profile.designation || "Not available",
+                },
+                {
+                  label: "Department",
+                  val: profile.department || "Not available",
+                },
+                { label: "Employee ID", val: profile.empId || "Not available" },
               ].map((r) => (
                 <div
                   key={r.label}
@@ -652,7 +663,7 @@ const EmployeeContent = ({ activeSection, setActiveSection }) => {
                     "Earned Leave": <Plane className="h-4 w-4" />,
                   };
                   return (
-                    <div key={req.id} className="flex items-center gap-3">
+                    <div key={req._id || req.id} className="flex items-center gap-3">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
                         {leaveIcons[req.type] || (
                           <ClipboardList className="h-5 w-5" />
@@ -697,23 +708,28 @@ const EmployeeContent = ({ activeSection, setActiveSection }) => {
               </button>
             </div>
             <div className="space-y-4">
-              {recentAnnouncements.map((ann, i) => (
-                <div key={i} className="flex items-start gap-3">
-                  <div
-                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-lg ${ann.iconBg}`}
-                  >
-                    {ann.icon}
+              {announcements.slice(0, 3).map((announcement) => (
+                <div key={announcement._id} className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-500 dark:bg-blue-900/20 dark:text-blue-400">
+                    <Megaphone className="h-5 w-5" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-gray-800 dark:text-gray-300 leading-snug">
-                      {ann.title}
+                      {announcement.headline}
                     </p>
                     <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
-                      {ann.date}
+                      {new Date(
+                        announcement.createdAt || announcement.date,
+                      ).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
               ))}
+              {announcements.length === 0 && (
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  No announcements yet.
+                </p>
+              )}
             </div>
           </div>
 
@@ -803,6 +819,14 @@ const EmployeeContent = ({ activeSection, setActiveSection }) => {
                     • Joined {profile.joinDate}
                   </p>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setIsEditingProfile(true)}
+                  disabled={isEditingProfile}
+                  className="sm:ml-auto rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-xs font-semibold text-indigo-600 transition hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-indigo-900/40 dark:bg-indigo-900/20 dark:text-indigo-400 dark:hover:bg-indigo-900/30"
+                >
+                  Edit Profile
+                </button>
               </div>
 
               <form className="mt-6 space-y-5">
@@ -813,6 +837,7 @@ const EmployeeContent = ({ activeSection, setActiveSection }) => {
                     </label>
                     <input
                       type="text"
+                      disabled={!isEditingProfile}
                       value={profile.firstName}
                       onChange={(e) =>
                         setProfile({ ...profile, firstName: e.target.value })
@@ -826,6 +851,7 @@ const EmployeeContent = ({ activeSection, setActiveSection }) => {
                     </label>
                     <input
                       type="text"
+                      disabled={!isEditingProfile}
                       value={profile.lastName}
                       onChange={(e) =>
                         setProfile({ ...profile, lastName: e.target.value })
@@ -841,6 +867,7 @@ const EmployeeContent = ({ activeSection, setActiveSection }) => {
                     </label>
                     <input
                       type="text"
+                      disabled={!isEditingProfile}
                       value={profile.phone}
                       onChange={(e) =>
                         setProfile({ ...profile, phone: e.target.value })
@@ -854,6 +881,7 @@ const EmployeeContent = ({ activeSection, setActiveSection }) => {
                     </label>
                     <input
                       type="date"
+                      disabled={!isEditingProfile}
                       value={profile.dateOfBirth}
                       onChange={(e) =>
                         setProfile({ ...profile, dateOfBirth: e.target.value })
@@ -869,6 +897,7 @@ const EmployeeContent = ({ activeSection, setActiveSection }) => {
                     </label>
                     <input
                       type="text"
+                      disabled={!isEditingProfile}
                       value={profile.gender}
                       onChange={(e) =>
                         setProfile({ ...profile, gender: e.target.value })
@@ -883,7 +912,7 @@ const EmployeeContent = ({ activeSection, setActiveSection }) => {
                     <input
                       type="text"
                       disabled
-                      value={profile.role}
+                      value={profile.designation}
                       className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 p-2.5 text-xs text-gray-500 cursor-not-allowed"
                     />
                   </div>
@@ -894,6 +923,7 @@ const EmployeeContent = ({ activeSection, setActiveSection }) => {
                   </label>
                   <textarea
                     rows={2}
+                    disabled={!isEditingProfile}
                     value={profile.address}
                     onChange={(e) =>
                       setProfile({ ...profile, address: e.target.value })
@@ -904,10 +934,14 @@ const EmployeeContent = ({ activeSection, setActiveSection }) => {
                 <div className="pt-4 flex justify-end">
                   <button
                     type="button"
+                    disabled={!isEditingProfile}
                     onClick={() =>
-                      showToast("Profile updated successfully!", "success")
+                      (() => {
+                        showToast("Profile updated successfully!", "success");
+                        setIsEditingProfile(false);
+                      })()
                     }
-                    className="rounded-xl bg-indigo-600 px-6 py-2.5 text-xs font-semibold text-white shadow-soft hover:bg-indigo-700 transition"
+                    className="rounded-xl bg-indigo-600 px-6 py-2.5 text-xs font-semibold text-white shadow-soft transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Save Changes
                   </button>
@@ -1135,7 +1169,12 @@ const EmployeeContent = ({ activeSection, setActiveSection }) => {
                           {req.fromDate} - {req.toDate}
                         </td>
                         <td className="py-3.5 text-gray-500 dark:text-gray-400">
-                          {req.reason}
+                          <div>{req.reason}</div>
+                          {req.status === "Rejected" && req.rejectionReason && (
+                            <div className="mt-1 text-xs text-rose-600 dark:text-rose-400">
+                              Rejection reason: {req.rejectionReason}
+                            </div>
+                          )}
                         </td>
                         {req.documentLink ? (
                           <td className="py-3.5">
@@ -1163,24 +1202,34 @@ const EmployeeContent = ({ activeSection, setActiveSection }) => {
                           </span>
                         </td>
                         <td className="py-3.5 text-right">
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteLeave(req._id || req.id)}
-                            aria-label={`Delete ${req.type} leave request`}
-                            title="Delete leave request"
-                            className="inline-flex rounded-lg p-2 text-red-500 transition hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-900/20"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleEditLeave(req)}
-                            aria-label={`Edit ${req.type} leave request`}
-                            title="Edit leave request"
-                            className="inline-flex rounded-lg p-2 text-blue-500 transition hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-900/20"
-                          >
-                            <FilePenIcon className="h-4 w-4" />
-                          </button>
+                          {req.status === "Pending" ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleDeleteLeave(req._id || req.id)
+                                }
+                                aria-label={`Delete ${req.type} leave request`}
+                                title="Delete leave request"
+                                className="inline-flex rounded-lg p-2 text-red-500 transition hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-900/20"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleEditLeave(req)}
+                                aria-label={`Edit ${req.type} leave request`}
+                                title="Edit leave request"
+                                className="inline-flex rounded-lg p-2 text-blue-500 transition hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-900/20"
+                              >
+                                <FilePenIcon className="h-4 w-4" />
+                              </button>
+                            </>
+                          ) : (
+                            <span className="text-gray-400 dark:text-gray-500">
+                              -
+                            </span>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -1205,13 +1254,13 @@ const EmployeeContent = ({ activeSection, setActiveSection }) => {
             <div className="grid gap-4 md:grid-cols-2">
               {tasks.map((task) => (
                 <div
-                  key={task.id}
+                  key={task._id}
                   className="rounded-xl bg-white/80 dark:bg-[#151d2e] p-5 border border-gray-100/80 dark:border-gray-800/50 shadow-soft flex flex-col justify-between"
                 >
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-xs font-medium uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-                        {task.project}
+                        Assigned Task
                       </span>
                       <span className="rounded-full bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400 px-2 py-0.5 text-[10px] font-semibold">
                         {task.priority} Priority
@@ -1220,23 +1269,18 @@ const EmployeeContent = ({ activeSection, setActiveSection }) => {
                     <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100">
                       {task.title}
                     </h3>
+                    {task.description && (
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        {task.description}
+                      </p>
+                    )}
                   </div>
                   <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-800/50 flex items-center justify-between">
                     <span className="text-xs text-gray-500 dark:text-gray-400">
-                      Deadline: {task.deadline}
+                      Deadline: {task.deadline || "Not set"}
                     </span>
                     <button
-                      onClick={() => {
-                        const next =
-                          task.status === "Completed"
-                            ? "In Progress"
-                            : "Completed";
-                        setTasks(
-                          tasks.map((t) =>
-                            t.id === task.id ? { ...t, status: next } : t,
-                          ),
-                        );
-                      }}
+                      onClick={() => handleTaskStatusChange(task)}
                       className={`rounded-xl px-3 py-1.5 text-xs font-semibold shadow-soft transition ${task.status === "Completed" ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400" : "bg-indigo-600 hover:bg-indigo-700 text-white"}`}
                     >
                       {task.status === "Completed"
@@ -1399,30 +1443,137 @@ const EmployeeContent = ({ activeSection, setActiveSection }) => {
             <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">
               Announcements
             </h2>
-            <div className="p-5 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
-              <span className="text-[10px] font-semibold text-amber-500 uppercase">
-                Notice
-              </span>
-              <h4 className="text-base font-semibold mt-1 text-gray-800 dark:text-gray-100">
-                Quarterly Townhall & Growth Vision
-              </h4>
-              <p className="text-xs text-gray-600 dark:text-gray-300 mt-2 font-medium">
-                All employees are invited to the Q4 Townhall meeting this Friday
-                at 4:00 PM.
-              </p>
+            {announcements.length === 0 ? (
+              <div className="p-5 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft text-sm text-gray-500 dark:text-gray-400">
+                No announcements yet.
+              </div>
+            ) : (
+              announcements.map((announcement) => (
+                <div
+                  key={announcement._id}
+                  className="p-5 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft"
+                >
+                  <span className="text-[10px] font-semibold text-indigo-500 uppercase">
+                    Notice
+                  </span>
+                  <h4 className="text-base font-semibold mt-1 text-gray-800 dark:text-gray-100">
+                    {announcement.headline}
+                  </h4>
+                  <p className="text-xs text-gray-600 dark:text-gray-300 mt-2 font-medium">
+                    {announcement.body}
+                  </p>
+                </div>
+              ))
+            )}
+          </div>
+        );
+
+      case "Projects":
+        return (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">
+                  My Projects
+                </h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Showcase your work and uploaded projects
+                </p>
+              </div>
+              <button
+                onClick={() => setIsAddProjectOpen(true)}
+                className="flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-semibold text-white shadow-soft hover:bg-indigo-700 transition"
+              >
+                <Plus className="h-4 w-4" /> Upload Project
+              </button>
             </div>
-            <div className="p-5 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
-              <span className="text-[10px] font-semibold text-indigo-500 uppercase">
-                Info
-              </span>
-              <h4 className="text-base font-semibold mt-1 text-gray-800 dark:text-gray-100">
-                Office Closure on Independence Day
-              </h4>
-              <p className="text-xs text-gray-600 dark:text-gray-300 mt-2 font-medium">
-                The office will remain closed on 15th August in observance of
-                Independence Day.
-              </p>
-            </div>
+
+            {projects.length === 0 ? (
+              <div className="p-8 text-center rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  No projects uploaded yet. Click on "Upload Project" to add
+                  one!
+                </p>
+              </div>
+            ) : (
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {projects.map((project) => (
+                  <div
+                    key={project._id}
+                    className="flex flex-col rounded-xl bg-white/80 dark:bg-[#151d2e] p-5 border border-gray-100/80 dark:border-gray-800/50 shadow-soft"
+                  >
+                    <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">
+                      {project.title}
+                    </h3>
+                    <p className="mt-2 text-xs text-gray-600 dark:text-gray-400 line-clamp-3">
+                      {project.content}
+                    </p>
+                    <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800/50 flex flex-wrap gap-3">
+                      {project.githubLink && (
+                        <a
+                          href={project.githubLink}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex items-center gap-1 text-[11px] font-semibold text-gray-600 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400"
+                        >
+                          <GithubIcon className="h-3.5 w-3.5" />
+                          GitHub
+                        </a>
+                      )}
+                      {project.linkedinLink && (
+                        <a
+                          href={project.linkedinLink}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                        >
+                          <LinkedinIcon className="h-3.5 w-3.5" />
+                          LinkedIn
+                        </a>
+                      )}
+                      {project.liveLink && (
+                        <a
+                          href={project.liveLink}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
+                        >
+                          <svg
+                            className="h-3.5 w-3.5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                            />
+                          </svg>
+                          Live Link
+                        </a>
+                      )}
+                    </div>
+                    {project.score && (
+                      <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800/50 bg-gray-50/50 dark:bg-gray-800/20 p-3 rounded-lg">
+                        <p className="text-xs font-semibold text-gray-800 dark:text-gray-100">
+                          Review Score:{" "}
+                          <span className="text-indigo-600 dark:text-indigo-400">
+                            {project.score}/5
+                          </span>
+                        </p>
+                        {project.feedback && (
+                          <p className="text-[11px] text-gray-600 dark:text-gray-400 mt-1.5 italic">
+                            "{project.feedback}"
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         );
 
@@ -1703,19 +1854,31 @@ const EmployeeContent = ({ activeSection, setActiveSection }) => {
             </div>
             <div>
               <label className="flex items-center gap-1.5 font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
-                <YoutubeIcon className="h-3.5 w-3.5 text-rose-500 dark:text-rose-400" />{" "}
-                YouTube Demo Video Link
+                <svg
+                  className="h-3.5 w-3.5 text-emerald-500 dark:text-emerald-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                  />
+                </svg>{" "}
+                Live Link (Optional)
               </label>
               <input
                 type="url"
-                value={projectForm.youtubeLink}
+                value={projectForm.liveLink}
                 onChange={(e) =>
                   setProjectForm({
                     ...projectForm,
-                    youtubeLink: e.target.value,
+                    liveLink: e.target.value,
                   })
                 }
-                placeholder="https://youtube.com/watch?v=..."
+                placeholder="https://example.com"
                 className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
               />
             </div>

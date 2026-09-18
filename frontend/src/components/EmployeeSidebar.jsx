@@ -1,7 +1,7 @@
 import React from 'react';
 import Sidebar from './Sidebar';
 
-const employeeSidebarItems = ['Dashboard', 'My Profile', 'Attendance', 'Leave', 'Tasks', 'Payroll', 'Documents', 'Notifications', 'Announcements', 'Logout'];
+const employeeSidebarItems = ['Dashboard', 'My Profile', 'Projects', 'Attendance', 'Leave', 'Tasks', 'Payroll', 'Documents', 'Notifications', 'Announcements', 'Logout'];
 
 const EmployeeSidebar = (props) => {
   return (

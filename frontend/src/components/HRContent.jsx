@@ -30,13 +30,9 @@ import MetricStatCard from '../components/MetricStatCard'
 import TaskStatisticsCard from '../components/TaskStatisticsCard'
 import PerformanceCard from '../components/PerformanceCard'
 import Modal from '../components/Modal'
-import {
-  getStoredEmployees,
-  saveStoredEmployees,
-  getStoredLeaves,
-  saveStoredLeaves
-} from '../data/portalData'
+
 import { useToast } from '../components/ToastProvider';
+import { auth, admin } from '../apis/axios';
 
 ChartJS.register(
   CategoryScale,
@@ -49,7 +45,7 @@ ChartJS.register(
   Filler
 )
 
-const HRContent = ({ activeSection }) => {
+const HRContent = ({ activeSection, setActiveSection }) => {
   const { showToast } = useToast();
 
   // Modals state
@@ -58,6 +54,21 @@ const HRContent = ({ activeSection }) => {
   const [selectedEmployeeDetails, setSelectedEmployeeDetails] = useState(null)
   const [isAssignTaskOpen, setIsAssignTaskOpen] = useState(false)
   const [isNewAnnouncementOpen, setIsNewAnnouncementOpen] = useState(false)
+  const [announcements, setAnnouncements] = useState([])
+  const fetchAnnouncements = async () => {
+    try {
+      const response = await auth.get('/announcements')
+      if (response.data.success) {
+        setAnnouncements(response.data.announcements || [])
+      }
+    } catch (error) {
+      console.error('Error fetching announcements:', error)
+    }
+  }
+
+  useEffect(() => {
+    fetchAnnouncements()
+  }, [])
 
   // Search & Filter
   const [employeeSearch, setEmployeeSearch] = useState('')
@@ -65,14 +76,72 @@ const HRContent = ({ activeSection }) => {
   // Persistent Employees State
   const [employees, setEmployees] = useState([])
   useEffect(() => {
-    setEmployees(getStoredEmployees())
+    fetchEmployees()
   }, [])
 
   // Persistent Leaves State
   const [leaveRequests, setLeaveRequests] = useState([])
   useEffect(() => {
-    setLeaveRequests(getStoredLeaves())
+    fetchLeaveRequests()
   }, [])
+
+  const [projects, setProjects] = useState([])
+  const [isReviewProjectOpen, setIsReviewProjectOpen] = useState(false)
+  const [reviewingProject, setReviewingProject] = useState(null)
+  const [projectReviewForm, setProjectReviewForm] = useState({ score: "", feedback: "" })
+
+    const fetchLeaveRequests = async () => {
+    try {
+      const response = await admin.get('/leave-requests');
+      if (response.data.success) {
+        setLeaveRequests(response.data.leaveRequests);
+      }
+    } catch (error) {
+      console.error('Error fetching leave requests:', error);
+    }
+  };
+
+  const fetchEmployees = async () => {
+    try {
+      const response = await admin.get('/employees');
+      if (response.data.success) {
+        setEmployees(
+          response.data.employees.map((employee) => ({
+            ...employee,
+            name: employee.userId?.name || 'Unnamed employee',
+            email: employee.userId?.email || 'No email',
+            role: employee.userId?.role || 'employee',
+            status: employee.userId?.isActive === false ? 'Inactive' : 'Active',
+          }))
+        );
+      }
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+    }
+  };
+
+  const fetchDepartments = async () => {
+    try {
+      const response = await admin.get('/departments');
+      if (response.data.success) {
+        setDepartments(response.data.departments);
+      }
+    } catch (error) {
+      console.error('Error fetching departments:', error);
+    }
+  };
+  const fetchProjects = async () => {
+    try {
+      const response = await admin.get('/projects')
+      if (response.data.success) {
+        setProjects(response.data.projects)
+      }
+    } catch (error) {
+      console.error('Error fetching projects:', error)
+    }
+  }
+
+  useEffect(() => { fetchProjects(); fetchEmployees(); fetchLeaveRequests(); fetchDepartments(); }, [])
 
   // Add User Form State
   const [userForm, setUserForm] = useState({
@@ -97,27 +166,13 @@ const HRContent = ({ activeSection }) => {
   })
 
   // Job Applications
-  const jobApplications = [
-    { name: 'Rojina Shahi', email: 'shahirji12@gmail.com', position: 'Graphics Designer', badgeColor: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400' },
-    { name: 'Amrit Acharya', email: 'amritacha0@gmail.com', position: 'Mobile Engineer', badgeColor: 'bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400' },
-    { name: 'Abhinav Aryal', email: 'abhiv.aryal@hotmail.com', position: 'Frontend Developer', badgeColor: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' },
-  ]
+  const [jobApplications, setJobApplications] = useState([])
 
   // Shortlisted Candidates
-  const shortlisted = [
-    { name: 'Francis Holzworth', id: 'APPID#00222' },
-    { name: 'Kaylyn Yokel', id: 'APPID#00223' },
-    { name: 'Kimberly Muro', id: 'APPID#00224' },
-  ]
+  const [shortlisted, setShortlisted] = useState([])
 
   // Departments list
-  const departments = [
-    { name: 'Software Engineering', head: 'Rahul Nair', count: 24, budget: '₹1.2 Cr', openPositions: 4 },
-    { name: 'Product Design', head: 'Darrel Steward', count: 8, budget: '₹45 L', openPositions: 2 },
-    { name: 'Marketing & Sales', head: 'Jhon Willamson', count: 12, budget: '₹60 L', openPositions: 3 },
-    { name: 'Human Resources', head: 'Sarah Jenkins', count: 5, budget: '₹30 L', openPositions: 1 },
-    { name: 'Business Development', head: 'Jaxon Dean', count: 6, budget: '₹35 L', openPositions: 2 },
-  ]
+  const [departments, setDepartments] = useState([])
 
   // Exact Sidebar items required by user for HR:
   const hrSidebarItems = [
@@ -134,84 +189,124 @@ const HRContent = ({ activeSection }) => {
     'Logout'
   ]
 
-  // Grant Leave Handler
-  const handleGrantLeave = (id) => {
-    const updated = leaveRequests.map(l => l.id === id ? { ...l, status: 'Granted' } : l)
-    setLeaveRequests(updated)
-    saveStoredLeaves(updated)
-    showToast('Leave request has been Granted!', 'success')
-  }
-
-  // Reject Leave Handler
-  const handleRejectLeave = (id) => {
-    const updated = leaveRequests.map(l => l.id === id ? { ...l, status: 'Rejected' } : l)
-    setLeaveRequests(updated)
-    saveStoredLeaves(updated)
-    showToast('Leave request has been Rejected.', 'error')
-  }
-
-  // Handle Add User
-  const handleAddUser = (e) => {
-    e.preventDefault()
+  const handleAddUser = async (e) => {
+    e.preventDefault();
     if (!userForm.name || !userForm.email) {
-      showToast('Please fill out the name and email address.', 'error')
-      return
+      showToast('Please fill out the name and email address.', 'error');
+      return;
     }
+    try {
+      const displayRole = userForm.role === 'Employee' ? 'Employee' : 'hr';
+      const payload = { ...userForm, role: displayRole };
+      await admin.post('/create-user', payload);
 
-    setEmployeeForm(prev => ({
-      ...prev,
-      name: userForm.name,
-      email: userForm.email,
-      designation: userForm.role === 'Employee' ? 'Associate Engineer' : userForm.role
-    }))
+      setEmployeeForm((prev) => ({
+        ...prev,
+        name: userForm.name,
+        email: userForm.email,
+        designation: displayRole === 'Employee' ? 'Software Engineer' : displayRole,
+      }));
 
-    setIsAddUserOpen(false)
-    setIsAddEmployeeOpen(true)
-    showToast(`User account for ${userForm.name} created! Please now enter their employee profile details.`, 'success')
-  }
-
-  // Handle Add Employee Details
-  const handleAddEmployee = (e) => {
-    e.preventDefault()
-    if (!employeeForm.name || !employeeForm.email || !employeeForm.phone) {
-      showToast('Please fill out all required employee details.', 'error')
-      return
+      setIsAddUserOpen(false);
+      setIsAddEmployeeOpen(true);
+      showToast('User created! Please now enter their employee profile details.', 'success');
+    } catch (error) {
+      console.error('Error adding user:', error);
+      showToast('Error creating user.', 'error');
     }
+  };
 
-    const newEmp = {
-      id: Date.now(),
-      name: employeeForm.name,
-      email: employeeForm.email,
-      phone: employeeForm.phone,
-      dateOfBirth: employeeForm.dateOfBirth || '1998-05-15',
-      gender: employeeForm.gender || 'Male',
-      address: employeeForm.address || 'Bengaluru, Karnataka',
-      department: employeeForm.department || 'Software Engineering',
-      designation: employeeForm.designation || 'Software Engineer',
-      joiningDate: employeeForm.joiningDate || new Date().toISOString().split('T')[0],
-      salary: employeeForm.salary || '₹10,00,000 / yr',
-      status: 'Active',
-      attendancePercentage: 96.0
+  const handleAddEmployee = async (e) => {
+    e.preventDefault();
+    if (!employeeForm.email || !employeeForm.phone) {
+      showToast('Please fill out all required employee details.', 'error');
+      return;
     }
+    try {
+      const response = await admin.post('/create-employee', employeeForm);
+      const selectedDepartment = departments.find(
+        (department) => department.name === employeeForm.department,
+      );
+      if (selectedDepartment && response.data.employee?._id) {
+        await admin.post('/assign-department', {
+          employeeId: response.data.employee._id,
+          departmentId: selectedDepartment._id,
+        });
+      }
+      
+      await fetchEmployees();
+      if(typeof fetchDepartments === 'function') await fetchDepartments();
+      
+      setIsAddEmployeeOpen(false);
+      setEmployeeForm({
+        name: '',
+        email: '',
+        phone: '',
+        dateOfBirth: '',
+        gender: 'Male',
+        address: '',
+        department: 'Software Engineering',
+        designation: '',
+        joiningDate: '',
+        salary: ''
+      });
+      showToast('Employee profile saved successfully with full details!', 'success');
+    } catch (error) {
+      console.error('Error adding employee details:', error);
+      showToast('Error creating employee', 'error');
+    }
+  };
 
-    const updated = [newEmp, ...employees]
-    setEmployees(updated)
-    saveStoredEmployees(updated)
-    setIsAddEmployeeOpen(false)
-    setEmployeeForm({
-      name: '',
-      email: '',
-      phone: '',
-      dateOfBirth: '',
-      gender: 'Male',
-      address: '',
-      department: 'Software Engineering',
-      designation: '',
-      joiningDate: '',
-      salary: ''
-    })
-    showToast('Employee profile saved successfully with full details!', 'success')
-  }
+  const handleGrantLeave = async (leaveId) => {
+    try {
+      const response = await admin.put(`/leave-requests/accept/${leaveId}`);
+      if (response.data.success) {
+        await fetchLeaveRequests();
+        showToast('Leave request has been Granted!', 'success');
+      }
+    } catch (error) {
+      console.error('Error granting leave:', error);
+      showToast('Error granting leave', 'error');
+    }
+  };
+
+  const handleRejectLeave = async (leaveId) => {
+    try {
+      const response = await admin.put(`/leave-requests/reject/${leaveId}`);
+      if (response.data.success) {
+        await fetchLeaveRequests();
+        showToast('Leave request has been Rejected.', 'error');
+      }
+    } catch (error) {
+      console.error('Error rejecting leave:', error);
+      showToast('Error rejecting leave', 'error');
+    }
+  };
+  const handleProjectReview = async (e) => {
+    e.preventDefault();
+    if (!projectReviewForm.score) {
+      return showToast("Please provide a score.", "error");
+    }
+    try {
+      const response = await admin.put(`/projects/${reviewingProject._id}/review`, {
+        score: projectReviewForm.score,
+        feedback: projectReviewForm.feedback
+      });
+      if (response.data.success) {
+        await fetchProjects();
+        setIsReviewProjectOpen(false);
+        setReviewingProject(null);
+        setProjectReviewForm({ score: "", feedback: "" });
+        showToast("Project reviewed successfully!", "success");
+      }
+    } catch (error) {
+      console.error("Error reviewing project:", error);
+      showToast(
+        error.response?.data?.message || "Error reviewing project. Please try again.",
+        "error"
+      );
+    }
+  };
 
   const renderContent = () => {
     switch (activeSection) {
@@ -288,7 +383,7 @@ const HRContent = ({ activeSection }) => {
                     </thead>
                     <tbody className="divide-y divide-gray-100/80 dark:divide-gray-800/50">
                       {employees.slice(0, 5).map((emp) => (
-                        <tr key={emp.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition">
+                        <tr key={emp._id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition">
                           <td className="py-3.5">
                             <div className="flex items-center gap-3">
                               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-semibold text-xs">
@@ -381,6 +476,30 @@ const HRContent = ({ activeSection }) => {
                     ))}
                   </div>
                 </div>
+
+                <div className="rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100">
+                      Announcements
+                    </h3>
+                    <button onClick={() => setActiveSection('Announcements')} className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
+                      View All
+                    </button>
+                  </div>
+                  <div className="space-y-3">
+                    {announcements.slice(0, 3).map((announcement) => (
+                      <div key={announcement._id}>
+                        <p className="text-xs font-semibold text-gray-800 dark:text-gray-100">
+                          {announcement.headline}
+                        </p>
+                        <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+                          {announcement.body}
+                        </p>
+                      </div>
+                    ))}
+                    {announcements.length === 0 && <p className="text-xs text-gray-500 dark:text-gray-400">No announcements yet.</p>}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -447,7 +566,7 @@ const HRContent = ({ activeSection }) => {
                   {employees
                     .filter(e => e.name.toLowerCase().includes(employeeSearch.toLowerCase()) || e.department.toLowerCase().includes(employeeSearch.toLowerCase()))
                     .map((emp) => (
-                      <tr key={emp.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition">
+                      <tr key={emp._id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition">
                         <td className="py-3.5">
                           <div className="flex items-center gap-3">
                             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-semibold text-xs">
@@ -506,7 +625,7 @@ const HRContent = ({ activeSection }) => {
               <div className="space-y-4">
                 {leaveRequests.map((req) => (
                   <div
-                    key={req.id}
+                    key={req._id || req.id}
                     className="flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-xl border border-gray-100/80 dark:border-gray-800/50 p-4 bg-gray-50/50 dark:bg-gray-900/40"
                   >
                     <div>
@@ -533,14 +652,14 @@ const HRContent = ({ activeSection }) => {
 
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => handleRejectLeave(req.id)}
+                        onClick={() => handleRejectLeave(req._id || req.id)}
                         className="flex items-center gap-1.5 rounded-xl border border-rose-200 dark:border-rose-900 bg-rose-50 hover:bg-rose-100 dark:bg-rose-900/20 px-4 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 transition dark:hover:bg-rose-900/30"
                       >
                         <XCircle className="h-4 w-4" />
                         Reject
                       </button>
                       <button
-                        onClick={() => handleGrantLeave(req.id)}
+                        onClick={() => handleGrantLeave(req._id || req.id)}
                         className="flex items-center gap-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-900/20 px-4 py-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400 shadow-sm transition dark:hover:bg-emerald-900/30"
                       >
                         <CheckCircle2 className="h-4 w-4" />
@@ -656,11 +775,22 @@ const HRContent = ({ activeSection }) => {
               </h2>
               <button onClick={() => setIsNewAnnouncementOpen(true)} className="rounded-xl bg-indigo-600 hover:bg-indigo-700 px-4 py-2 text-xs font-semibold text-white">New Notice</button>
             </div>
-            <div className="p-5 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
-              <h4 className="font-semibold text-gray-800 dark:text-gray-100">
-                Townhall & Bonus Distribution
-              </h4>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-1">All department leads are requested to finalize quarterly appraisals.</p>
+            <div className="space-y-4">
+              {announcements.length === 0 ? (
+                <div className="p-5 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft text-sm text-gray-500 dark:text-gray-400">
+                  No announcements yet.
+                </div>
+              ) : announcements.map((announcement) => (
+                <div key={announcement._id} className="p-5 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
+                  <span className="text-[10px] font-semibold text-indigo-500 uppercase">Notice</span>
+                  <h4 className="font-semibold text-gray-800 dark:text-gray-100 mt-1">
+                    {announcement.headline}
+                  </h4>
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-1">
+                    {announcement.body}
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
         )
@@ -680,6 +810,87 @@ const HRContent = ({ activeSection }) => {
                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-0.5">Review pending employee requests in Leave Management.</p>
               </div>
             </div>
+          </div>
+        )
+
+      case 'Projects':
+        return (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">
+                Project Reviews
+              </h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Review and score employee projects
+              </p>
+            </div>
+            {projects.length === 0 ? (
+              <div className="p-8 text-center rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  No projects available to review.
+                </p>
+              </div>
+            ) : (
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {projects.map((project) => (
+                  <div
+                    key={project._id}
+                    className="flex flex-col rounded-xl bg-white/80 dark:bg-[#151d2e] p-5 border border-gray-100/80 dark:border-gray-800/50 shadow-soft"
+                  >
+                    <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">
+                      {project.title}
+                    </h3>
+                    <p className="mt-1 text-[11px] font-semibold text-indigo-500 uppercase">
+                      By {project.employeeId?.userId?.name || "Unknown Employee"}
+                    </p>
+                    <p className="mt-2 text-xs text-gray-600 dark:text-gray-400 line-clamp-3">
+                      {project.content}
+                    </p>
+                    <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800/50 flex flex-wrap gap-3">
+                      {project.githubLink && (
+                        <a
+                          href={project.githubLink}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[11px] font-semibold text-indigo-600 hover:underline"
+                        >
+                          GitHub
+                        </a>
+                      )}
+                      {project.liveLink && (
+                        <a
+                          href={project.liveLink}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[11px] font-semibold text-emerald-600 hover:underline"
+                        >
+                          Live Link
+                        </a>
+                      )}
+                    </div>
+                    <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800/50">
+                      {project.score ? (
+                        <div>
+                          <p className="text-xs font-semibold text-gray-800 dark:text-gray-100">Score: {project.score}/5</p>
+                          <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">"{project.feedback}"</p>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setReviewingProject(project);
+                            setProjectReviewForm({ score: "", feedback: "" });
+                            setIsReviewProjectOpen(true);
+                          }}
+                          className="w-full rounded-lg bg-indigo-50 dark:bg-indigo-900/20 py-2 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition"
+                        >
+                          Review Project
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )
 
@@ -1002,7 +1213,7 @@ const HRContent = ({ activeSection }) => {
           <div>
             <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1">Assignee</label>
             <select className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 px-3 text-sm text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500 cursor-pointer">
-              {employees.map(e => <option key={e.id} className="bg-white dark:bg-[#0c1222] text-gray-800 dark:text-gray-100">{e.name} ({e.department})</option>)}
+              {employees.map(e => <option key={e._id} className="bg-white dark:bg-[#0c1222] text-gray-800 dark:text-gray-100">{e.name} ({e.department})</option>)}
             </select>
           </div>
         </div>
@@ -1030,6 +1241,61 @@ const HRContent = ({ activeSection }) => {
             <textarea rows={4} placeholder="Content..." className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 px-3 text-sm text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500" />
           </div>
         </div>
+      </Modal>
+      <Modal
+        isOpen={isReviewProjectOpen}
+        onClose={() => setIsReviewProjectOpen(false)}
+        title="Review Project"
+        footer={
+          <>
+            <button
+              onClick={() => setIsReviewProjectOpen(false)}
+              className="rounded-xl px-4 py-2 text-xs font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleProjectReview}
+              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 px-5 py-2 text-xs font-medium text-white transition"
+            >
+              Save Review
+            </button>
+          </>
+        }
+      >
+        <form onSubmit={handleProjectReview} className="space-y-4 text-xs">
+          <div>
+            <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Score (out of 5)
+            </label>
+            <input
+              type="number"
+              min="0"
+              max="5"
+              required
+              value={projectReviewForm.score}
+              onChange={(e) =>
+                setProjectReviewForm({ ...projectReviewForm, score: e.target.value })
+              }
+              placeholder="e.g. 8"
+              className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-gray-800 dark:text-gray-100 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10"
+            />
+          </div>
+          <div>
+            <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Feedback / Comments
+            </label>
+            <textarea
+              rows={3}
+              value={projectReviewForm.feedback}
+              onChange={(e) =>
+                setProjectReviewForm({ ...projectReviewForm, feedback: e.target.value })
+              }
+              placeholder="Provide comments on the project..."
+              className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-gray-800 dark:text-gray-100 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10"
+            />
+          </div>
+        </form>
       </Modal>
     </>
   )

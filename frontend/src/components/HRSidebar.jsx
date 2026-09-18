@@ -9,6 +9,7 @@ const hrSidebarItems = [
   'Leave Management',
   'Tasks',
   'Performance',
+  'Projects',
   'Documents',
   'Announcements',
   'Notifications',

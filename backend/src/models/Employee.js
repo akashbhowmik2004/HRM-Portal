@@ -40,6 +40,11 @@ const employeeSchema = new mongoose.Schema(
       trim: true,
     },
 
+    department: {
+      type: String,
+      trim: true,
+    },
+
     joiningDate: {
       type: String,
       required: true,

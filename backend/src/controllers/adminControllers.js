@@ -1,14 +1,40 @@
 import User from "../models/User.js";
 import Employee from "../models/Employee.js";
 import Leave from "../models/Leave.js";
-import {generateEmployeeId} from "../utils/generateEmployeeId.js";
+import Task from "../models/Task.js";
+import Announcement from "../models/Announcement.js";
+import Department from "../models/Depertment.js";
+import Project from "../models/Project.js";
+import { generateEmployeeId } from "../utils/generateEmployeeId.js";
 
 export const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find();
-    res.status(200).json(users);
+    const users = await User.find({ role: { $in: ["hr", "employee"] } }).select(
+      "-password",
+    );
+    res.status(200).json({
+      success: true,
+      message: "Users retrieved successfully",
+      users,
+    });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, message: "Something went wrong" });
+  }
+};
+
+export const getAllEmployees = async (req, res) => {
+  try {
+    const employees = await Employee.find().populate(
+      "userId",
+      "name email role isActive",
+    );
+    res.status(200).json({
+      success: true,
+      message: "Employees retrieved successfully",
+      employees,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Something went wrong" });
   }
 };
 
@@ -55,6 +81,7 @@ export const createEmployee = async (req, res) => {
       dateOfBirth,
       gender,
       address,
+      department,
       designation,
       joiningDate,
       salary,
@@ -88,11 +115,12 @@ export const createEmployee = async (req, res) => {
       });
     }
     const employee = await Employee.create({
-      userId ,
+      userId,
       phone: phone || null,
       dateOfBirth: dateOfBirth || null,
       gender: gender || null,
       address: address || null,
+      department: department || null,
       designation,
       joiningDate,
       salary: salary || null,
@@ -111,9 +139,73 @@ export const createEmployee = async (req, res) => {
   }
 };
 
+export const updateEmployee = async (req, res) => {
+  try {
+    const employee = await Employee.findById(req.params.employeeId);
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        message: "Employee not found",
+      });
+    }
+
+    const previousDepartmentName = employee.department;
+    const nextDepartmentName = req.body.department;
+
+    const fields = [
+      "phone",
+      "dateOfBirth",
+      "gender",
+      "address",
+      "department",
+      "designation",
+      "joiningDate",
+      "salary",
+      "profileImage",
+    ];
+    fields.forEach((field) => {
+      if (req.body[field] !== undefined) employee[field] = req.body[field];
+    });
+
+    await employee.save();
+
+    if (nextDepartmentName !== undefined && nextDepartmentName !== previousDepartmentName) {
+      const user = await User.findById(employee.userId);
+      if (user) {
+        if (previousDepartmentName) {
+          const previousDepartment = await Department.findOne({ name: previousDepartmentName });
+          if (previousDepartment) {
+            previousDepartment.employees.pull(user._id);
+            await previousDepartment.save();
+          }
+        }
+        if (nextDepartmentName) {
+          const nextDepartment = await Department.findOne({ name: nextDepartmentName });
+          if (nextDepartment) {
+            nextDepartment.employees.addToSet(user._id);
+            await nextDepartment.save();
+          }
+        }
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Employee updated successfully",
+      employee,
+    });
+  } catch (error) {
+    console.error("Error updating employee:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 export const getLeaveRequests = async (req, res) => {
   try {
-    const leaveRequests = await Leave.find({status: "Pending"}).populate("employeeId", "name email");
+    const leaveRequests = await Leave.find({ status: "Pending" }).populate(
+      "employeeId",
+      "name email",
+    );
     res.status(200).json({
       success: true,
       message: "Leave requests retrieved successfully",
@@ -127,7 +219,7 @@ export const getLeaveRequests = async (req, res) => {
 
 export const acceptLeaveRequest = async (req, res) => {
   try {
-    const leaveId = req.params.leaveId;
+    const { leaveId } = req.params;
     const leaveRequest = await Leave.findById(leaveId);
     if (!leaveRequest) {
       return res.status(404).json({
@@ -135,7 +227,7 @@ export const acceptLeaveRequest = async (req, res) => {
         message: "Leave request not found",
       });
     }
-    leaveRequest.status = "approved";
+    leaveRequest.status = "Approved";
     await leaveRequest.save();
     res.status(200).json({
       success: true,
@@ -150,7 +242,15 @@ export const acceptLeaveRequest = async (req, res) => {
 
 export const rejectLeaveRequest = async (req, res) => {
   try {
-    const leaveId = req.params.leaveId;
+    const { leaveId } = req.params;
+    const rejectionReason = req.body.rejectionReason?.trim();
+    if (!rejectionReason) {
+      return res.status(400).json({
+        success: false,
+        message: "A rejection reason is required",
+      });
+    }
+
     const leaveRequest = await Leave.findById(leaveId);
     if (!leaveRequest) {
       return res.status(404).json({
@@ -159,6 +259,7 @@ export const rejectLeaveRequest = async (req, res) => {
       });
     }
     leaveRequest.status = "Rejected";
+    leaveRequest.rejectionReason = rejectionReason;
     await leaveRequest.save();
     res.status(200).json({
       success: true,
@@ -168,5 +269,226 @@ export const rejectLeaveRequest = async (req, res) => {
   } catch (error) {
     console.error("Error rejecting leave request:", error);
     res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const assignTask = async (req, res) => {
+  try {
+    const { title, description, priority, deadline, assignee } = req.body;
+    if (!title || !assignee) {
+      return res.status(400).json({
+        success: false,
+        message: "Task title and employee are required",
+      });
+    }
+
+    const employee = await User.findOne({ _id: assignee, role: "employee" });
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        message: "Employee not found",
+      });
+    }
+
+    const task = await Task.create({
+      title,
+      description,
+      priority,
+      deadline,
+      assignee,
+      assignedBy: req.user.id,
+    });
+
+    const populatedTask = await task.populate("assignee", "name email");
+    res.status(201).json({ success: true, task: populatedTask });
+  } catch (error) {
+    console.error("Error assigning task:", error);
+    res.status(500).json({ success: false, message: "Something went wrong" });
+  }
+};
+
+export const getTasks = async (req, res) => {
+  try {
+    const tasks = await Task.find()
+      .populate("assignee", "name email")
+      .populate("assignedBy", "name")
+      .sort({ createdAt: -1 });
+    res.status(200).json({ success: true, tasks });
+  } catch (error) {
+    console.error("Error fetching tasks:", error);
+    res.status(500).json({ success: false, message: "Something went wrong" });
+  }
+};
+
+export const toggleUserStatus = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await User.findById(userId);
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+    user.status = user.status === "Active" ? "Inactive" : "Active";
+    await user.save();
+    res.status(200).json({
+      success: true,
+      message: "User status updated successfully",
+      user,
+    });
+  } catch (error) {
+    console.error("Error toggling user status:", error);
+    res.status(500).json({ success: false, message: "Something went wrong" });
+  }
+};
+
+export const assignDepertmentToEmployee = async (req, res) => {
+  try {
+    const { employeeId, departmentId } = req.body;
+    const employee = await Employee.findById(employeeId);
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        message: "Employee not found",
+      });
+    }
+    const department = await Department.findById(departmentId);
+    if (!department) {
+      return res.status(404).json({
+        success: false,
+        message: "Department not found",
+      });
+    }
+    const user = await User.findById(employee.userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Employee user account not found",
+      });
+    }
+
+    const previousDepartment = employee.department
+      ? await Department.findOne({ name: employee.department })
+      : null;
+    if (previousDepartment && previousDepartment._id.toString() !== departmentId) {
+      previousDepartment.employees.pull(user._id);
+      await previousDepartment.save();
+    }
+
+    employee.department = department.name;
+    await employee.save();
+    department.employees.addToSet(user._id);
+    await department.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Department assigned to employee successfully",
+      employee: await employee.populate("userId", "name email role"),
+    });
+  } catch (error) {
+    console.error("Error assigning department to employee:", error);
+    res.status(500).json({ success: false, message: "Something went wrong" });
+  }
+};
+
+
+export const createAnnouncement = async (req, res) => {
+  try {
+    const { headline, body } = req.body;
+    if(!headline || !body){
+      return res.status(400).json({
+        success: false,
+        message: "Headline and body are required",
+      });
+    }
+    await Announcement.create({ headline, body });
+    return res.status(201).json({
+      success: true,
+      message: "Announcement created successfully",
+    });
+  }catch(err){
+    console.error("Error creating announcement:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong",
+    });
+  }
+}
+
+export const getAllAnnouncements = async (req, res) => {
+  try {
+    const announcements = await Announcement.find().sort({ createdAt: -1 });
+    return res.status(200).json({
+      success: true,
+      message: "Announcements fetched successfully",
+      announcements,
+    });
+  }catch (err) {
+    console.error("Error fetching announcements:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong",
+    });
+  }
+};
+
+export const getAllProjects = async (req, res) => {
+  try {
+    const projects = await Project.find().populate({
+      path: "employeeId",
+      populate: {
+        path: "userId",
+        select: "name email"
+      }
+    });
+    res.status(200).json({
+      success: true,
+      projects,
+    });
+  } catch (error) {
+    console.error("Error fetching projects:", error);
+    res.status(500).json({
+      success: false,
+      message: "Something went wrong",
+    });
+  }
+};
+
+export const reviewProject = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const { score, feedback } = req.body;
+    
+    if (score === undefined || score < 0 || score > 5) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid score. Must be between 0 and 5."
+      });
+    }
+
+    const project = await Project.findByIdAndUpdate(
+      projectId,
+      { score, feedback },
+      { new: true }
+    );
+
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: "Project not found"
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Project reviewed successfully",
+      project
+    });
+  } catch (error) {
+    console.error("Error reviewing project:", error);
+    res.status(500).json({
+      success: false,
+      message: "Something went wrong",
+    });
   }
 };
