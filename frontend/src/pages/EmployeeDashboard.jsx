@@ -10,14 +10,18 @@ const EmployeeDashboard = () => {
   const [activeSection, setActiveSection] = useState("Dashboard");
   const [userDetails, setUserDetails] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    return localStorage.getItem("theme") === "dark";
+  });
 
 
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
     } else {
       document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
     }
   }, [isDarkMode]);
 
@@ -27,6 +31,8 @@ const EmployeeDashboard = () => {
       setUserDetails({
         ...response.data.user,
         employee: response.data.employee,
+        attendancePercentage: response.data.attendancePercentage,
+        attendanceCount: response.data.attendanceCount,
       });
       console.log("User details:", response.data);
     } catch (error) {
@@ -58,6 +64,7 @@ const EmployeeDashboard = () => {
             }}
             onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
             isDarkMode={isDarkMode}
+            onAttendanceUpdate={fetchUserDetails}
           />
           <main className="flex-1">
             <EmployeeContent

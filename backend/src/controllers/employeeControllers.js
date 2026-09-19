@@ -53,10 +53,27 @@ export const fetchUserDetails = async (req, res) => {
     }
     const employee = await Employee.findOne({ userId });
 
+    let attendancePercentage = 0;
+    const Attendance = (await import("../models/Attendance.js")).default;
+    const totalPresent = await Attendance.countDocuments({ userId, status: "Present" });
+    
+    let totalDays = 1;
+    if (employee && employee.joiningDate) {
+      const joinDate = new Date(employee.joiningDate);
+      const today = new Date();
+      const diffTime = Math.abs(today - joinDate);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      totalDays = diffDays > 0 ? diffDays : 1;
+    }
+    
+    attendancePercentage = Math.round((totalPresent / totalDays) * 100);
+
     res.status(200).json({
       success: true,
       user,
       employee,
+      attendancePercentage,
+      attendanceCount: totalPresent,
     });
   } catch (error) {
     console.error("Error fetching user details:", error);
@@ -98,6 +115,22 @@ export const applyLeave = async (req, res) => {
       documentLink,
     });
     await newLeave.save();
+
+    try {
+      const { emitNotification } = await import("../../server.js");
+      const adminsAndHrs = await User.find({ role: { $in: ["admin", "hr"] }, status: "Active" });
+      
+      // Need user's name, so let's fetch it
+      const currentUser = await User.findById(userId);
+      const userName = currentUser ? currentUser.name : "An employee";
+
+      for (const u of adminsAndHrs) {
+        await emitNotification(u._id, "New Leave Applied", `${userName} has applied for ${days} days of leave.`);
+      }
+    } catch (err) {
+      console.error("Socket emit failed", err);
+    }
+
     res.status(201).json({
       success: true,
       message: "Leave applied successfully",

@@ -22,7 +22,7 @@ import { admin } from "../apis/axios.js";
 import { useToast } from "../components/ToastProvider.jsx";
 
 
-const AdminContent = ({ activeSection, setActiveSection }) => {
+const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
   const { showToast } = useToast();
 
   // Modals state
@@ -476,7 +476,7 @@ const AdminContent = ({ activeSection, setActiveSection }) => {
             <div>
               <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-gray-800 dark:text-gray-100">
                 Good Morning,{" "}
-                <span className="text-gray-800 dark:text-gray-100">John</span> !
+                <span className="text-gray-800 dark:text-gray-100">{userDetails?.name?.split(' ')[0] || "Admin"}</span> !
               </h1>
               <p className="mt-1 text-sm font-medium text-gray-500 dark:text-gray-400">
                 Welcome back, Let's get back to work.
@@ -492,7 +492,7 @@ const AdminContent = ({ activeSection, setActiveSection }) => {
               />
               <MetricStatCard
                 icon={Percent}
-                value="95.2%"
+                value={`${employees.length > 0 ? Math.round(employees.reduce((acc, emp) => acc + (emp.attendancePercentage || 0), 0) / employees.length) : 0}%`}
                 label="Overall Attendance"
               />
               <MetricStatCard

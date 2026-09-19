@@ -45,7 +45,7 @@ ChartJS.register(
   Filler
 )
 
-const HRContent = ({ activeSection, setActiveSection }) => {
+const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
   const { showToast } = useToast();
 
   // Modals state
@@ -81,8 +81,25 @@ const HRContent = ({ activeSection, setActiveSection }) => {
 
   // Persistent Leaves State
   const [leaveRequests, setLeaveRequests] = useState([])
+  
+  // Persistent Tasks State
+  const [tasks, setTasks] = useState([])
+
+  const fetchTasks = async () => {
+    try {
+      const response = await admin.get("/tasks");
+      if (response.data.success) {
+        setTasks(response.data.tasks);
+      }
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
+      showToast("Error fetching assigned tasks", "error");
+    }
+  };
+
   useEffect(() => {
     fetchLeaveRequests()
+    fetchTasks()
   }, [])
 
   const [projects, setProjects] = useState([])
@@ -141,7 +158,19 @@ const HRContent = ({ activeSection, setActiveSection }) => {
     }
   }
 
-  useEffect(() => { fetchProjects(); fetchEmployees(); fetchLeaveRequests(); fetchDepartments(); }, [])
+  const [users, setUsers] = useState([])
+  const fetchUsers = async () => {
+    try {
+      const response = await admin.get('/users');
+      if (response.data.success) {
+        setUsers(response.data.users);
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    }
+  };
+
+  useEffect(() => { fetchProjects(); fetchEmployees(); fetchLeaveRequests(); fetchDepartments(); fetchUsers(); }, [])
 
   // Add User Form State
   const [userForm, setUserForm] = useState({
@@ -196,15 +225,14 @@ const HRContent = ({ activeSection, setActiveSection }) => {
       return;
     }
     try {
-      const displayRole = userForm.role === 'Employee' ? 'Employee' : 'hr';
-      const payload = { ...userForm, role: displayRole };
+      const payload = { ...userForm, role: 'employee' };
       await admin.post('/create-user', payload);
 
       setEmployeeForm((prev) => ({
         ...prev,
         name: userForm.name,
         email: userForm.email,
-        designation: displayRole === 'Employee' ? 'Software Engineer' : displayRole,
+        designation: 'Software Engineer',
       }));
 
       setIsAddUserOpen(false);
@@ -316,7 +344,7 @@ const HRContent = ({ activeSection, setActiveSection }) => {
             {/* Header */}
             <div>
               <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-gray-800 dark:text-gray-100">
-                Good Morning, <span className="text-gray-800 dark:text-gray-100">Sarah</span> !
+                Good Morning, <span className="text-gray-800 dark:text-gray-100">{userDetails?.name?.split(' ')[0] || "HR"}</span> !
               </h1>
               <p className="mt-1 text-sm font-medium text-gray-500 dark:text-gray-400">
                 Welcome back, Let's get back to work.
@@ -337,8 +365,8 @@ const HRContent = ({ activeSection, setActiveSection }) => {
               />
               <MetricStatCard
                 icon={Percent}
-                value="95.2%"
-                label="Attendance Rate"
+                value={`${userDetails?.attendanceCount || 0} Days (${userDetails?.attendancePercentage || 0}%)`}
+                label="My Attendance"
               />
               <MetricStatCard
                 icon={FileCheck}
@@ -602,6 +630,48 @@ const HRContent = ({ activeSection, setActiveSection }) => {
                 </tbody>
               </table>
             </div>
+            
+            <div className="mt-8 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft p-6 overflow-x-auto">
+              <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">
+                System Users
+              </h3>
+              <table className="w-full text-left text-xs min-w-[750px]">
+                <thead className="border-b border-gray-100/80 dark:border-gray-800/50 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                  <tr>
+                    <th className="pb-3">User Name</th>
+                    <th className="pb-3">Email</th>
+                    <th className="pb-3">Role</th>
+                    <th className="pb-3">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100/80 dark:divide-gray-800/50">
+                  {users.map((u) => (
+                      <tr key={u._id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition">
+                        <td className="py-3.5">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-semibold text-xs">
+                              {u.name.charAt(0)}
+                            </div>
+                            <div>
+                              <p className="font-semibold text-gray-800 dark:text-gray-100">
+                                {u.name}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3.5 text-sm text-gray-700 dark:text-gray-300 font-medium">{u.email}</td>
+                        <td className="py-3.5 text-sm text-gray-700 dark:text-gray-300 font-medium capitalize">{u.role}</td>
+                        <td className="py-3.5">
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${u.isActive ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400' : 'bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400'}`}>
+                            {u.isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+
           </div>
         )
 
@@ -727,13 +797,85 @@ const HRContent = ({ activeSection, setActiveSection }) => {
       case 'Tasks':
         return (
           <div className="space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex items-center justify-between gap-4">
               <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
-                Task Delegation
+                Organization Tasks Matrix
               </h2>
-              <button onClick={() => setIsAssignTaskOpen(true)} className="rounded-xl bg-indigo-600 hover:bg-indigo-700 px-4 py-2 text-xs font-semibold text-white">Assign Task</button>
+              <button
+                onClick={() => setIsAssignTaskOpen(true)}
+                className="flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-medium text-white transition hover:bg-indigo-700"
+              >
+                <Plus className="h-4 w-4" />
+                Assign Task
+              </button>
             </div>
             <TaskStatisticsCard totalTask={245} overdueTask={17} />
+            <div className="rounded-xl border border-gray-100/80 bg-white/80 p-6 shadow-soft dark:border-gray-800/50 dark:bg-[#151d2e]">
+              <h3 className="mb-4 text-base font-semibold text-gray-800 dark:text-gray-100">
+                Assigned Tasks ({tasks.length})
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[680px] text-left text-xs">
+                  <thead className="border-b border-gray-100 text-gray-500 dark:border-gray-800 dark:text-gray-400">
+                    <tr>
+                      <th className="pb-3 font-medium">Task</th>
+                      <th className="pb-3 font-medium">Assigned Employee</th>
+                      <th className="pb-3 font-medium">Priority</th>
+                      <th className="pb-3 font-medium">Deadline</th>
+                      <th className="pb-3 text-right font-medium">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800/50">
+                    {tasks.map((task) => (
+                      <tr key={task._id}>
+                        <td className="py-3 pr-4">
+                          <p className="font-semibold text-gray-800 dark:text-gray-100">
+                            {task.title}
+                          </p>
+                          {task.description && (
+                            <p className="mt-0.5 text-gray-500 dark:text-gray-400">
+                              {task.description}
+                            </p>
+                          )}
+                        </td>
+                        <td className="py-3 pr-4 text-gray-600 dark:text-gray-300">
+                          <p className="font-medium">
+                            {task.assignee?.name || "Unknown"}
+                          </p>
+                          <p className="text-[11px] text-gray-400 dark:text-gray-500">
+                            {task.assignee?.email || "No email"}
+                          </p>
+                        </td>
+                        <td className="py-3 text-gray-600 dark:text-gray-300">
+                          {task.priority}
+                        </td>
+                        <td className="py-3 text-gray-600 dark:text-gray-300">
+                          {task.deadline || "Not set"}
+                        </td>
+                        <td className="py-3 text-right">
+                          <span
+                            className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${
+                              task.status === "Completed"
+                                ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400"
+                                : "bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400"
+                            }`}
+                          >
+                            {task.status === "Completed"
+                              ? "Completed"
+                              : "Not completed"}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {tasks.length === 0 && (
+                <p className="py-6 text-center text-xs text-gray-500 dark:text-gray-400">
+                  No tasks have been assigned yet.
+                </p>
+              )}
+            </div>
           </div>
         )
 
@@ -946,18 +1088,7 @@ const HRContent = ({ activeSection, setActiveSection }) => {
               className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 px-3 text-sm text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
             />
           </div>
-          <div>
-            <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Account Role</label>
-            <select
-              value={userForm.role}
-              onChange={(e) => setUserForm({ ...userForm, role: e.target.value })}
-              className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 px-3 text-sm text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500 cursor-pointer"
-            >
-              <option className="bg-white dark:bg-[#0c1222] text-gray-800 dark:text-gray-100">Employee</option>
-              <option className="bg-white dark:bg-[#0c1222] text-gray-800 dark:text-gray-100">HR Manager</option>
-              <option className="bg-white dark:bg-[#0c1222] text-gray-800 dark:text-gray-100">Admin</option>
-            </select>
-          </div>
+
           <div>
             <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Temporary Password</label>
             <input

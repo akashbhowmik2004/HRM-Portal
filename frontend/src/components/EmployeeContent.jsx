@@ -112,6 +112,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
       gender: userDetails.employee?.gender || currentProfile.gender,
       address: userDetails.employee?.address || currentProfile.address,
       salary: userDetails.employee?.salary ?? currentProfile.salary,
+      attendancePercentage: userDetails.attendancePercentage ?? currentProfile.attendancePercentage,
     }));
   }, [userDetails]);
   const [leaveRequests, setLeaveRequests] = useState([]);

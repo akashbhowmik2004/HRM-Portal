@@ -26,12 +26,30 @@ export const getAllEmployees = async (req, res) => {
   try {
     const employees = await Employee.find().populate(
       "userId",
-      "name email role isActive",
+      "name email role isActive status",
     );
+
+    const Attendance = (await import("../models/Attendance.js")).default;
+    const employeesWithAttendance = await Promise.all(
+      employees.map(async (emp) => {
+        const totalPresent = await Attendance.countDocuments({ userId: emp.userId._id, status: "Present" });
+        let totalDays = 1;
+        if (emp.joiningDate) {
+          const joinDate = new Date(emp.joiningDate);
+          const today = new Date();
+          const diffTime = Math.abs(today - joinDate);
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          totalDays = diffDays > 0 ? diffDays : 1;
+        }
+        const attendancePercentage = Math.round((totalPresent / totalDays) * 100);
+        return { ...emp._doc, attendancePercentage };
+      })
+    );
+
     res.status(200).json({
       success: true,
       message: "Employees retrieved successfully",
-      employees,
+      employees: employeesWithAttendance,
     });
   } catch (error) {
     res.status(500).json({ success: false, message: "Something went wrong" });
@@ -229,6 +247,12 @@ export const acceptLeaveRequest = async (req, res) => {
     }
     leaveRequest.status = "Approved";
     await leaveRequest.save();
+
+    try {
+      const { emitNotification } = await import("../../server.js");
+      await emitNotification(leaveRequest.employeeId, "Leave Approved", "Your leave request has been approved.");
+    } catch (err) {}
+
     res.status(200).json({
       success: true,
       message: "Leave request approved successfully",
@@ -261,6 +285,12 @@ export const rejectLeaveRequest = async (req, res) => {
     leaveRequest.status = "Rejected";
     leaveRequest.rejectionReason = rejectionReason;
     await leaveRequest.save();
+
+    try {
+      const { emitNotification } = await import("../../server.js");
+      await emitNotification(leaveRequest.employeeId, "Leave Rejected", `Your leave request was rejected: ${rejectionReason}`);
+    } catch (err) {}
+
     res.status(200).json({
       success: true,
       message: "Leave request rejected successfully",
@@ -298,6 +328,14 @@ export const assignTask = async (req, res) => {
       assignee,
       assignedBy: req.user.id,
     });
+    
+    // Attempt to emit notification
+    try {
+      const { emitNotification } = await import("../../server.js");
+      await emitNotification(assignee, "New Task Assigned", `You have been assigned a new task: ${title}`);
+    } catch (err) {
+      console.error("Socket emit failed", err);
+    }
 
     const populatedTask = await task.populate("assignee", "name email");
     res.status(201).json({ success: true, task: populatedTask });
@@ -402,6 +440,18 @@ export const createAnnouncement = async (req, res) => {
       });
     }
     await Announcement.create({ headline, body });
+
+    try {
+      const { emitNotification } = await import("../../server.js");
+      const User = (await import("../models/User.js")).default;
+      const allUsers = await User.find({ status: "Active" });
+      for (const u of allUsers) {
+        await emitNotification(u._id, "New Announcement", headline);
+      }
+    } catch (err) {
+      console.error("Socket emit failed", err);
+    }
+
     return res.status(201).json({
       success: true,
       message: "Announcement created successfully",

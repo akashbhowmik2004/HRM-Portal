@@ -3,19 +3,40 @@ import AdminSidebar from "../components/AdminSidebar";
 import TopHeader from "../components/TopHeader";
 import AdminContent from "../components/AdminContent";
 import { useToast } from "../components/ToastProvider.jsx";
+import { auth } from "../apis/axios.js";
 
 const AdminDashboard = () => {
   const [activeSection, setActiveSection] = useState("Dashboard");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [userDetails, setUserDetails] = useState(null);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    return localStorage.getItem("theme") === "dark";
+  });
 
   const { showToast } = useToast();
+
+  const fetchUserDetails = async () => {
+    try {
+      const response = await auth.get("/verify");
+      if (response.data.success) {
+        setUserDetails(response.data.user);
+      }
+    } catch (error) {
+      console.error("Error fetching user details:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchUserDetails();
+  }, []);
 
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
     } else {
       document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
     }
   }, [isDarkMode]);
 
@@ -32,7 +53,7 @@ const AdminDashboard = () => {
         />
         <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden p-4 sm:p-6 lg:p-8">
           <TopHeader
-            user={{ name: "John Wick", role: "Super Admin", avatar: null }}
+            user={{ name: userDetails?.name || "Admin", role: userDetails?.role || "Admin", avatar: null }}
             onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
             isDarkMode={isDarkMode}
           />
@@ -40,6 +61,7 @@ const AdminDashboard = () => {
             <AdminContent
               activeSection={activeSection}
               setActiveSection={setActiveSection}
+              userDetails={userDetails}
             />
           </main>
         </div>
