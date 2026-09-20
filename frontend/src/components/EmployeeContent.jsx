@@ -195,9 +195,25 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
     }
   };
 
+  const [documents, setDocuments] = useState([]);
+  
+  const fetchDocuments = async () => {
+    if (!userDetails?.employee?._id) return;
+    try {
+      const { api } = await import("../apis/axios.js");
+      const response = await api.get(`/documents/${userDetails.employee._id}`);
+      if (response.data.success) {
+        setDocuments(response.data.documents);
+      }
+    } catch (error) {
+      console.error("Error fetching documents:", error);
+    }
+  };
+
   useEffect(() => {
     fetchTasks();
-  }, []);
+    fetchDocuments();
+  }, [userDetails]);
 
   const handleTaskStatusChange = async (task) => {
     const nextStatus =
@@ -1389,26 +1405,34 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
               </p>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              {[
-                "Offer Letter & NDA",
-                "Joining Appointment Letter",
-                "Form 16 Tax Certificate",
-              ].map((doc, idx) => (
-                <div
-                  key={idx}
-                  className="p-4 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft flex justify-between items-center"
-                >
-                  <div className="flex items-center gap-3">
-                    <FileText className="h-5 w-5 text-indigo-500 dark:text-indigo-400" />
-                    <span className="text-xs font-semibold text-gray-800 dark:text-gray-100">
-                      {doc}
-                    </span>
+              {documents.length === 0 ? (
+                <div className="col-span-2 text-sm text-gray-500">No documents uploaded yet.</div>
+              ) : (
+                documents.map((doc) => (
+                  <div
+                    key={doc._id}
+                    className="p-4 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft flex justify-between items-center"
+                  >
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-3">
+                        <FileText className="h-5 w-5 text-indigo-500 dark:text-indigo-400" />
+                        <span className="text-xs font-semibold text-gray-800 dark:text-gray-100">
+                          {doc.title}
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-gray-500 ml-8">{doc.documentType}</span>
+                    </div>
+                    <a
+                      href={`http://localhost:3000${doc.fileUrl}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
+                    >
+                      View / Download
+                    </a>
                   </div>
-                  <button className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
-                    Download
-                  </button>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         );

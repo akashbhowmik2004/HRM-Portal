@@ -22,7 +22,8 @@ import {
   UserCheck,
   FileSpreadsheet,
   Layers,
-  X
+  X,
+  AlertCircle
 } from 'lucide-react'
 
 const iconMap = {
@@ -44,6 +45,7 @@ const iconMap = {
   'HR Management': ShieldCheck,
   'Audit Logs': FileSpreadsheet,
   'System Settings': Settings,
+  'Issues': AlertCircle
 }
 
 const categorizeItems = (role, items) => {
@@ -76,7 +78,7 @@ const categorizeItems = (role, items) => {
       },
       {
         title: 'OTHERS',
-        items: items.filter(i => ['Documents', 'Announcements', 'Notifications'].includes(i))
+        items: items.filter(i => ['Documents', 'Announcements', 'Notifications', 'Issues'].includes(i))
       }
     ]
   }

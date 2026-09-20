@@ -18,9 +18,52 @@ import MetricStatCard from "../components/MetricStatCard";
 import TaskStatisticsCard from "../components/TaskStatisticsCard";
 import PerformanceCard from "../components/PerformanceCard";
 import Modal from "../components/Modal";
-import { admin } from "../apis/axios.js";
+import { admin, api } from "../apis/axios.js";
 import { useToast } from "../components/ToastProvider.jsx";
 
+const DocumentList = ({ employeeId }) => {
+  const [docs, setDocs] = useState([]);
+  useEffect(() => {
+    if (!employeeId) return;
+    const fetchDocs = async () => {
+      try {
+        const { api } = await import("../apis/axios.js");
+        const res = await api.get(`/documents/${employeeId}`);
+        if (res.data.success) {
+          setDocs(res.data.documents);
+        }
+      } catch (err) {
+        console.error("Error fetching docs", err);
+      }
+    };
+    fetchDocs();
+  }, [employeeId]);
+
+  return (
+    <div className="space-y-3">
+      {docs.length === 0 ? (
+        <p className="text-sm text-gray-500">No documents found for this employee.</p>
+      ) : (
+        docs.map((doc) => (
+          <div key={doc._id} className="flex justify-between items-center p-4 bg-white dark:bg-[#151d2e] rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
+            <div>
+              <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">{doc.title}</p>
+              <p className="text-[11px] text-gray-500">{doc.documentType}</p>
+            </div>
+            <a
+              href={`http://localhost:3000${doc.fileUrl}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
+            >
+              View Document
+            </a>
+          </div>
+        ))
+      )}
+    </div>
+  );
+};
 
 const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
   const { showToast } = useToast();
@@ -136,7 +179,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
             name: employee.userId?.name || "Unnamed employee",
             email: employee.userId?.email || "No email",
             role: employee.userId?.role || "employee",
-            status: employee.userId?.isActive === false ? "Inactive" : "Active",
+            status: employee.userId?.status || "Active",
           })),
         );
       }
@@ -204,6 +247,40 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
 
   // Audit logs data
   const [auditLogs, setAuditLogs] = useState([]);
+
+  // Document upload state
+  const [docEmployeeId, setDocEmployeeId] = useState("");
+  const [docTitle, setDocTitle] = useState("");
+  const [docType, setDocType] = useState("Offer Letter");
+  const [docFile, setDocFile] = useState(null);
+  const [uploadCount, setUploadCount] = useState(0);
+
+  const handleUploadDocument = async (e) => {
+    e.preventDefault();
+    if (!docEmployeeId || !docTitle || !docFile) {
+      return showToast("Please fill all document fields and select a file.", "error");
+    }
+    const formData = new FormData();
+    formData.append("employeeId", docEmployeeId);
+    formData.append("title", docTitle);
+    formData.append("documentType", docType);
+    formData.append("file", docFile);
+    try {
+      const res = await api.post("/documents/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      if (res.data.success) {
+        showToast("Document uploaded successfully!", "success");
+        setDocTitle("");
+        setDocFile(null);
+        e.target.reset(); // clear file input
+        setUploadCount(prev => prev + 1);
+      }
+    } catch (err) {
+      console.error("Error uploading document:", err);
+      showToast(err.response?.data?.message || "Error uploading document", "error");
+    }
+  };
 
   const toggleUserStatus = async (id) => {
     try {
@@ -858,6 +935,16 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                       <td className="py-3.5 text-right">
                         <div className="flex justify-end gap-2">
                           <button
+                            onClick={() => {
+                              setDocEmployeeId(emp._id);
+                              setActiveSection("Documents");
+                            }}
+                            className="flex items-center gap-1 rounded-lg bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:hover:bg-emerald-900/30"
+                          >
+                            <FileText className="h-3.5 w-3.5" />
+                            Upload Doc
+                          </button>
+                          <button
                             onClick={() => handleEditEmployee(emp)}
                             className="flex items-center gap-1 rounded-lg bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-400 dark:hover:bg-indigo-900/30"
                           >
@@ -1234,19 +1321,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
           </div>
         );
 
-      case "Documents":
-        return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
-              Documents
-            </h2>
-            <div className="p-5 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
-              <p className="text-xs font-semibold text-gray-800 dark:text-gray-100">
-                Company Master Archive (128 Files)
-              </p>
-            </div>
-          </div>
-        );
+
 
       case "Announcements":
         return (
@@ -1466,6 +1541,85 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
           </div>
         );
 
+      case "Documents":
+        return (
+          <div className="max-w-2xl space-y-6">
+            <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
+              Upload Employee Document
+            </h2>
+            <div className="p-6 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
+              <form onSubmit={handleUploadDocument} className="space-y-4 text-xs">
+                <div>
+                  <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                    Select Employee
+                  </label>
+                  <select
+                    className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 outline-none font-medium text-gray-800 dark:text-gray-100"
+                    onChange={(e) => setDocEmployeeId(e.target.value)}
+                    value={docEmployeeId}
+                  >
+                    <option value="">-- Choose Employee --</option>
+                    {employees.map(emp => (
+                      <option key={emp._id} value={emp._id}>{emp.userId?.name} ({emp.userId?.email})</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                    Document Title
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 2024 Offer Letter"
+                    value={docTitle}
+                    onChange={(e) => setDocTitle(e.target.value)}
+                    className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 outline-none font-medium text-gray-800 dark:text-gray-100"
+                  />
+                </div>
+                <div>
+                  <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                    Document Type
+                  </label>
+                  <select
+                    value={docType}
+                    onChange={(e) => setDocType(e.target.value)}
+                    className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 outline-none font-medium text-gray-800 dark:text-gray-100"
+                  >
+                    <option value="Offer Letter">Offer Letter</option>
+                    <option value="Payment Slip">Payment Slip</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                    File (PDF, Image, etc.)
+                  </label>
+                  <input
+                    type="file"
+                    onChange={(e) => setDocFile(e.target.files[0])}
+                    className="w-full text-gray-800 dark:text-gray-100 font-medium"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="rounded-xl bg-indigo-600 hover:bg-indigo-700 px-5 py-2.5 font-medium text-white shadow-sm mt-2"
+                >
+                  Upload Document
+                </button>
+              </form>
+            </div>
+
+            {docEmployeeId && (
+              <div className="mt-8">
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">
+                  Existing Documents
+                </h3>
+                <DocumentList key={uploadCount} employeeId={docEmployeeId} />
+              </div>
+            )}
+          </div>
+        );
+
       default:
         return null;
     }
@@ -1676,7 +1830,9 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
               <input
                 type="text"
                 value={employeeForm.name}
-                disabled
+                onChange={(e) =>
+                  setEmployeeForm({ ...employeeForm, name: e.target.value })
+                }
                 placeholder="Full Name"
                 className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
               />
@@ -1688,7 +1844,6 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
               <input
                 type="email"
                 value={employeeForm.email}
-                disabled
                 onChange={(e) =>
                   setEmployeeForm({ ...employeeForm, email: e.target.value })
                 }

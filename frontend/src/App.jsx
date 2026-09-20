@@ -5,6 +5,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import { Route, Routes } from "react-router";
 import { ToastProvider } from "./components/ToastProvider";
 import ProtectedRoute from "./components/ProtectedRoutes";
+import ContactHR from "./pages/ContactHR";
 
 const App = () => {
   return (
@@ -12,6 +13,7 @@ const App = () => {
       <div>
         <Routes>
           <Route path="/" element={<Login />} />
+          <Route path="/contact-hr" element={<ContactHR />} />
           <Route
             path="/employee-dashboard"
             element={

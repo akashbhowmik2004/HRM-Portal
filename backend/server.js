@@ -12,6 +12,7 @@ import requireAuth from "./src/middlewares/authMiddleware.js";
 import employeeRoutes from "./src/routes/employeeRoutes.js";
 import attendanceRoutes from "./src/routes/attendanceRoutes.js";
 import notificationRoutes from "./src/routes/notificationRoutes.js";
+import issueRoutes from "./src/routes/issueRoutes.js";
 import Notification from "./src/models/Notification.js";
 
 dotenv.config();
@@ -36,11 +37,21 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+import path from "path";
+import { fileURLToPath } from "url";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+import documentRoutes from "./src/routes/documentRoutes.js";
+
 app.use("/api/auth", authRoutes);
 app.use("/api/employee", requireAuth, employeeRoutes);
 app.use("/api/admin", requireAuth, adminRoutes);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/issues", issueRoutes);
+app.use("/api/documents", requireAuth, documentRoutes);
 
 // Socket.io mapping
 export const userSockets = new Map();

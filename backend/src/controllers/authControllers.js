@@ -39,6 +39,14 @@ export const requestOTP = async (req, res) => {
         message: "User not found or not registered",
       });
     }
+
+    if (user.status !== "Active") {
+      return res.status(403).json({
+        success: false,
+        message: "Your account has been disabled or suspended.",
+      });
+    }
+    
     await OTP.deleteMany({ email });
 
     const otp = generateOTP();

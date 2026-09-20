@@ -13,6 +13,7 @@ const hrSidebarItems = [
   'Documents',
   'Announcements',
   'Notifications',
+  'Issues',
   'Logout',
 ];
 
