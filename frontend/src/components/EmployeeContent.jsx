@@ -20,8 +20,10 @@ import {
   Tent,
   Trash2,
   FilePenIcon,
+  Camera,
 } from "lucide-react";
-import { auth, employee } from "../apis/axios";
+import { auth, employee, api } from "../apis/axios";
+import WebcamCapture from "../components/WebcamCapture";
 
 // Brand Icons
 const GithubIcon = ({ className = "h-3.5 w-3.5" }) => (
@@ -172,6 +174,8 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
     fetchLeaveHistory();
     fetchAnnouncements();
     fetchProjects();
+    fetchAttendanceLogs();
+    fetchTodayAttendance();
   }, []);
 
   const [newLeave, setNewLeave] = useState({
@@ -183,7 +187,72 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
   });
 
   const [tasks, setTasks] = useState([]);
+  const [attendanceLogs, setAttendanceLogs] = useState([]);
+  const [todayAttendance, setTodayAttendance] = useState(null);
 
+  const fetchAttendanceLogs = async () => {
+    try {
+      const response = await api.get("/attendance/me");
+      if (response.data.success) {
+        setAttendanceLogs(response.data.attendance);
+      }
+    } catch (error) {
+      console.error("Error fetching attendance logs:", error);
+    }
+  };
+
+  const fetchTodayAttendance = async () => {
+    try {
+      const response = await api.get("/attendance/today");
+      if (response.data.success && response.data.attendance) {
+        setTodayAttendance(response.data.attendance);
+        if (response.data.attendance.checkInTime && !response.data.attendance.checkOutTime) {
+          setIsCheckedIn(true);
+        } else {
+          setIsCheckedIn(false);
+        }
+      } else {
+        setIsCheckedIn(false);
+      }
+    } catch (error) {
+      console.error("Error fetching today attendance:", error);
+    }
+  };
+
+  const [isWebcamCheckInOpen, setIsWebcamCheckInOpen] = useState(false);
+
+  const handlePunch = async () => {
+    // Open Webcam Check-in/out Modal
+    setIsWebcamCheckInOpen(true);
+  };
+
+  const handleWebcamCapture = async (descriptor, setStatus) => {
+    try {
+      setStatus("Verifying identity...", false);
+      const res = await api.post("/attendance/checkin-webcam", {
+        faceDescriptor: descriptor,
+      });
+
+      if (res.data.success) {
+        setStatus("Attendance marked successfully", false);
+        showToast(res.data.message || "Attendance updated", "success");
+        setTimeout(() => setIsWebcamCheckInOpen(false), 1500);
+        fetchTodayAttendance();
+        fetchAttendanceLogs();
+      } else {
+        const errorMsg = res.data.message || "Failed to verify face.";
+        showToast(errorMsg, "error");
+        setStatus(errorMsg, false);
+        setTimeout(() => setIsWebcamCheckInOpen(false), 2000);
+      }
+    } catch (err) {
+      console.error(err);
+      const errorMessage = err.response?.data?.message || "Face verification failed";
+      showToast(errorMessage, "error");
+      setStatus(errorMessage, false);
+      setTimeout(() => setIsWebcamCheckInOpen(false), 2000);
+    }
+  };
   const fetchTasks = async () => {
     try {
       const response = await employee.get("/tasks");
@@ -979,18 +1048,27 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                 <h3 className="text-3xl sm:text-4xl font-bold mt-1 text-gray-800 dark:text-gray-100">
                   {profile.attendancePercentage}% Attendance Rate
                 </h3>
-                <p className="text-xs text-gray-600 dark:text-gray-300 mt-1 font-medium">
-                  21 Days Present • 2 Days Late • 1 Day Absent out of 22 Working
-                  Days
-                </p>
               </div>
               <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setIsCheckedIn(!isCheckedIn)}
-                  className={`rounded-xl px-6 py-2.5 text-xs font-semibold text-white shadow-soft transition ${isCheckedIn ? "bg-indigo-600 hover:bg-indigo-700" : "bg-indigo-600 hover:bg-indigo-700"}`}
-                >
-                  {isCheckedIn ? "Punch Out" : "Punch In"}
-                </button>
+                {(!todayAttendance || !todayAttendance.checkInTime) ? (
+                  <button
+                    onClick={handlePunch}
+                    className="rounded-xl px-6 py-2.5 text-xs font-semibold text-white shadow-soft transition bg-indigo-600 hover:bg-indigo-700"
+                  >
+                    Punch In
+                  </button>
+                ) : (!todayAttendance.checkOutTime) ? (
+                  <button
+                    onClick={handlePunch}
+                    className="rounded-xl px-6 py-2.5 text-xs font-semibold text-white shadow-soft transition bg-rose-600 hover:bg-rose-700"
+                  >
+                    Punch Out
+                  </button>
+                ) : (
+                  <span className="text-gray-500 font-medium text-sm flex items-center bg-gray-100 dark:bg-gray-800 px-4 py-2 rounded-lg">
+                    Attendance Completed
+                  </span>
+                )}
               </div>
             </div>
             <div className="grid gap-6 lg:grid-cols-3">
@@ -1001,11 +1079,11 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                 <div className="h-44 w-44 relative">
                   <Doughnut
                     data={{
-                      labels: ["Present", "Late", "Absent"],
+                      labels: ["Present", "Absent"],
                       datasets: [
                         {
-                          data: [21, 2, 1],
-                          backgroundColor: ["#6366f1", "#f59e0b", "#f43f5e"],
+                          data: [profile.attendancePercentage, 100 - (profile.attendancePercentage || 0)],
+                          backgroundColor: ["#6366f1", "#f43f5e"],
                           borderWidth: 0,
                         },
                       ],
@@ -1025,69 +1103,37 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                     </span>
                   </div>
                 </div>
-                <div className="mt-4 flex gap-4 text-xs font-medium">
-                  <span className="text-indigo-600 dark:text-indigo-400 font-semibold">
-                    21 Present
-                  </span>
-                  <span className="text-amber-500 dark:text-amber-400 font-semibold">
-                    2 Late
-                  </span>
-                  <span className="text-rose-500 dark:text-rose-400 font-semibold">
-                    1 Absent
-                  </span>
-                </div>
               </div>
               <div className="lg:col-span-2 rounded-xl bg-white/80 dark:bg-[#151d2e] p-6 border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
                 <h3 className="text-base font-semibold mb-4 text-gray-800 dark:text-gray-100">
                   Detailed Check-In Logs
                 </h3>
-                <div className="space-y-2.5">
-                  {[
-                    [
-                      "Today, 24 Oct",
-                      "09:02 AM",
-                      "In Progress",
-                      "6h 45m",
-                      "Present (100%)",
-                      "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400",
-                    ],
-                    [
-                      "Wed, 23 Oct",
-                      "08:58 AM",
-                      "06:12 PM",
-                      "9h 14m",
-                      "Present (100%)",
-                      "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400",
-                    ],
-                    [
-                      "Tue, 22 Oct",
-                      "09:35 AM",
-                      "06:40 PM",
-                      "9h 05m",
-                      "Late (80%)",
-                      "bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400",
-                    ],
-                    [
-                      "Mon, 21 Oct",
-                      "09:01 AM",
-                      "06:05 PM",
-                      "9h 04m",
-                      "Present (100%)",
-                      "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400",
-                    ],
-                    [
-                      "Fri, 18 Oct",
-                      "09:00 AM",
-                      "06:00 PM",
-                      "9h 00m",
-                      "Present (100%)",
-                      "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400",
-                    ],
-                  ].map(
-                    (
-                      [date, punchIn, punchOut, duration, status, badgeClass],
-                      idx,
-                    ) => (
+                <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-2">
+                  {attendanceLogs.map((log, idx) => {
+                    const date = new Date(log.date).toLocaleDateString('en-US', { weekday: 'short', day: '2-digit', month: 'short' });
+                    const punchIn = log.checkInTime ? new Date(log.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A";
+                    const punchOut = log.checkOutTime ? new Date(log.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "In Progress";
+                    let duration = "0h 0m";
+                    if (log.checkInTime && log.checkOutTime) {
+                      const diff = new Date(log.checkOutTime) - new Date(log.checkInTime);
+                      const hours = Math.floor(diff / (1000 * 60 * 60));
+                      const minutes = Math.floor((diff / (1000 * 60)) % 60);
+                      duration = `${hours}h ${minutes}m`;
+                    }
+                    
+                    let statusText = log.status || "Present";
+                    let badgeClass = "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400";
+                    if (log.checkInTime && log.checkOutTime) {
+                      statusText += " (100%)";
+                      badgeClass = "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400";
+                    } else if (!log.checkInTime && !log.checkOutTime && log.status === "Absent") {
+                      statusText += " (0%)";
+                      badgeClass = "bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400";
+                    } else {
+                      statusText += " (Incomplete)";
+                    }
+
+                    return (
                       <div
                         key={idx}
                         className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl bg-gray-50 dark:bg-gray-800/50 p-3 text-xs border border-gray-100/80 dark:border-gray-800/50"
@@ -1105,10 +1151,13 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                         <span
                           className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${badgeClass}`}
                         >
-                          {status}
+                          {statusText}
                         </span>
                       </div>
-                    ),
+                    );
+                  })}
+                  {attendanceLogs.length === 0 && (
+                     <div className="text-sm text-gray-500 text-center py-4">No attendance logs found.</div>
                   )}
                 </div>
               </div>
@@ -1927,6 +1976,27 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
             </div>
           </div>
         </form>
+      </Modal>
+
+      {/* Webcam Check-In Modal */}
+      <Modal
+        isOpen={isWebcamCheckInOpen}
+        onClose={() => setIsWebcamCheckInOpen(false)}
+        title="Webcam Attendance"
+        size="md"
+        primaryAction={{
+          label: "Close",
+          onClick: () => setIsWebcamCheckInOpen(false),
+        }}
+      >
+        <div className="flex flex-col items-center p-4">
+          <p className="text-sm text-gray-500 mb-6 text-center">
+            Look at the camera to mark your attendance.
+          </p>
+          {isWebcamCheckInOpen && (
+            <WebcamCapture onCapture={handleWebcamCapture} mode="verify" />
+          )}
+        </div>
       </Modal>
     </>
   );

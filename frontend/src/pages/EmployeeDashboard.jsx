@@ -64,7 +64,6 @@ const EmployeeDashboard = () => {
             }}
             onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
             isDarkMode={isDarkMode}
-            onAttendanceUpdate={fetchUserDetails}
           />
           <main className="flex-1">
             <EmployeeContent

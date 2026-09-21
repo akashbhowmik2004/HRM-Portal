@@ -119,7 +119,7 @@ export const createEmployee = async (req, res) => {
       });
     }
     const userId = user._id;
-    const existingEmployee = await Employee.findById(userId);
+    const existingEmployee = await Employee.findOne({ userId });
     if (existingEmployee) {
       return res.status(400).json({
         success: false,
@@ -214,6 +214,35 @@ export const updateEmployee = async (req, res) => {
     });
   } catch (error) {
     console.error("Error updating employee:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const enrollFace = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { faceDescriptor } = req.body;
+
+    if (!faceDescriptor || !Array.isArray(faceDescriptor) || faceDescriptor.length !== 128) {
+      return res.status(400).json({ success: false, message: "Invalid face descriptor provided." });
+    }
+
+    const employee = await Employee.findByIdAndUpdate(
+      id,
+      { faceDescriptor },
+      { new: true }
+    );
+
+    if (!employee) {
+      return res.status(404).json({ success: false, message: "Employee not found." });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Face enrolled successfully.",
+    });
+  } catch (error) {
+    console.error("Error enrolling face:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 };

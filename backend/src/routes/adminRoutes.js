@@ -17,6 +17,7 @@ import {
   getAllAnnouncements,
   getAllProjects,
   reviewProject,
+  enrollFace,
 } from "../controllers/adminControllers.js";
 import {
   createDepartment,
@@ -38,6 +39,7 @@ router.post("/assign-department", assignDepertmentToEmployee);
 router.post("/announcements", createAnnouncement);
 router.post("/departments", createDepartment);
 router.post("/tasks", assignTask);
+router.post("/employees/:id/enroll-face", enrollFace);
 
 router.put("/toggle-user-status/:userId", toggleUserStatus);
 router.put("/employees/:employeeId", updateEmployee);

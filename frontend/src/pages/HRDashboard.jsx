@@ -56,7 +56,6 @@ const HRDashboard = () => {
             user={{ name: userDetails?.name || "HR Manager", role: userDetails?.role || "HR", avatar: null }}
             onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
             isDarkMode={isDarkMode}
-            onAttendanceUpdate={fetchUserDetails}
           />
           <main className="flex-1">
             <HRContent

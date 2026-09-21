@@ -63,7 +63,10 @@ const employeeSchema = new mongoose.Schema(
       enum: ["active", "inactive"],
       default: "active",
     },
-
+    faceDescriptor: {
+      type: [Number],
+      default: undefined,
+    },
   },
   {
     timestamps: true,

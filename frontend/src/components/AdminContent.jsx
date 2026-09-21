@@ -12,12 +12,14 @@ import {
   UserPlus,
   FileText,
   FilePenIcon,
+  Camera,
 } from "lucide-react";
 
 import MetricStatCard from "../components/MetricStatCard";
 import TaskStatisticsCard from "../components/TaskStatisticsCard";
 import PerformanceCard from "../components/PerformanceCard";
 import Modal from "../components/Modal";
+import WebcamCapture from "../components/WebcamCapture";
 import { admin, api } from "../apis/axios.js";
 import { useToast } from "../components/ToastProvider.jsx";
 
@@ -71,7 +73,13 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
   // Modals state
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [isAddEmployeeOpen, setIsAddEmployeeOpen] = useState(false);
-  
+  const [isEditEmployeeOpen, setIsEditEmployeeOpen] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState(null);
+  const [selectedEmployeeDetails, setSelectedEmployeeDetails] = useState(null);
+
+  // Face Enrollment State
+  const [isEnrollFaceOpen, setIsEnrollFaceOpen] = useState(false);
+  const [enrollFaceEmployeeId, setEnrollFaceEmployeeId] = useState(null);
   const [projects, setProjects] = useState([]);
   const [isReviewProjectOpen, setIsReviewProjectOpen] = useState(false);
   const [reviewingProject, setReviewingProject] = useState(null);
@@ -92,7 +100,6 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
     fetchProjects();
   }, []);
   const [editingEmployeeId, setEditingEmployeeId] = useState(null);
-  const [selectedEmployeeDetails, setSelectedEmployeeDetails] = useState(null);
   const [isBroadcastNoticeOpen, setIsBroadcastNoticeOpen] = useState(false);
   const [isProcessPayrollOpen, setIsProcessPayrollOpen] = useState(false);
   const [isAssignTaskOpen, setIsAssignTaskOpen] = useState(false);
@@ -103,6 +110,32 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
   const [departments, setDepartments] = useState([]);
   const [assignableEmployees, setAssignableEmployees] = useState([]);
   const [tasks, setTasks] = useState([]);
+  const [attendanceLogs, setAttendanceLogs] = useState([]);
+
+  const [todayStatus, setTodayStatus] = useState(null);
+
+  const fetchAttendanceLogs = async () => {
+    try {
+      const response = await api.get("/attendance/all");
+      if (response.data.success) {
+        setAttendanceLogs(response.data.attendance);
+      }
+    } catch (error) {
+      console.error("Error fetching all attendance logs:", error);
+    }
+  };
+
+  const fetchTodayStatus = async () => {
+    try {
+      const response = await api.get("/attendance/today-status");
+      if (response.data.success) {
+        setTodayStatus(response.data);
+      }
+    } catch (error) {
+      console.error("Error fetching today status:", error);
+    }
+  };
+
   const [noticesData, setNoticesData] = useState({
     headline: "",
     body: "",
@@ -118,6 +151,11 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
       console.error("Error fetching announcements:", error);
     }
   };
+
+  useEffect(() => {
+    fetchAttendanceLogs();
+    fetchTodayStatus();
+  }, []);
   const [taskForm, setTaskForm] = useState({
     title: "",
     description: "",
@@ -421,8 +459,8 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
         ...prev,
         name: userForm.name,
         email: userForm.email,
-        designation:
-          displayRole === "Employee" ? "Software Engineer" : displayRole,
+        designation: displayRole === "Employee" ? "Software Engineer" : displayRole,
+        joiningDate: new Date().toISOString().split("T")[0],
       }));
 
       setIsAddUserOpen(false);
@@ -440,8 +478,8 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
   const handleAddEmployee = async (e) => {
     try {
       e.preventDefault();
-      if (!employeeForm.email || !employeeForm.phone) {
-        showToast("Please fill out all required employee details.", "error");
+      if (!employeeForm.email || !employeeForm.phone || !employeeForm.joiningDate || !employeeForm.designation) {
+        showToast("Please fill out all required employee details (email, phone, designation, joining date).", "error");
         return;
       }
       if (editingEmployeeId) {
@@ -466,7 +504,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
         email: "",
         phone: "",
         dateOfBirth: "",
-        gender: "Male",
+        gender: "male",
         address: "",
         department: "",
         designation: "",
@@ -481,7 +519,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
       );
     } catch (error) {
       console.error("Error adding employee details:", error);
-      showToast("Error creating employee", "error");
+      showToast(error.response?.data?.message || "Error creating employee", "error");
     }
   };
 
@@ -541,6 +579,28 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
         error.response?.data?.message || "Unable to create department.",
         "error",
       );
+    }
+  };
+
+  const handleEnrollFace = async (descriptor, setStatus) => {
+    try {
+      setStatus("Saving face descriptor...");
+      const res = await admin.post(`/employees/${enrollFaceEmployeeId}/enroll-face`, {
+        faceDescriptor: descriptor
+      });
+      if (res.data.success) {
+        showToast("Face enrolled successfully", "success");
+        setIsEnrollFaceOpen(false);
+        setEnrollFaceEmployeeId(null);
+        fetchEmployees();
+      } else {
+        setStatus("Failed to enroll face.");
+        showToast(res.data.message || "Failed to enroll face", "error");
+      }
+    } catch (err) {
+      console.error(err);
+      setStatus("Error enrolling face.");
+      showToast(err.response?.data?.message || "Error enrolling face", "error");
     }
   };
 
@@ -952,6 +1012,16 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                             Edit
                           </button>
                           <button
+                            onClick={() => {
+                              setEnrollFaceEmployeeId(emp._id);
+                              setIsEnrollFaceOpen(true);
+                            }}
+                            className="flex items-center gap-1 rounded-lg bg-blue-50 px-3 py-1 text-xs font-medium text-blue-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/30"
+                          >
+                            <Camera className="h-3.5 w-3.5" />
+                            Enroll Face
+                          </button>
+                          <button
                             onClick={() => setSelectedEmployeeDetails(emp)}
                             className="rounded-lg bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
                           >
@@ -1056,32 +1126,176 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
         return (
           <div className="space-y-6">
             <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
-              Master Attendance & Percentages
+              Attendance Analytics & Logs
             </h2>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="p-5 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
-                <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">
-                  Average Organization Attendance
-                </p>
-                <p className="mt-2 text-3xl font-semibold text-emerald-500 dark:text-emerald-400">
-                  95.2%
-                </p>
+
+            {todayStatus && (
+              <>
+                <div className="grid gap-4 sm:grid-cols-4">
+                  <div className="p-5 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
+                    <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">Present Today</p>
+                    <p className="mt-2 text-3xl font-semibold text-emerald-500 dark:text-emerald-400">
+                      {Math.round((todayStatus.stats.presentCount / todayStatus.stats.totalEmployees) * 100) || 0}%
+                    </p>
+                    <p className="mt-1 text-[11px] font-medium text-gray-500 dark:text-gray-400">
+                      {todayStatus.stats.presentCount} / {todayStatus.stats.totalEmployees} employees
+                    </p>
+                  </div>
+                  <div className="p-5 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
+                    <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">Late Arrivals</p>
+                    <p className="mt-2 text-3xl font-semibold text-amber-500 dark:text-amber-400">
+                      {Math.round((todayStatus.stats.lateCount / todayStatus.stats.totalEmployees) * 100) || 0}%
+                    </p>
+                    <p className="mt-1 text-[11px] font-medium text-gray-500 dark:text-gray-400">
+                      {todayStatus.stats.lateCount} employees late
+                    </p>
+                  </div>
+                  <div className="p-5 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
+                    <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">On Leave</p>
+                    <p className="mt-2 text-3xl font-semibold text-blue-500 dark:text-blue-400">
+                      {Math.round((todayStatus.stats.onLeaveCount / todayStatus.stats.totalEmployees) * 100) || 0}%
+                    </p>
+                    <p className="mt-1 text-[11px] font-medium text-gray-500 dark:text-gray-400">
+                      {todayStatus.stats.onLeaveCount} employees on leave
+                    </p>
+                  </div>
+                  <div className="p-5 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
+                    <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">Absent</p>
+                    <p className="mt-2 text-3xl font-semibold text-rose-500 dark:text-rose-400">
+                      {Math.round((todayStatus.stats.absentCount / todayStatus.stats.totalEmployees) * 100) || 0}%
+                    </p>
+                    <p className="mt-1 text-[11px] font-medium text-gray-500 dark:text-gray-400">
+                      {todayStatus.stats.absentCount} employees absent
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid gap-6 sm:grid-cols-2">
+                  <div className="bg-white/80 dark:bg-[#151d2e] rounded-xl border border-gray-100/80 dark:border-gray-800/50 shadow-soft p-5">
+                    <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-4">Who is Present / Late</h3>
+                    <div className="space-y-3 max-h-48 overflow-y-auto pr-2">
+                      {[...todayStatus.lists.present, ...todayStatus.lists.late].length === 0 && (
+                        <p className="text-xs text-gray-500 text-center py-4">No employees present yet.</p>
+                      )}
+                      {[...todayStatus.lists.present, ...todayStatus.lists.late].map(emp => {
+                        const isLate = todayStatus.lists.late.some(l => l._id === emp._id);
+                        return (
+                          <div key={emp._id} className="flex justify-between items-center p-2 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+                            <div>
+                              <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{emp.name}</p>
+                              <p className="text-[10px] text-gray-500">In: {new Date(emp.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                            </div>
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${isLate ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'}`}>
+                              {isLate ? 'Late' : 'On Time'}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="bg-white/80 dark:bg-[#151d2e] rounded-xl border border-gray-100/80 dark:border-gray-800/50 shadow-soft p-5">
+                    <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-4">Who is On Leave / Absent</h3>
+                    <div className="space-y-3 max-h-48 overflow-y-auto pr-2">
+                      {[...todayStatus.lists.onLeave, ...todayStatus.lists.absent].length === 0 && (
+                        <p className="text-xs text-gray-500 text-center py-4">Everyone is present.</p>
+                      )}
+                      {todayStatus.lists.onLeave.map(emp => (
+                        <div key={emp._id} className="flex justify-between items-center p-2 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+                          <div>
+                            <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{emp.name}</p>
+                            <p className="text-[10px] text-gray-500">{emp.leaveType}</p>
+                          </div>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                            On Leave
+                          </span>
+                        </div>
+                      ))}
+                      {todayStatus.lists.absent.map(emp => (
+                        <div key={emp._id} className="flex justify-between items-center p-2 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+                          <div>
+                            <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{emp.name}</p>
+                            <p className="text-[10px] text-gray-500">Not checked in</p>
+                          </div>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400">
+                            Absent
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
+            <div className="bg-white/80 dark:bg-[#151d2e] rounded-xl border border-gray-100/80 dark:border-gray-800/50 shadow-soft overflow-hidden">
+              <div className="p-4 border-b border-gray-100 dark:border-gray-800/50">
+                <h3 className="font-semibold text-gray-800 dark:text-gray-100">Historical Check-In Logs</h3>
               </div>
-              <div className="p-5 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
-                <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">
-                  Total Work Days This Month
-                </p>
-                <p className="mt-2 text-3xl font-semibold text-gray-800 dark:text-gray-100">
-                  22 Days
-                </p>
-              </div>
-              <div className="p-5 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
-                <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">
-                  Biometric Sync Status
-                </p>
-                <p className="mt-2 text-xl font-semibold text-indigo-500 dark:text-indigo-400">
-                  All Terminals Online
-                </p>
+              <div className="max-h-[500px] overflow-y-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead className="bg-gray-50 dark:bg-gray-800/50 sticky top-0">
+                    <tr>
+                      <th className="p-4 text-xs font-semibold text-gray-500 dark:text-gray-400">Employee</th>
+                      <th className="p-4 text-xs font-semibold text-gray-500 dark:text-gray-400">Date</th>
+                      <th className="p-4 text-xs font-semibold text-gray-500 dark:text-gray-400">Punch In</th>
+                      <th className="p-4 text-xs font-semibold text-gray-500 dark:text-gray-400">Punch Out</th>
+                      <th className="p-4 text-xs font-semibold text-gray-500 dark:text-gray-400">Duration</th>
+                      <th className="p-4 text-xs font-semibold text-gray-500 dark:text-gray-400">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800/50">
+                    {attendanceLogs.map((log) => {
+                      const date = new Date(log.date).toLocaleDateString('en-US', { weekday: 'short', day: '2-digit', month: 'short' });
+                      const punchIn = log.checkInTime ? new Date(log.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A";
+                      const punchOut = log.checkOutTime ? new Date(log.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "In Progress";
+                      let duration = "0h 0m";
+                      if (log.checkInTime && log.checkOutTime) {
+                        const diff = new Date(log.checkOutTime) - new Date(log.checkInTime);
+                        const hours = Math.floor(diff / (1000 * 60 * 60));
+                        const minutes = Math.floor((diff / (1000 * 60)) % 60);
+                        duration = `${hours}h ${minutes}m`;
+                      }
+
+                      let statusText = log.status || "Present";
+                      let badgeClass = "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400";
+                      if (log.checkInTime && log.checkOutTime) {
+                        statusText += " (100%)";
+                        badgeClass = "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400";
+                      } else if (!log.checkInTime && !log.checkOutTime && log.status === "Absent") {
+                        statusText += " (0%)";
+                        badgeClass = "bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400";
+                      } else {
+                        statusText += " (Incomplete)";
+                      }
+                      
+                      return (
+                        <tr key={log._id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
+                          <td className="p-4">
+                            <div className="flex flex-col">
+                              <span className="font-semibold text-sm text-gray-800 dark:text-gray-100">{log.userId?.name || "Unknown"}</span>
+                              <span className="text-[10px] text-gray-500">{log.userId?.email || ""}</span>
+                            </div>
+                          </td>
+                          <td className="p-4 text-xs text-gray-600 dark:text-gray-300 font-medium">{date}</td>
+                          <td className="p-4 text-xs text-gray-600 dark:text-gray-300 font-medium">{punchIn}</td>
+                          <td className="p-4 text-xs text-gray-600 dark:text-gray-300 font-medium">{punchOut}</td>
+                          <td className="p-4 text-xs font-semibold text-gray-700 dark:text-gray-200">{duration}</td>
+                          <td className="p-4">
+                            <span className={`inline-block rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${badgeClass}`}>
+                              {statusText}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {attendanceLogs.length === 0 && (
+                      <tr>
+                        <td colSpan="6" className="p-4 text-sm text-gray-500 text-center">No attendance logs found.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
@@ -1947,7 +2161,6 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
               </label>
               <input
                 type="text"
-                disabled
                 value={employeeForm.designation}
                 onChange={(e) =>
                   setEmployeeForm({
@@ -2394,6 +2607,33 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
             />
           </div>
         </form>
+      </Modal>
+
+      {/* Enroll Face Modal */}
+      <Modal
+        isOpen={isEnrollFaceOpen}
+        onClose={() => {
+          setIsEnrollFaceOpen(false);
+          setEnrollFaceEmployeeId(null);
+        }}
+        title="Enroll Face"
+        size="md"
+        primaryAction={{
+          label: "Cancel",
+          onClick: () => {
+            setIsEnrollFaceOpen(false);
+            setEnrollFaceEmployeeId(null);
+          },
+        }}
+      >
+        <div className="flex flex-col items-center p-4">
+          <p className="text-sm text-gray-500 mb-6 text-center">
+            Please position the employee's face in front of the camera. The system will automatically detect and enroll the face.
+          </p>
+          {isEnrollFaceOpen && (
+            <WebcamCapture onCapture={handleEnrollFace} mode="enroll" />
+          )}
+        </div>
       </Modal>
     </>
   );

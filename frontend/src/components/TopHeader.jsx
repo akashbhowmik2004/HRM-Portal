@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Search, Bell, Menu, X, LogIn, LogOut } from 'lucide-react'
+import { Search, Bell, Menu, X } from 'lucide-react'
 import { useSocket } from '../context/SocketContext'
 import { api } from '../apis/axios'
 import { useToast } from './ToastProvider'
@@ -7,19 +7,16 @@ import { useToast } from './ToastProvider'
 const TopHeader = ({
   user = { name: 'John Wick', role: 'Admin', avatar: null },
   onOpenMobileMenu = () => {},
-  isDarkMode = false,
-  onAttendanceUpdate = () => {}
+  isDarkMode = false
 }) => {
   const socket = useSocket();
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [attendance, setAttendance] = useState(null);
   const notificationRef = React.useRef(null);
   const { showToast } = useToast();
 
   useEffect(() => {
     fetchNotifications();
-    fetchAttendance();
 
     const handleClickOutside = (event) => {
       if (!event.target.closest('[data-notification-container]')) {
@@ -58,16 +55,6 @@ const TopHeader = ({
     }
   };
 
-  const fetchAttendance = async () => {
-    try {
-      const res = await api.get("/attendance/today");
-      if (res.data.success) {
-        setAttendance(res.data.attendance);
-      }
-    } catch (error) {
-      console.error("Error fetching attendance", error);
-    }
-  };
 
   const markAsRead = async () => {
     try {
@@ -100,33 +87,7 @@ const TopHeader = ({
     }
   };
 
-  const handleCheckIn = async () => {
-    try {
-      const res = await api.post("/attendance/checkin");
-      if (res.data.success) {
-        setAttendance(res.data.attendance);
-        showToast("Checked in successfully", "success");
-        onAttendanceUpdate();
-      }
-    } catch (error) {
-      console.error("Check in error", error);
-      showToast(error.response?.data?.message || "Check in failed", "error");
-    }
-  };
 
-  const handleCheckOut = async () => {
-    try {
-      const res = await api.post("/attendance/checkout");
-      if (res.data.success) {
-        setAttendance(res.data.attendance);
-        showToast("Checked out successfully", "success");
-        onAttendanceUpdate();
-      }
-    } catch (error) {
-      console.error("Check out error", error);
-      showToast(error.response?.data?.message || "Check out failed", "error");
-    }
-  };
 
   return (
     <header className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl bg-white/80 dark:bg-[#151d2e] p-3 sm:px-5 border border-gray-100/80 dark:border-gray-800/50 shadow-soft backdrop-blur-sm transition-colors">
@@ -142,39 +103,10 @@ const TopHeader = ({
             <Menu className="h-5 w-5" />
           </button>
 
-          <nav className="hidden sm:flex items-center gap-5 text-[13px] font-medium text-gray-500 dark:text-gray-400">
-            {(!attendance || !attendance.checkInTime) ? (
-              <button 
-                onClick={handleCheckIn}
-                className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-semibold hover:text-emerald-700 transition"
-              >
-                <LogIn className="h-4 w-4" /> Check In
-              </button>
-            ) : (!attendance.checkOutTime) ? (
-              <button 
-                onClick={handleCheckOut}
-                className="flex items-center gap-1.5 text-rose-600 dark:text-rose-400 font-semibold hover:text-rose-700 transition"
-              >
-                <LogOut className="h-4 w-4" /> Check Out
-              </button>
-            ) : (
-              <span className="text-gray-400">Attendance Completed</span>
-            )}
-          </nav>
         </div>
 
         {/* Right Actions (Visible on Mobile in this row) */}
         <div className="flex sm:hidden items-center justify-end gap-3 shrink-0 relative" data-notification-container>
-          {(!attendance || !attendance.checkInTime) ? (
-            <button onClick={handleCheckIn} className="text-emerald-600">
-              <LogIn className="h-5 w-5" />
-            </button>
-          ) : (!attendance.checkOutTime) ? (
-            <button onClick={handleCheckOut} className="text-rose-600">
-              <LogOut className="h-5 w-5" />
-            </button>
-          ) : null}
-
           <button
             className="relative rounded-lg p-2 text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-200 transition"
             onClick={toggleNotifications}
