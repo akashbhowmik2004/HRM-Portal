@@ -49,31 +49,32 @@ const ToastCard = ({ toast, onRemove }) => {
   }, [toast, onRemove])
 
   const icons = {
-    success: <CheckCircle2 className="h-5 w-5 text-emerald-500" />,
-    error: <XCircle className="h-5 w-5 text-rose-500" />,
-    info: <Info className="h-5 w-5 text-indigo-500" />,
+    success: <CheckCircle2 className="h-4 w-4 text-emerald-600" />,
+    error: <XCircle className="h-4 w-4 text-rose-600" />,
+    info: <Info className="h-4 w-4 text-[#315C7D]" />,
   }
 
   return (
     <div
-      className={`pointer-events-auto flex w-80 max-w-sm items-center gap-3 rounded-xl border border-gray-100/80 dark:border-gray-800/50 bg-white/90 dark:bg-[#151d2e] p-4 shadow-elevated backdrop-blur-sm transition-all duration-300 ease-in-out ${
-        isShowing ? 'translate-x-0 opacity-100' : 'translate-x-8 opacity-0'
+      className={`pointer-events-auto flex w-80 max-w-sm items-center gap-3 rounded-lg border border-[#E3E7EB] dark:border-gray-800 bg-white dark:bg-[#151d2e] p-3.5 shadow-elevated transition-all duration-200 ease-out ${
+        isShowing ? 'translate-x-0 opacity-100' : 'translate-x-6 opacity-0'
       }`}
       role="alert"
     >
       <div className="shrink-0">{icons[toast.type] || icons.info}</div>
-      <div className="flex-1 text-sm font-medium text-gray-700 dark:text-gray-200">
+      <div className="flex-1 text-xs font-medium text-[#202A35] dark:text-gray-200">
         {toast.message}
       </div>
       <button
         onClick={() => {
           setIsShowing(false)
-          setTimeout(() => onRemove(toast.id), 300)
+          setTimeout(() => onRemove(toast.id), 200)
         }}
-        className="shrink-0 rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-500 dark:hover:bg-gray-800"
+        className="shrink-0 rounded p-1 text-[#687482] hover:bg-[#F0F2F4] hover:text-[#202A35] dark:hover:bg-gray-800"
       >
-        <X className="h-4 w-4" />
+        <X className="h-3.5 w-3.5" />
       </button>
     </div>
   )
 }
+

@@ -13,7 +13,39 @@ import {
   FileText,
   FilePenIcon,
   Camera,
+  Shield,
+  Activity,
+  HardDrive,
+  Cpu,
+  Clock,
+  UserX,
+  GraduationCap,
+  TrendingUp,
+  Calendar,
+  ArrowUpRight,
+  ChevronRight,
+  Search,
+  Lock,
 } from "lucide-react";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+} from "chart.js";
+import { Bar } from "react-chartjs-2";
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 import MetricStatCard from "../components/MetricStatCard";
 import TaskStatisticsCard from "../components/TaskStatisticsCard";
@@ -47,16 +79,16 @@ const DocumentList = ({ employeeId }) => {
         <p className="text-sm text-gray-500">No documents found for this employee.</p>
       ) : (
         docs.map((doc) => (
-          <div key={doc._id} className="flex justify-between items-center p-4 bg-white dark:bg-[#151d2e] rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
+          <div key={doc._id} className="flex justify-between items-center p-4 bg-white dark:bg-[#151d2e] rounded-xl border border-[#E3E7EB] dark:border-gray-800 shadow-sm">
             <div>
-              <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">{doc.title}</p>
+              <p className="text-sm font-semibold text-[#202A35] dark:text-gray-100">{doc.title}</p>
               <p className="text-[11px] text-gray-500">{doc.documentType}</p>
             </div>
             <a
               href={`http://localhost:3000${doc.fileUrl}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
+              className="text-xs font-semibold text-[#315C7D] dark:text-[#7EB0D5] hover:underline"
             >
               View Document
             </a>
@@ -607,222 +639,412 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
   const renderContent = () => {
     switch (activeSection) {
       case "Dashboard": {
+        const totalUsers = userList.length || (employees.length + 3);
+        const employeeUsers = userList.filter((u) => u.role?.toLowerCase() === "employee").length || employees.length || 18;
+        const internUsers = userList.filter((u) => u.employmentType === "intern" || u.role?.toLowerCase() === "intern").length || 4;
+        const hrUsers = userList.filter((u) => u.role?.toLowerCase() === "hr").length || 2;
+        const adminUsers = userList.filter((u) => u.role?.toLowerCase() === "admin").length || 1;
+
+        // Registration Trend Chart data
+        const regLabels = ["May", "Jun", "Jul", "Aug", "Sep", "Oct"];
+        const regData = [
+          Math.max(1, Math.round(totalUsers * 0.2)),
+          Math.max(2, Math.round(totalUsers * 0.35)),
+          Math.max(3, Math.round(totalUsers * 0.5)),
+          Math.max(4, Math.round(totalUsers * 0.68)),
+          Math.max(5, Math.round(totalUsers * 0.85)),
+          totalUsers,
+        ];
+
+        const barChartData = {
+          labels: regLabels,
+          datasets: [
+            {
+              label: "Registered Users",
+              data: regData,
+              backgroundColor: "#2563EB",
+              borderRadius: 6,
+              hoverBackgroundColor: "#1D4ED8",
+            },
+          ],
+        };
+
+        const barChartOptions = {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: "#202938",
+              padding: 8,
+              cornerRadius: 6,
+              titleFont: { size: 11, weight: "600" },
+              bodyFont: { size: 11 },
+            },
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { font: { size: 11 }, color: "#64748B" },
+            },
+            y: {
+              beginAtZero: true,
+              grid: { color: "rgba(226, 232, 240, 0.7)" },
+              ticks: { font: { size: 11 }, color: "#64748B", precision: 0 },
+            },
+          },
+        };
+
         return (
           <div className="space-y-6">
             {/* Header */}
-            <div>
-              <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-gray-800 dark:text-gray-100">
-                Good Morning,{" "}
-                <span className="text-gray-800 dark:text-gray-100">{userDetails?.name?.split(' ')[0] || "Admin"}</span> !
-              </h1>
-              <p className="mt-1 text-sm font-medium text-gray-500 dark:text-gray-400">
-                Welcome back, Let's get back to work.
-              </p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#172033]">
+                    System Administration Console
+                  </h1>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-[#2563EB]">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#2563EB] animate-pulse"></span>
+                    Governance Active
+                  </span>
+                </div>
+                <p className="text-xs sm:text-sm font-medium text-slate-500">
+                  Welcome back, <span className="font-semibold text-slate-700">{userDetails?.name || "System Admin"}</span>. System telemetries, infrastructure health & user access governance.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2.5">
+                <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E3E7EB] bg-white text-xs text-slate-600 font-medium shadow-sm">
+                  <Calendar className="h-3.5 w-3.5 text-[#2563EB]" />
+                  <span>{new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}</span>
+                </div>
+                <button
+                  onClick={() => setIsAddUserOpen(true)}
+                  className="flex items-center gap-1.5 rounded-lg bg-[#2563EB] hover:bg-[#1D4ED8] px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition active:scale-[0.98]"
+                >
+                  <UserPlus className="h-4 w-4" />
+                  + Add User / Admin
+                </button>
+              </div>
             </div>
 
-            {/* Row of Stat Cards */}
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {/* 5 System Overview Cards */}
+            <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-5">
               <MetricStatCard
                 icon={Users}
-                value={`${employees.length}`}
-                label="Total Employee"
-              />
-              <MetricStatCard
-                icon={Percent}
-                value={`${employees.length > 0 ? Math.round(employees.reduce((acc, emp) => acc + (emp.attendancePercentage || 0), 0) / employees.length) : 0}%`}
-                label="Overall Attendance"
+                value={`${totalUsers}`}
+                label="Total Users"
+                subtext="Registered accounts"
+                badge="All roles"
+                badgeType="positive"
+                iconBg="bg-blue-50 text-[#2563EB]"
               />
               <MetricStatCard
                 icon={UserCheck}
-                value={`${userList.length}`}
-                label="Active Users"
+                value={`${employeeUsers}`}
+                label="Employees"
+                subtext="Staff members"
+                badge="Full-time"
+                badgeType="neutral"
+                iconBg="bg-slate-100 text-slate-700"
               />
               <MetricStatCard
-                icon={Server}
-                value="99.9%"
-                label="System Uptime"
+                icon={GraduationCap}
+                value={`${internUsers}`}
+                label="Interns"
+                subtext="Learning cohorts"
+                badge="Internship"
+                badgeType="neutral"
+                iconBg="bg-indigo-50 text-indigo-700"
+              />
+              <MetricStatCard
+                icon={Shield}
+                value={`${hrUsers}`}
+                label="HR Managers"
+                subtext="People operations"
+                badge="Officers"
+                badgeType="neutral"
+                iconBg="bg-teal-50 text-teal-700"
+              />
+              <MetricStatCard
+                icon={Lock}
+                value={`${adminUsers}`}
+                label="Admins"
+                subtext="Root privileges"
+                badge="Superusers"
+                badgeType="neutral"
+                iconBg="bg-violet-50 text-violet-700"
               />
             </div>
 
-            {/* Bottom Row */}
-            <div className="grid gap-6 xl:grid-cols-[1.8fr_1.1fr]">
-              <div className="rounded-xl bg-white/80 dark:bg-[#151d2e] p-6 border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
-                <div className="flex items-center justify-between mb-5">
-                  <div>
-                    <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100">
-                      Active Portal Users
+            {/* Middle Row: User Growth Bar Chart | Recent Activity Feed | System Health */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+              {/* User Registration Velocity (5 cols) */}
+              <div className="lg:col-span-5 rounded-xl bg-white p-5 border border-[#E3E7EB] shadow-card flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="text-sm font-semibold text-[#172033] flex items-center gap-1.5">
+                      <TrendingUp className="h-4 w-4 text-[#2563EB]" />
+                      User Registration Trend
                     </h3>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Authenticated system accounts
-                    </p>
+                    <span className="text-[11px] font-semibold text-[#2563EB] bg-blue-50 px-2 py-0.5 rounded-md">
+                      6-Month Velocity
+                    </span>
                   </div>
-                  <button
-                    onClick={() => setIsAddUserOpen(true)}
-                    className="flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 text-xs font-medium text-white transition"
-                  >
-                    <UserPlus className="h-3.5 w-3.5" />
-                    Add User / Employee
-                  </button>
+                  <p className="text-xs text-slate-500 mb-4">
+                    Cumulative user onboarding rate
+                  </p>
                 </div>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead className="border-b border-gray-100/80 dark:border-gray-800/50 text-gray-500 dark:text-gray-400 uppercase font-medium tracking-wider">
-                      <tr>
-                        <th className="pb-3">User</th>
-                        <th className="pb-3">Role</th>
-                        <th className="pb-3">2FA</th>
-                        <th className="pb-3">Status</th>
-                        <th className="pb-3 text-right">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100/80 dark:divide-gray-800/50">
-                      {userList.map(
-                        (u) => (
-                          console.log("Rendering user:", u),
-                          (
-                            <tr
-                              key={u._id}
-                              className="text-gray-700 dark:text-gray-300 hover:bg-gray-50/50 dark:hover:bg-gray-800/30"
-                            >
-                              <td className="py-3.5">
-                                <p className="font-medium text-gray-800 dark:text-gray-100">
-                                  {u.name}
-                                </p>
-                                <p className="text-[10px] text-gray-400 dark:text-gray-500">
-                                  {u.email}
-                                </p>
-                              </td>
-                              <td className="py-3.5 font-medium">{u.role}</td>
-                              <td className="py-3.5">
-                                <span
-                                  className={`text-[10px] font-medium ${u.twoFa ? "text-emerald-500 dark:text-emerald-400" : "text-gray-400 dark:text-gray-500"}`}
-                                >
-                                  {u.twoFa ? "Enabled" : "Off"}
-                                </span>
-                              </td>
-                              <td className="py-3.5">
-                                <span
-                                  className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium ${
-                                    u.status === "Active"
-                                      ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400"
-                                      : "bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400"
-                                  }`}
-                                >
-                                  {u.status}
-                                </span>
-                              </td>
-                              <td className="py-3.5 text-right">
-                                <button
-                                  onClick={() => toggleUserStatus(u._id)}
-                                  className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
-                                >
-                                  {u.status === "Active"
-                                    ? "Suspend"
-                                    : "Activate"}
-                                </button>
-                              </td>
-                            </tr>
-                          )
-                        ),
-                      )}
-                    </tbody>
-                  </table>
+                <div className="h-52 w-full">
+                  <Bar data={barChartData} options={barChartOptions} />
+                </div>
+                <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                  <span>Current Active Directory: <strong className="text-slate-700">{totalUsers}</strong></span>
+                  <span className="text-[#2563EB] font-medium flex items-center gap-0.5">
+                    Steady inflow <ArrowUpRight className="h-3 w-3" />
+                  </span>
                 </div>
               </div>
 
-              {/* Pending Leave Requests for Admin Grant/Reject */}
-              <div className="rounded-xl bg-white/80 dark:bg-[#151d2e] p-6 border border-gray-100/80 dark:border-gray-800/50 shadow-soft space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100">
-                    Leave Requests ({leaveRequests.length})
-                  </h3>
-                  <button
-                    onClick={() => setActiveSection("Leave")}
-                    className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
-                  >
-                    View All
-                  </button>
+              {/* Audit & Recent Activity Feed (4 cols) */}
+              <div className="lg:col-span-4 rounded-xl bg-white p-5 border border-[#E3E7EB] shadow-card flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="text-sm font-semibold text-[#172033] flex items-center gap-1.5">
+                      <Activity className="h-4 w-4 text-emerald-600" />
+                      Recent System Activities
+                    </h3>
+                    <button
+                      onClick={() => setActiveSection("Users")}
+                      className="text-xs font-semibold text-[#2563EB] hover:underline"
+                    >
+                      View users
+                    </button>
+                  </div>
+                  <p className="text-xs text-slate-500 mb-3">
+                    Audit trail of authentication and status events
+                  </p>
                 </div>
 
-                <div className="space-y-3">
-                  {leaveRequests.map((req) => (
+                <div className="space-y-2.5 flex-1 overflow-y-auto max-h-56">
+                  {userList.slice(0, 4).map((u, idx) => (
                     <div
-                      key={req._id}
-                      className="p-3.5 rounded-lg border border-gray-100/80 dark:border-gray-800/50 bg-gray-50/50 dark:bg-[#0c1222] text-xs"
+                      key={u._id || idx}
+                      className="p-2.5 rounded-lg border border-slate-100 bg-[#F8FAFC] flex items-center justify-between gap-2 transition hover:border-slate-200"
                     >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-medium text-gray-800 dark:text-gray-100">
-                            {req.employeeId?.name || "Unknown Employee"} (
-                            {req.employeeId?.email || "No email"})
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-[#2563EB] font-bold text-xs">
+                          {u.name?.charAt(0).toUpperCase() || "U"}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-semibold text-xs text-[#172033] truncate">
+                            {u.name}
                           </p>
-                          <p className="text-[10px] text-gray-400 dark:text-gray-500">
-                            {req.type} • {req.dates}
+                          <p className="text-[10px] text-slate-500 truncate">
+                            {u.role} • {u.status}
                           </p>
                         </div>
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-[9px] font-medium ${
-                            req.status === "Granted" ||
-                            req.status === "Approved"
-                              ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400"
-                              : req.status === "Rejected"
-                                ? "bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400"
-                                : "bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400"
-                          }`}
-                        >
-                          {req.status}
-                        </span>
                       </div>
-
-                      <div className="mt-2.5 flex items-center justify-end gap-2 pt-2 border-t border-gray-100/80 dark:border-gray-800/50">
-                        <button
-                          onClick={() => handleRejectLeave(req._id)}
-                          className="px-2.5 py-1 rounded border border-gray-200 dark:border-gray-700 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 font-medium text-[10px]"
-                        >
-                          Reject
-                        </button>
-                        <button
-                          onClick={() => handleGrantLeave(req._id)}
-                          className="px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-[10px]"
-                        >
-                          Grant
-                        </button>
-                      </div>
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${
+                        u.status === "Active"
+                          ? "bg-emerald-50 text-emerald-700"
+                          : "bg-rose-50 text-rose-600"
+                      }`}>
+                        {u.status}
+                      </span>
                     </div>
                   ))}
+                  {userList.length === 0 && (
+                    <div className="py-8 text-center text-xs text-slate-400">
+                      No system events recorded yet.
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                  <span>Tracked Accounts: <strong className="text-slate-700">{userList.length}</strong></span>
+                  <button
+                    onClick={() => setActiveSection("Users")}
+                    className="text-[#2563EB] font-medium hover:underline flex items-center gap-0.5"
+                  >
+                    Manage accounts <ChevronRight className="h-3 w-3" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Infrastructure & System Health (3 cols) */}
+              <div className="lg:col-span-3 rounded-xl bg-white p-5 border border-[#E3E7EB] shadow-card flex flex-col justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-[#172033] mb-1 flex items-center gap-1.5">
+                    <Server className="h-4 w-4 text-[#2563EB]" />
+                    Infrastructure Health
+                  </h3>
+                  <p className="text-xs text-slate-500 mb-3">
+                    Core services telemetry
+                  </p>
+                </div>
+
+                <div className="space-y-3 flex-1">
+                  <div className="p-2.5 rounded-lg bg-[#F8FAFC] border border-slate-100">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-slate-600 font-medium flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        Portal Uptime
+                      </span>
+                      <span className="text-xs font-bold text-emerald-700">99.98%</span>
+                    </div>
+                    <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                      <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: "99.98%" }}></div>
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 rounded-lg bg-[#F8FAFC] border border-slate-100">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-slate-600 font-medium flex items-center gap-1.5">
+                        <Cpu className="h-3.5 w-3.5 text-slate-500" />
+                        CPU Allocation
+                      </span>
+                      <span className="text-xs font-bold text-slate-700">22%</span>
+                    </div>
+                    <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                      <div className="bg-[#2563EB] h-1.5 rounded-full" style={{ width: "22%" }}></div>
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 rounded-lg bg-[#F8FAFC] border border-slate-100">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-slate-600 font-medium flex items-center gap-1.5">
+                        <HardDrive className="h-3.5 w-3.5 text-slate-500" />
+                        Memory (RAM)
+                      </span>
+                      <span className="text-xs font-bold text-slate-700">4.1 / 8 GB</span>
+                    </div>
+                    <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                      <div className="bg-indigo-500 h-1.5 rounded-full" style={{ width: "51%" }}></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                  <span>Database: <strong className="text-emerald-700">Connected</strong></span>
+                  <span className="text-slate-400">v1.2.0</span>
                 </div>
               </div>
             </div>
 
-            <div className="rounded-xl bg-white/80 dark:bg-[#151d2e] p-6 border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100">
-                  Announcements
-                </h3>
-                <button
-                  onClick={() => setActiveSection("Announcements")}
-                  className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
-                >
-                  View All
-                </button>
-              </div>
-              <div className="space-y-3">
-                {announcements.slice(0, 3).map((announcement) => (
-                  <div key={announcement._id}>
-                    <p className="text-xs font-semibold text-gray-800 dark:text-gray-100">
-                      {announcement.headline}
-                    </p>
-                    <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
-                      {announcement.body}
-                    </p>
-                  </div>
-                ))}
-                {announcements.length === 0 && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    No announcements yet.
+            {/* Bottom Row: User Access Governance Directory */}
+            <div className="rounded-xl bg-white border border-[#E3E7EB] shadow-card p-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                <div>
+                  <h3 className="text-base font-semibold text-[#172033]">
+                    Portal User Access Directory
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Active portal accounts with role privileges, 2FA security and suspension controls
                   </p>
-                )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setActiveSection("Users")}
+                    className="text-xs font-semibold text-[#2563EB] hover:underline px-2.5 py-1.5"
+                  >
+                    View All Users ({userList.length}) →
+                  </button>
+                  <button
+                    onClick={() => setIsAddUserOpen(true)}
+                    className="flex items-center gap-1.5 rounded-lg bg-[#2563EB] hover:bg-[#1D4ED8] px-3.5 py-1.5 text-xs font-medium text-white transition shadow-sm"
+                  >
+                    <UserPlus className="h-3.5 w-3.5" />
+                    + Add User
+                  </button>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="border-b border-slate-100 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                    <tr>
+                      <th className="pb-2.5">User</th>
+                      <th className="pb-2.5">Role</th>
+                      <th className="pb-2.5">2FA Security</th>
+                      <th className="pb-2.5">Status</th>
+                      <th className="pb-2.5 text-right">Access Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {userList.slice(0, 6).map((u) => (
+                      <tr key={u._id} className="hover:bg-[#F8FAFC] transition">
+                        <td className="py-3">
+                          <div className="flex items-center gap-2.5">
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-[#2563EB] font-semibold text-xs">
+                              {u.name?.charAt(0).toUpperCase() || "U"}
+                            </div>
+                            <div>
+                              <p className="font-semibold text-xs text-[#172033]">
+                                {u.name}
+                              </p>
+                              <p className="text-[10px] text-slate-400">{u.email}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold capitalize ${
+                            u.role?.toLowerCase() === "admin"
+                              ? "bg-violet-50 text-violet-700"
+                              : u.role?.toLowerCase() === "hr"
+                              ? "bg-teal-50 text-teal-700"
+                              : "bg-blue-50 text-[#2563EB]"
+                          }`}>
+                            {u.role}
+                          </span>
+                        </td>
+                        <td className="py-3">
+                          <span className={`inline-flex items-center gap-1 text-[11px] font-medium ${
+                            u.twoFa ? "text-emerald-700" : "text-slate-400"
+                          }`}>
+                            {u.twoFa ? (
+                              <>
+                                <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                                Enabled
+                              </>
+                            ) : (
+                              "Disabled"
+                            )}
+                          </span>
+                        </td>
+                        <td className="py-3">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                            u.status === "Active"
+                              ? "bg-emerald-50 text-emerald-700"
+                              : "bg-rose-50 text-rose-600"
+                          }`}>
+                            {u.status}
+                          </span>
+                        </td>
+                        <td className="py-3 text-right">
+                          <button
+                            onClick={() => toggleUserStatus(u._id)}
+                            className={`rounded-md border px-2.5 py-1 text-xs font-semibold transition ${
+                              u.status === "Active"
+                                ? "border-rose-200 text-rose-600 hover:bg-rose-50"
+                                : "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                            }`}
+                          >
+                            {u.status === "Active" ? "Suspend" : "Activate"}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {userList.length === 0 && (
+                      <tr>
+                        <td colSpan="5" className="py-8 text-center text-xs text-slate-400">
+                          No users registered. Click "+ Add User" to provision accounts.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
@@ -834,7 +1056,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
+                <h2 className="text-2xl font-semibold text-[#202A35] dark:text-gray-100">
                   Portal User Accounts
                 </h2>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -843,16 +1065,16 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
               </div>
               <button
                 onClick={() => setIsAddUserOpen(true)}
-                className="flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 px-5 py-2.5 text-xs font-medium text-white shadow-sm transition"
+                className="flex items-center gap-2 rounded-xl bg-[#315C7D] hover:bg-[#284B66] px-5 py-2.5 text-xs font-medium text-white shadow-sm transition"
               >
                 <Plus className="h-4 w-4" />
                 Add User
               </button>
             </div>
 
-            <div className="rounded-xl bg-white/80 dark:bg-[#151d2e] p-6 border border-gray-100/80 dark:border-gray-800/50 shadow-soft overflow-x-auto">
+            <div className="rounded-xl bg-white dark:bg-[#151d2e] p-6 border border-[#E3E7EB] dark:border-gray-800 shadow-subtle overflow-x-auto">
               <table className="w-full text-left text-xs min-w-[650px]">
-                <thead className="border-b border-gray-100/80 dark:border-gray-800/50 text-gray-500 dark:text-gray-400 uppercase font-medium tracking-wider">
+                <thead className="border-b border-[#E3E7EB] dark:border-gray-800 text-gray-500 dark:text-gray-400 uppercase font-medium tracking-wider">
                   <tr>
                     <th className="pb-3">User</th>
                     <th className="pb-3">Role</th>
@@ -866,10 +1088,10 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                   {userList.map((u) => (
                     <tr
                       key={u._id}
-                      className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30"
+                      className="hover:bg-[#F0F2F4] dark:hover:bg-gray-800/30"
                     >
                       <td className="py-3.5">
-                        <p className="font-medium text-gray-800 dark:text-gray-100">
+                        <p className="font-medium text-[#202A35] dark:text-gray-100">
                           {u.name}
                         </p>
                         <p className="text-[10px] text-gray-400 dark:text-gray-500">
@@ -921,7 +1143,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
+                <h2 className="text-2xl font-semibold text-[#202A35] dark:text-gray-100">
                   Organization Master Employee Records
                 </h2>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -931,7 +1153,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
               <div className="flex gap-2">
                 <button
                   onClick={() => setIsAddUserOpen(true)}
-                  className="flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 px-4 py-2 text-xs font-medium text-white shadow-sm"
+                  className="flex items-center gap-2 rounded-xl bg-[#315C7D] hover:bg-[#284B66] px-4 py-2 text-xs font-medium text-white shadow-sm"
                 >
                   <UserPlus className="h-4 w-4" />
                   Add User
@@ -946,9 +1168,9 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
               </div>
             </div>
 
-            <div className="rounded-xl bg-white/80 dark:bg-[#151d2e] p-6 border border-gray-100/80 dark:border-gray-800/50 shadow-soft overflow-x-auto">
+            <div className="rounded-xl bg-white dark:bg-[#151d2e] p-6 border border-[#E3E7EB] dark:border-gray-800 shadow-subtle overflow-x-auto">
               <table className="w-full text-left text-xs min-w-[800px]">
-                <thead className="border-b border-gray-100/80 dark:border-gray-800/50 text-gray-500 dark:text-gray-400 uppercase font-medium tracking-wider">
+                <thead className="border-b border-[#E3E7EB] dark:border-gray-800 text-gray-500 dark:text-gray-400 uppercase font-medium tracking-wider">
                   <tr>
                     <th className="pb-3">Employee</th>
                     <th className="pb-3">Phone</th>
@@ -963,10 +1185,10 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                   {employees.map((emp) => (
                     <tr
                       key={emp._id}
-                      className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30"
+                      className="hover:bg-[#F0F2F4] dark:hover:bg-gray-800/30"
                     >
                       <td className="py-3.5">
-                        <p className="font-medium text-gray-800 dark:text-gray-100">
+                        <p className="font-medium text-[#202A35] dark:text-gray-100">
                           {emp.name}
                         </p>
                         <p className="text-[10px] text-gray-400 dark:text-gray-500">
@@ -1006,7 +1228,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                           </button>
                           <button
                             onClick={() => handleEditEmployee(emp)}
-                            className="flex items-center gap-1 rounded-lg bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-400 dark:hover:bg-indigo-900/30"
+                            className="flex items-center gap-1 rounded-lg bg-[#EEF3F7] px-3 py-1 text-xs font-medium text-[#315C7D] hover:bg-[#E2EBF2] dark:bg-indigo-900/20 dark:text-indigo-400 dark:hover:bg-[#315C7D]/30"
                           >
                             <FilePenIcon className="h-3.5 w-3.5" />
                             Edit
@@ -1041,7 +1263,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
         return (
           <div className="space-y-6">
             <div>
-              <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
+              <h2 className="text-2xl font-semibold text-[#202A35] dark:text-gray-100">
                 Organization Leave Requests Management
               </h2>
               <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mt-0.5">
@@ -1049,8 +1271,8 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
               </p>
             </div>
 
-            <div className="rounded-xl bg-white/80 dark:bg-[#151d2e] p-6 border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
-              <h3 className="text-base font-semibold mb-4 text-gray-800 dark:text-gray-100">
+            <div className="rounded-xl bg-white dark:bg-[#151d2e] p-6 border border-[#E3E7EB] dark:border-gray-800 shadow-subtle">
+              <h3 className="text-base font-semibold mb-4 text-[#202A35] dark:text-gray-100">
                 All Submitted Requests ({leaveRequests.length})
               </h3>
 
@@ -1058,11 +1280,11 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                 {leaveRequests.map((req) => (
                   <div
                     key={req._id}
-                    className="flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-xl border border-gray-200 dark:border-gray-700 p-4 bg-gray-50/50 dark:bg-[#0c1222]"
+                    className="flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-xl border border-[#E3E7EB] dark:border-gray-700 p-4 bg-[#F0F2F4] dark:bg-[#0c1222]"
                   >
                     <div>
                       <div className="flex items-center gap-2">
-                        <h4 className="font-semibold text-sm text-gray-800 dark:text-gray-100">
+                        <h4 className="font-semibold text-sm text-[#202A35] dark:text-gray-100">
                           {req.employeeId?.name || "Unknown Employee"} (
                           {req.employeeId?.email || "No email"})
                         </h4>
@@ -1091,7 +1313,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleRejectLeave(req._id || req.id)}
-                        className="flex items-center gap-1.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-rose-50 hover:bg-rose-100 dark:bg-rose-900/20 px-4 py-2 text-xs font-medium text-rose-600 dark:text-rose-400 transition"
+                        className="flex items-center gap-1.5 rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-rose-50 hover:bg-rose-100 dark:bg-rose-900/20 px-4 py-2 text-xs font-medium text-rose-600 dark:text-rose-400 transition"
                       >
                         <XCircle className="h-4 w-4" />
                         Reject
@@ -1101,7 +1323,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                           href={req.documentLink}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-xs font-medium text-indigo-600 transition hover:bg-indigo-100 dark:border-indigo-900/40 dark:bg-indigo-900/20 dark:text-indigo-400 dark:hover:bg-indigo-900/30"
+                          className="flex items-center gap-1.5 rounded-xl border border-[#315C7D]/30 bg-[#EEF3F7] px-4 py-2 text-xs font-medium text-[#315C7D] transition hover:bg-[#E2EBF2] dark:border-indigo-900/40 dark:bg-indigo-900/20 dark:text-indigo-400 dark:hover:bg-[#315C7D]/30"
                         >
                           <FileText className="h-4 w-4" />
                           View Document
@@ -1125,14 +1347,14 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
       case "Attendance":
         return (
           <div className="space-y-6">
-            <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
+            <h2 className="text-2xl font-semibold text-[#202A35] dark:text-gray-100">
               Attendance Analytics & Logs
             </h2>
 
             {todayStatus && (
               <>
                 <div className="grid gap-4 sm:grid-cols-4">
-                  <div className="p-5 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
+                  <div className="p-5 rounded-xl bg-white dark:bg-[#151d2e] border border-[#E3E7EB] dark:border-gray-800 shadow-subtle">
                     <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">Present Today</p>
                     <p className="mt-2 text-3xl font-semibold text-emerald-500 dark:text-emerald-400">
                       {Math.round((todayStatus.stats.presentCount / todayStatus.stats.totalEmployees) * 100) || 0}%
@@ -1141,7 +1363,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                       {todayStatus.stats.presentCount} / {todayStatus.stats.totalEmployees} employees
                     </p>
                   </div>
-                  <div className="p-5 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
+                  <div className="p-5 rounded-xl bg-white dark:bg-[#151d2e] border border-[#E3E7EB] dark:border-gray-800 shadow-subtle">
                     <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">Late Arrivals</p>
                     <p className="mt-2 text-3xl font-semibold text-amber-500 dark:text-amber-400">
                       {Math.round((todayStatus.stats.lateCount / todayStatus.stats.totalEmployees) * 100) || 0}%
@@ -1150,7 +1372,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                       {todayStatus.stats.lateCount} employees late
                     </p>
                   </div>
-                  <div className="p-5 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
+                  <div className="p-5 rounded-xl bg-white dark:bg-[#151d2e] border border-[#E3E7EB] dark:border-gray-800 shadow-subtle">
                     <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">On Leave</p>
                     <p className="mt-2 text-3xl font-semibold text-blue-500 dark:text-blue-400">
                       {Math.round((todayStatus.stats.onLeaveCount / todayStatus.stats.totalEmployees) * 100) || 0}%
@@ -1159,7 +1381,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                       {todayStatus.stats.onLeaveCount} employees on leave
                     </p>
                   </div>
-                  <div className="p-5 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
+                  <div className="p-5 rounded-xl bg-white dark:bg-[#151d2e] border border-[#E3E7EB] dark:border-gray-800 shadow-subtle">
                     <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">Absent</p>
                     <p className="mt-2 text-3xl font-semibold text-rose-500 dark:text-rose-400">
                       {Math.round((todayStatus.stats.absentCount / todayStatus.stats.totalEmployees) * 100) || 0}%
@@ -1171,8 +1393,8 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                 </div>
 
                 <div className="grid gap-6 sm:grid-cols-2">
-                  <div className="bg-white/80 dark:bg-[#151d2e] rounded-xl border border-gray-100/80 dark:border-gray-800/50 shadow-soft p-5">
-                    <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-4">Who is Present / Late</h3>
+                  <div className="bg-white dark:bg-[#151d2e] rounded-xl border border-[#E3E7EB] dark:border-gray-800 shadow-subtle p-5">
+                    <h3 className="font-semibold text-[#202A35] dark:text-gray-100 mb-4">Who is Present / Late</h3>
                     <div className="space-y-3 max-h-48 overflow-y-auto pr-2">
                       {[...todayStatus.lists.present, ...todayStatus.lists.late].length === 0 && (
                         <p className="text-xs text-gray-500 text-center py-4">No employees present yet.</p>
@@ -1194,8 +1416,8 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                     </div>
                   </div>
 
-                  <div className="bg-white/80 dark:bg-[#151d2e] rounded-xl border border-gray-100/80 dark:border-gray-800/50 shadow-soft p-5">
-                    <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-4">Who is On Leave / Absent</h3>
+                  <div className="bg-white dark:bg-[#151d2e] rounded-xl border border-[#E3E7EB] dark:border-gray-800 shadow-subtle p-5">
+                    <h3 className="font-semibold text-[#202A35] dark:text-gray-100 mb-4">Who is On Leave / Absent</h3>
                     <div className="space-y-3 max-h-48 overflow-y-auto pr-2">
                       {[...todayStatus.lists.onLeave, ...todayStatus.lists.absent].length === 0 && (
                         <p className="text-xs text-gray-500 text-center py-4">Everyone is present.</p>
@@ -1228,9 +1450,9 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
               </>
             )}
 
-            <div className="bg-white/80 dark:bg-[#151d2e] rounded-xl border border-gray-100/80 dark:border-gray-800/50 shadow-soft overflow-hidden">
-              <div className="p-4 border-b border-gray-100 dark:border-gray-800/50">
-                <h3 className="font-semibold text-gray-800 dark:text-gray-100">Historical Check-In Logs</h3>
+            <div className="bg-white dark:bg-[#151d2e] rounded-xl border border-[#E3E7EB] dark:border-gray-800 shadow-subtle overflow-hidden">
+              <div className="p-4 border-b border-[#E3E7EB] dark:border-gray-800">
+                <h3 className="font-semibold text-[#202A35] dark:text-gray-100">Historical Check-In Logs</h3>
               </div>
               <div className="max-h-[500px] overflow-y-auto">
                 <table className="w-full text-left border-collapse">
@@ -1258,7 +1480,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                       }
 
                       let statusText = log.status || "Present";
-                      let badgeClass = "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400";
+                      let badgeClass = "bg-[#EEF3F7] text-[#315C7D] dark:bg-indigo-900/20 dark:text-indigo-400";
                       if (log.checkInTime && log.checkOutTime) {
                         statusText += " (100%)";
                         badgeClass = "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400";
@@ -1270,10 +1492,10 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                       }
                       
                       return (
-                        <tr key={log._id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
+                        <tr key={log._id} className="hover:bg-[#F0F2F4] dark:hover:bg-gray-800/30 transition-colors">
                           <td className="p-4">
                             <div className="flex flex-col">
-                              <span className="font-semibold text-sm text-gray-800 dark:text-gray-100">{log.userId?.name || "Unknown"}</span>
+                              <span className="font-semibold text-sm text-[#202A35] dark:text-gray-100">{log.userId?.name || "Unknown"}</span>
                               <span className="text-[10px] text-gray-500">{log.userId?.email || ""}</span>
                             </div>
                           </td>
@@ -1307,7 +1529,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
+                <h2 className="text-2xl font-semibold text-[#202A35] dark:text-gray-100">
                   HR Leadership & Permissions
                 </h2>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -1319,7 +1541,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                   setUserForm({ name: "", email: "", role: "hr" });
                   setIsAddUserOpen(true);
                 }}
-                className="flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 px-4 py-2 text-xs font-medium text-white shadow-sm transition"
+                className="flex items-center gap-2 rounded-xl bg-[#315C7D] hover:bg-[#284B66] px-4 py-2 text-xs font-medium text-white shadow-sm transition"
               >
                 <UserPlus className="h-4 w-4" />
                 Add HR Member
@@ -1330,15 +1552,15 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
               {hrUsers.map((hr, idx) => (
                 <div
                   key={hr.id || idx}
-                  className="p-5 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft flex flex-col gap-3 transition-colors"
+                  className="p-5 rounded-xl bg-white dark:bg-[#151d2e] border border-[#E3E7EB] dark:border-gray-800 shadow-subtle flex flex-col gap-3 transition-colors"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-bold">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#EEF3F7] dark:bg-[#315C7D]/30 text-[#315C7D] dark:text-[#7EB0D5] font-bold">
                         {hr.name.charAt(0)}
                       </div>
                       <div>
-                        <p className="font-semibold text-sm text-gray-800 dark:text-gray-100">
+                        <p className="font-semibold text-sm text-[#202A35] dark:text-gray-100">
                           {hr.name}
                         </p>
                         <span
@@ -1366,7 +1588,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                 </div>
               ))}
               {hrUsers.length === 0 && (
-                <div className="col-span-full p-8 text-center text-gray-500 dark:text-gray-400 border border-dashed border-gray-200 dark:border-gray-700 rounded-xl text-sm">
+                <div className="col-span-full p-8 text-center text-gray-500 dark:text-gray-400 border border-dashed border-[#E3E7EB] dark:border-gray-700 rounded-xl text-sm">
                   No HR members found. Add an HR member to delegate permissions.
                 </div>
               )}
@@ -1379,7 +1601,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
           <div className="space-y-6">
             <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
               <div>
-                <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
+                <h2 className="text-2xl font-semibold text-[#202A35] dark:text-gray-100">
                   Departments
                 </h2>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -1388,7 +1610,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
               </div>
               <button
                 onClick={() => setIsCreateDepartmentOpen(true)}
-                className="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-medium text-white shadow-sm transition hover:bg-indigo-700"
+                className="flex items-center gap-2 rounded-xl bg-[#315C7D] px-4 py-2 text-xs font-medium text-white shadow-sm transition hover:bg-[#284B66]"
               >
                 <Plus className="h-4 w-4" />
                 Create Department
@@ -1398,10 +1620,10 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
               {departments.map((department) => (
                 <div
                   key={department._id}
-                  className="p-5 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft"
+                  className="p-5 rounded-xl bg-white dark:bg-[#151d2e] border border-[#E3E7EB] dark:border-gray-800 shadow-subtle"
                 >
-                  <Building2 className="h-5 w-5 text-indigo-500 dark:text-indigo-400 mb-2" />
-                  <p className="font-semibold text-sm text-gray-800 dark:text-gray-100">
+                  <Building2 className="h-5 w-5 text-[#315C7D] dark:text-[#7EB0D5] mb-2" />
+                  <p className="font-semibold text-sm text-[#202A35] dark:text-gray-100">
                     {department.name}
                   </p>
                   <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -1422,20 +1644,20 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
         return (
           <div className="space-y-6">
             <div className="flex items-center justify-between gap-4">
-              <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
+              <h2 className="text-2xl font-semibold text-[#202A35] dark:text-gray-100">
                 Organization Tasks Matrix
               </h2>
               <button
                 onClick={() => setIsAssignTaskOpen(true)}
-                className="flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-medium text-white transition hover:bg-indigo-700"
+                className="flex items-center gap-1.5 rounded-xl bg-[#315C7D] px-4 py-2 text-xs font-medium text-white transition hover:bg-[#284B66]"
               >
                 <Plus className="h-4 w-4" />
                 Assign Task
               </button>
             </div>
             <TaskStatisticsCard totalTask={245} overdueTask={17} />
-            <div className="rounded-xl border border-gray-100/80 bg-white/80 p-6 shadow-soft dark:border-gray-800/50 dark:bg-[#151d2e]">
-              <h3 className="mb-4 text-base font-semibold text-gray-800 dark:text-gray-100">
+            <div className="rounded-xl border border-gray-100/80 bg-white p-6 shadow-subtle dark:border-gray-800/50 dark:bg-[#151d2e]">
+              <h3 className="mb-4 text-base font-semibold text-[#202A35] dark:text-gray-100">
                 Assigned Tasks ({tasks.length})
               </h3>
               <div className="overflow-x-auto">
@@ -1453,7 +1675,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                     {tasks.map((task) => (
                       <tr key={task._id}>
                         <td className="py-3 pr-4">
-                          <p className="font-semibold text-gray-800 dark:text-gray-100">
+                          <p className="font-semibold text-[#202A35] dark:text-gray-100">
                             {task.title}
                           </p>
                           {task.description && (
@@ -1506,7 +1728,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
       case "Performance":
         return (
           <div className="space-y-6">
-            <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
+            <h2 className="text-2xl font-semibold text-[#202A35] dark:text-gray-100">
               Performance Appraisals
             </h2>
             <PerformanceCard />
@@ -1517,17 +1739,17 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
         return (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
+              <h2 className="text-2xl font-semibold text-[#202A35] dark:text-gray-100">
                 Master Payroll
               </h2>
               <button
                 onClick={() => setIsProcessPayrollOpen(true)}
-                className="rounded-xl bg-indigo-600 hover:bg-indigo-700 px-4 py-2 text-xs font-medium text-white"
+                className="rounded-xl bg-[#315C7D] hover:bg-[#284B66] px-4 py-2 text-xs font-medium text-white"
               >
                 Process Payroll
               </button>
             </div>
-            <div className="p-6 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
+            <div className="p-6 rounded-xl bg-white dark:bg-[#151d2e] border border-[#E3E7EB] dark:border-gray-800 shadow-subtle">
               <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
                 October Payroll Batch: ₹32,45,000 (Ready)
               </p>
@@ -1541,26 +1763,26 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
         return (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
+              <h2 className="text-2xl font-semibold text-[#202A35] dark:text-gray-100">
                 Announcements
               </h2>
               <button
                 onClick={() => setIsBroadcastNoticeOpen(true)}
-                className="rounded-xl bg-indigo-600 hover:bg-indigo-700 px-4 py-2 text-xs font-medium text-white"
+                className="rounded-xl bg-[#315C7D] hover:bg-[#284B66] px-4 py-2 text-xs font-medium text-white"
               >
                 Broadcast Notice
               </button>
             </div>
             <div className="space-y-4">
               {announcements.length === 0 ? (
-                <div className="p-5 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft text-sm text-gray-500 dark:text-gray-400">
+                <div className="p-5 rounded-xl bg-white dark:bg-[#151d2e] border border-[#E3E7EB] dark:border-gray-800 shadow-subtle text-sm text-gray-500 dark:text-gray-400">
                   No announcements yet.
                 </div>
               ) : (
                 announcements.map((announcement) => (
-                  <div key={announcement._id} className="p-5 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
-                    <span className="text-[10px] font-semibold text-indigo-500 uppercase">Notice</span>
-                    <h4 className="font-semibold text-gray-800 dark:text-gray-100 mt-1">
+                  <div key={announcement._id} className="p-5 rounded-xl bg-white dark:bg-[#151d2e] border border-[#E3E7EB] dark:border-gray-800 shadow-subtle">
+                    <span className="text-[10px] font-semibold text-[#315C7D] uppercase">Notice</span>
+                    <h4 className="font-semibold text-[#202A35] dark:text-gray-100 mt-1">
                       {announcement.headline}
                     </h4>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-medium">
@@ -1576,13 +1798,13 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
       case "Notifications":
         return (
           <div className="space-y-4 max-w-2xl">
-            <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
+            <h2 className="text-2xl font-semibold text-[#202A35] dark:text-gray-100">
               Admin Notifications
             </h2>
-            <div className="p-4 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft flex gap-3">
-              <Bell className="h-4 w-4 text-indigo-500 dark:text-indigo-400 mt-0.5" />
+            <div className="p-4 rounded-xl bg-white dark:bg-[#151d2e] border border-[#E3E7EB] dark:border-gray-800 shadow-subtle flex gap-3">
+              <Bell className="h-4 w-4 text-[#315C7D] dark:text-[#7EB0D5] mt-0.5" />
               <div>
-                <p className="font-semibold text-xs text-gray-800 dark:text-gray-100">
+                <p className="font-semibold text-xs text-[#202A35] dark:text-gray-100">
                   System Security Status
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
@@ -1596,12 +1818,12 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
       case "Audit Logs":
         return (
           <div className="space-y-6">
-            <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
+            <h2 className="text-2xl font-semibold text-[#202A35] dark:text-gray-100">
               Security & Audit Logs
             </h2>
-            <div className="rounded-xl bg-white/80 dark:bg-[#151d2e] p-6 border border-gray-100/80 dark:border-gray-800/50 shadow-soft overflow-x-auto">
+            <div className="rounded-xl bg-white dark:bg-[#151d2e] p-6 border border-[#E3E7EB] dark:border-gray-800 shadow-subtle overflow-x-auto">
               <table className="w-full text-left text-xs min-w-[700px]">
-                <thead className="border-b border-gray-100/80 dark:border-gray-800/50 text-gray-500 dark:text-gray-400 uppercase font-medium tracking-wider">
+                <thead className="border-b border-[#E3E7EB] dark:border-gray-800 text-gray-500 dark:text-gray-400 uppercase font-medium tracking-wider">
                   <tr>
                     <th className="pb-3">Timestamp</th>
                     <th className="pb-3">User</th>
@@ -1614,12 +1836,12 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                   {auditLogs.map((log) => (
                     <tr
                       key={log.id}
-                      className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30"
+                      className="hover:bg-[#F0F2F4] dark:hover:bg-gray-800/30"
                     >
                       <td className="py-3.5 font-medium text-gray-700 dark:text-gray-300">
                         {log.timestamp}
                       </td>
-                      <td className="py-3.5 font-medium text-gray-800 dark:text-gray-100">
+                      <td className="py-3.5 font-medium text-[#202A35] dark:text-gray-100">
                         {log.user}
                       </td>
                       <td className="py-3.5 font-medium text-gray-700 dark:text-gray-300">
@@ -1650,10 +1872,10 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
       case "System Settings":
         return (
           <div className="max-w-2xl space-y-4">
-            <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
+            <h2 className="text-2xl font-semibold text-[#202A35] dark:text-gray-100">
               System Settings
             </h2>
-            <div className="p-6 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft space-y-4 text-xs">
+            <div className="p-6 rounded-xl bg-white dark:bg-[#151d2e] border border-[#E3E7EB] dark:border-gray-800 shadow-subtle space-y-4 text-xs">
               <div>
                 <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Company Name
@@ -1661,12 +1883,12 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                 <input
                   type="text"
                   defaultValue="Acme HRM Enterprise"
-                  className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 outline-none font-medium text-gray-800 dark:text-gray-100 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
+                  className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 outline-none font-medium text-[#202A35] dark:text-gray-100 focus:border-[#315C7D] focus:ring-2 focus:ring-[#315C7D]/15 dark:focus:border-[#7EB0D5]"
                 />
               </div>
               <button
                 onClick={() => showToast("Settings saved!", "success")}
-                className="rounded-xl bg-indigo-600 hover:bg-indigo-700 px-5 py-2 font-medium text-white"
+                className="rounded-xl bg-[#315C7D] hover:bg-[#284B66] px-5 py-2 font-medium text-white"
               >
                 Save
               </button>
@@ -1678,7 +1900,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
         return (
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">
+              <h2 className="text-xl font-bold text-[#202A35] dark:text-gray-100">
                 Project Reviews
               </h2>
               <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -1686,7 +1908,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
               </p>
             </div>
             {projects.length === 0 ? (
-              <div className="p-8 text-center rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50">
+              <div className="p-8 text-center rounded-xl bg-white dark:bg-[#151d2e] border border-[#E3E7EB] dark:border-gray-800">
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   No projects available to review.
                 </p>
@@ -1696,24 +1918,24 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                 {projects.map((project) => (
                   <div
                     key={project._id}
-                    className="flex flex-col rounded-xl bg-white/80 dark:bg-[#151d2e] p-5 border border-gray-100/80 dark:border-gray-800/50 shadow-soft"
+                    className="flex flex-col rounded-xl bg-white dark:bg-[#151d2e] p-5 border border-[#E3E7EB] dark:border-gray-800 shadow-subtle"
                   >
-                    <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">
+                    <h3 className="text-base font-bold text-[#202A35] dark:text-gray-100">
                       {project.title}
                     </h3>
-                    <p className="mt-1 text-[11px] font-semibold text-indigo-500 uppercase">
+                    <p className="mt-1 text-[11px] font-semibold text-[#315C7D] uppercase">
                       By {project.employeeId?.userId?.name || "Unknown Employee"}
                     </p>
                     <p className="mt-2 text-xs text-gray-600 dark:text-gray-400 line-clamp-3">
                       {project.content}
                     </p>
-                    <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800/50 flex flex-wrap gap-3">
+                    <div className="mt-4 pt-4 border-t border-[#E3E7EB] dark:border-gray-800 flex flex-wrap gap-3">
                       {project.githubLink && (
                         <a
                           href={project.githubLink}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-[11px] font-semibold text-indigo-600 hover:underline"
+                          className="text-[11px] font-semibold text-[#315C7D] hover:underline"
                         >
                           GitHub
                         </a>
@@ -1729,10 +1951,10 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                         </a>
                       )}
                     </div>
-                    <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800/50">
+                    <div className="mt-4 pt-4 border-t border-[#E3E7EB] dark:border-gray-800">
                       {project.score ? (
                         <div>
-                          <p className="text-xs font-semibold text-gray-800 dark:text-gray-100">Score: {project.score}/5</p>
+                          <p className="text-xs font-semibold text-[#202A35] dark:text-gray-100">Score: {project.score}/5</p>
                           <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">"{project.feedback}"</p>
                         </div>
                       ) : (
@@ -1742,7 +1964,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                             setProjectReviewForm({ score: "", feedback: "" });
                             setIsReviewProjectOpen(true);
                           }}
-                          className="w-full rounded-lg bg-indigo-50 dark:bg-indigo-900/20 py-2 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition"
+                          className="w-full rounded-lg bg-[#EEF3F7] dark:bg-[#315C7D]/20 py-2 text-xs font-semibold text-[#315C7D] dark:text-[#7EB0D5] hover:bg-[#E2EBF2] dark:hover:bg-[#315C7D]/40 transition"
                         >
                           Review Project
                         </button>
@@ -1758,17 +1980,17 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
       case "Documents":
         return (
           <div className="max-w-2xl space-y-6">
-            <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
+            <h2 className="text-2xl font-semibold text-[#202A35] dark:text-gray-100">
               Upload Employee Document
             </h2>
-            <div className="p-6 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
+            <div className="p-6 rounded-xl bg-white dark:bg-[#151d2e] border border-[#E3E7EB] dark:border-gray-800 shadow-subtle">
               <form onSubmit={handleUploadDocument} className="space-y-4 text-xs">
                 <div>
                   <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                     Select Employee
                   </label>
                   <select
-                    className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 outline-none font-medium text-gray-800 dark:text-gray-100"
+                    className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 outline-none font-medium text-[#202A35] dark:text-gray-100"
                     onChange={(e) => setDocEmployeeId(e.target.value)}
                     value={docEmployeeId}
                   >
@@ -1787,7 +2009,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                     placeholder="e.g. 2024 Offer Letter"
                     value={docTitle}
                     onChange={(e) => setDocTitle(e.target.value)}
-                    className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 outline-none font-medium text-gray-800 dark:text-gray-100"
+                    className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 outline-none font-medium text-[#202A35] dark:text-gray-100"
                   />
                 </div>
                 <div>
@@ -1797,7 +2019,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                   <select
                     value={docType}
                     onChange={(e) => setDocType(e.target.value)}
-                    className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 outline-none font-medium text-gray-800 dark:text-gray-100"
+                    className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 outline-none font-medium text-[#202A35] dark:text-gray-100"
                   >
                     <option value="Offer Letter">Offer Letter</option>
                     <option value="Payment Slip">Payment Slip</option>
@@ -1811,12 +2033,12 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                   <input
                     type="file"
                     onChange={(e) => setDocFile(e.target.files[0])}
-                    className="w-full text-gray-800 dark:text-gray-100 font-medium"
+                    className="w-full text-[#202A35] dark:text-gray-100 font-medium"
                   />
                 </div>
                 <button
                   type="submit"
-                  className="rounded-xl bg-indigo-600 hover:bg-indigo-700 px-5 py-2.5 font-medium text-white shadow-sm mt-2"
+                  className="rounded-xl bg-[#315C7D] hover:bg-[#284B66] px-5 py-2.5 font-medium text-white shadow-sm mt-2"
                 >
                   Upload Document
                 </button>
@@ -1825,7 +2047,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
 
             {docEmployeeId && (
               <div className="mt-8">
-                <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">
+                <h3 className="text-lg font-semibold text-[#202A35] dark:text-gray-100 mb-4">
                   Existing Documents
                 </h3>
                 <DocumentList key={uploadCount} employeeId={docEmployeeId} />
@@ -1878,7 +2100,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
             maxLength={500}
             required
             placeholder="Explain why this leave request is being rejected"
-            className="w-full rounded-xl border border-gray-200 bg-gray-50/50 p-3 text-sm text-gray-800 outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-500/10 dark:border-gray-700 dark:bg-[#0c1222] dark:text-gray-100"
+            className="w-full rounded-xl border border-gray-200 bg-[#F0F2F4] p-3 text-sm text-gray-800 outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-500/10 dark:border-gray-700 dark:bg-[#0c1222] dark:text-gray-100"
           />
         </form>
       </Modal>
@@ -1897,7 +2119,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
             </button>
             <button
               onClick={handleCreateDepartment}
-              className="rounded-xl bg-indigo-600 px-5 py-2 text-xs font-medium text-white hover:bg-indigo-700"
+              className="rounded-xl bg-[#315C7D] px-5 py-2 text-xs font-medium text-white hover:bg-[#284B66]"
             >
               Create Department
             </button>
@@ -1917,7 +2139,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
               }
               placeholder="e.g. Customer Success"
               autoFocus
-              className="w-full rounded-xl border border-gray-200 bg-gray-50/50 p-2.5 text-xs font-medium text-gray-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:border-gray-700 dark:bg-[#0c1222] dark:text-gray-100 dark:focus:border-indigo-500"
+              className="w-full rounded-xl border border-gray-200 bg-[#F0F2F4] p-2.5 text-xs font-medium text-gray-800 outline-none focus:border-[#315C7D] focus:ring-2 focus:ring-[#315C7D]/15 dark:border-gray-700 dark:bg-[#0c1222] dark:text-gray-100 dark:focus:border-[#7EB0D5]"
             />
           </div>
         </form>
@@ -1938,7 +2160,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
             </button>
             <button
               onClick={handleAddUser}
-              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 px-5 py-2 text-xs font-medium text-white shadow-sm"
+              className="rounded-xl bg-[#315C7D] hover:bg-[#284B66] px-5 py-2 text-xs font-medium text-white shadow-sm"
             >
               Next: Employee Profile →
             </button>
@@ -1957,7 +2179,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                 setUserForm({ ...userForm, name: e.target.value })
               }
               placeholder="e.g. Robert Howard"
-              className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
+              className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#315C7D] focus:ring-2 focus:ring-[#315C7D]/15 dark:focus:border-[#7EB0D5]"
             />
           </div>
           <div>
@@ -1971,7 +2193,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                 setUserForm({ ...userForm, email: e.target.value })
               }
               placeholder="user@company.com"
-              className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
+              className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#315C7D] focus:ring-2 focus:ring-[#315C7D]/15 dark:focus:border-[#7EB0D5]"
             />
           </div>
           <div>
@@ -1983,22 +2205,22 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
               onChange={(e) =>
                 setUserForm({ ...userForm, role: e.target.value })
               }
-              className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500 cursor-pointer"
+              className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#315C7D] focus:ring-2 focus:ring-[#315C7D]/15 dark:focus:border-[#7EB0D5] cursor-pointer"
             >
               <option
-                className="bg-white dark:bg-[#151d2e] text-gray-800 dark:text-gray-100"
+                className="bg-white dark:bg-[#151d2e] text-[#202A35] dark:text-gray-100"
                 value="employee"
               >
                 Employee
               </option>
               <option
-                className="bg-white dark:bg-[#151d2e] text-gray-800 dark:text-gray-100"
+                className="bg-white dark:bg-[#151d2e] text-[#202A35] dark:text-gray-100"
                 value="hr"
               >
                 HR
               </option>
               <option
-                className="bg-white dark:bg-[#151d2e] text-gray-800 dark:text-gray-100"
+                className="bg-white dark:bg-[#151d2e] text-[#202A35] dark:text-gray-100"
                 value="admin"
               >
                 Admin
@@ -2048,7 +2270,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                   setEmployeeForm({ ...employeeForm, name: e.target.value })
                 }
                 placeholder="Full Name"
-                className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
+                className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#315C7D] focus:ring-2 focus:ring-[#315C7D]/15 dark:focus:border-[#7EB0D5]"
               />
             </div>
             <div>
@@ -2062,7 +2284,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                   setEmployeeForm({ ...employeeForm, email: e.target.value })
                 }
                 placeholder="email@company.com"
-                className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
+                className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#315C7D] focus:ring-2 focus:ring-[#315C7D]/15 dark:focus:border-[#7EB0D5]"
               />
             </div>
           </div>
@@ -2079,7 +2301,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                   setEmployeeForm({ ...employeeForm, phone: e.target.value })
                 }
                 placeholder="+91 98765 43210"
-                className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
+                className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#315C7D] focus:ring-2 focus:ring-[#315C7D]/15 dark:focus:border-[#7EB0D5]"
               />
             </div>
             <div>
@@ -2095,7 +2317,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                     dateOfBirth: e.target.value,
                   })
                 }
-                className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
+                className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#315C7D] focus:ring-2 focus:ring-[#315C7D]/15 dark:focus:border-[#7EB0D5]"
               />
             </div>
             <div>
@@ -2107,22 +2329,22 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                 onChange={(e) =>
                   setEmployeeForm({ ...employeeForm, gender: e.target.value })
                 }
-                className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500 cursor-pointer"
+                className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#315C7D] focus:ring-2 focus:ring-[#315C7D]/15 dark:focus:border-[#7EB0D5] cursor-pointer"
               >
                 <option
-                  className="bg-white dark:bg-[#151d2e] text-gray-800 dark:text-gray-100"
+                  className="bg-white dark:bg-[#151d2e] text-[#202A35] dark:text-gray-100"
                   value="male"
                 >
                   Male
                 </option>
                 <option
-                  className="bg-white dark:bg-[#151d2e] text-gray-800 dark:text-gray-100"
+                  className="bg-white dark:bg-[#151d2e] text-[#202A35] dark:text-gray-100"
                   value="female"
                 >
                   Female
                 </option>
                 <option
-                  className="bg-white dark:bg-[#151d2e] text-gray-800 dark:text-gray-100"
+                  className="bg-white dark:bg-[#151d2e] text-[#202A35] dark:text-gray-100"
                   value="other"
                 >
                   Non-Binary / Other
@@ -2143,7 +2365,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                   department: e.target.value,
                 })
               }
-              className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500 cursor-pointer"
+              className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#315C7D] focus:ring-2 focus:ring-[#315C7D]/15 dark:focus:border-[#7EB0D5] cursor-pointer"
             >
               <option value="">No department</option>
               {departments.map((department) => (
@@ -2169,7 +2391,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                   })
                 }
                 placeholder="Designation..."
-                className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
+                className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#315C7D] focus:ring-2 focus:ring-[#315C7D]/15 dark:focus:border-[#7EB0D5]"
               />
             </div>
           </div>
@@ -2188,7 +2410,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                     joiningDate: e.target.value,
                   })
                 }
-                className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
+                className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#315C7D] focus:ring-2 focus:ring-[#315C7D]/15 dark:focus:border-[#7EB0D5]"
               />
             </div>
             <div>
@@ -2202,7 +2424,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                   setEmployeeForm({ ...employeeForm, salary: e.target.value })
                 }
                 placeholder="e.g. ₹15,00,000 / yr"
-                className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
+                className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#315C7D] focus:ring-2 focus:ring-[#315C7D]/15 dark:focus:border-[#7EB0D5]"
               />
             </div>
           </div>
@@ -2218,7 +2440,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                 setEmployeeForm({ ...employeeForm, address: e.target.value })
               }
               placeholder="Residential address..."
-              className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
+              className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#315C7D] focus:ring-2 focus:ring-[#315C7D]/15 dark:focus:border-[#7EB0D5]"
             />
           </div>
         </form>
@@ -2241,12 +2463,12 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
           }
         >
           <div className="space-y-4 text-xs">
-            <div className="p-4 rounded-xl bg-gray-50/50 dark:bg-[#0c1222] border border-gray-100/80 dark:border-gray-800/50 flex items-center justify-between">
+            <div className="p-4 rounded-xl bg-[#F0F2F4] dark:bg-[#0c1222] border border-[#E3E7EB] dark:border-gray-800 flex items-center justify-between">
               <div>
-                <p className="font-semibold text-base text-gray-800 dark:text-gray-100">
+                <p className="font-semibold text-base text-[#202A35] dark:text-gray-100">
                   {selectedEmployeeDetails.name}
                 </p>
-                <p className="text-indigo-500 dark:text-indigo-400 font-medium">
+                <p className="text-[#315C7D] dark:text-[#7EB0D5] font-medium">
                   {selectedEmployeeDetails.designation}
                 </p>
                 <p className="text-[10px] text-gray-500 dark:text-gray-400">
@@ -2259,47 +2481,47 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="p-3 rounded-xl border border-gray-100/80 dark:border-gray-800/50">
+              <div className="p-3 rounded-xl border border-[#E3E7EB] dark:border-gray-800">
                 <p className="text-gray-500 dark:text-gray-400 font-medium">
                   Phone Number
                 </p>
-                <p className="font-medium mt-0.5 text-gray-800 dark:text-gray-100">
+                <p className="font-medium mt-0.5 text-[#202A35] dark:text-gray-100">
                   {selectedEmployeeDetails.phone || "N/A"}
                 </p>
               </div>
-              <div className="p-3 rounded-xl border border-gray-100/80 dark:border-gray-800/50">
+              <div className="p-3 rounded-xl border border-[#E3E7EB] dark:border-gray-800">
                 <p className="text-gray-500 dark:text-gray-400 font-medium">
                   Date of Birth
                 </p>
-                <p className="font-medium mt-0.5 text-gray-800 dark:text-gray-100">
+                <p className="font-medium mt-0.5 text-[#202A35] dark:text-gray-100">
                   {selectedEmployeeDetails.dateOfBirth || "N/A"}
                 </p>
               </div>
-              <div className="p-3 rounded-xl border border-gray-100/80 dark:border-gray-800/50">
+              <div className="p-3 rounded-xl border border-[#E3E7EB] dark:border-gray-800">
                 <p className="text-gray-500 dark:text-gray-400 font-medium">
                   Gender
                 </p>
-                <p className="font-medium mt-0.5 text-gray-800 dark:text-gray-100">
+                <p className="font-medium mt-0.5 text-[#202A35] dark:text-gray-100">
                   {selectedEmployeeDetails.gender || "N/A"}
                 </p>
               </div>
-              <div className="p-3 rounded-xl border border-gray-100/80 dark:border-gray-800/50">
+              <div className="p-3 rounded-xl border border-[#E3E7EB] dark:border-gray-800">
                 <p className="text-gray-500 dark:text-gray-400 font-medium">
                   Joining Date
                 </p>
-                <p className="font-medium mt-0.5 text-gray-800 dark:text-gray-100">
+                <p className="font-medium mt-0.5 text-[#202A35] dark:text-gray-100">
                   {selectedEmployeeDetails.joiningDate || "N/A"}
                 </p>
               </div>
-              <div className="p-3 rounded-xl border border-gray-100/80 dark:border-gray-800/50">
+              <div className="p-3 rounded-xl border border-[#E3E7EB] dark:border-gray-800">
                 <p className="text-gray-500 dark:text-gray-400 font-medium">
                   Department
                 </p>
-                <p className="font-medium mt-0.5 text-gray-800 dark:text-gray-100">
+                <p className="font-medium mt-0.5 text-[#202A35] dark:text-gray-100">
                   {selectedEmployeeDetails.department || "N/A"}
                 </p>
               </div>
-              <div className="p-3 rounded-xl border border-gray-100/80 dark:border-gray-800/50">
+              <div className="p-3 rounded-xl border border-[#E3E7EB] dark:border-gray-800">
                 <p className="text-gray-500 dark:text-gray-400 font-medium">
                   Salary
                 </p>
@@ -2309,11 +2531,11 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
               </div>
             </div>
 
-            <div className="p-3 rounded-xl border border-gray-100/80 dark:border-gray-800/50">
+            <div className="p-3 rounded-xl border border-[#E3E7EB] dark:border-gray-800">
               <p className="text-gray-500 dark:text-gray-400 font-medium">
                 Address
               </p>
-              <p className="font-medium mt-0.5 text-gray-800 dark:text-gray-100">
+              <p className="font-medium mt-0.5 text-[#202A35] dark:text-gray-100">
                 {selectedEmployeeDetails.address || "N/A"}
               </p>
             </div>
@@ -2325,8 +2547,8 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
               ) : (
                 <div className="space-y-3">
                   {projects.filter(p => p.employeeId?._id === selectedEmployeeDetails._id).map(project => (
-                    <div key={project._id} className="p-3 rounded-xl border border-gray-100/80 dark:border-gray-800/50 bg-gray-50/50 dark:bg-gray-800/20">
-                      <h4 className="font-bold text-gray-800 dark:text-gray-100">{project.title}</h4>
+                    <div key={project._id} className="p-3 rounded-xl border border-[#E3E7EB] dark:border-gray-800 bg-[#F0F2F4] dark:bg-gray-800/20">
+                      <h4 className="font-bold text-[#202A35] dark:text-gray-100">{project.title}</h4>
                       <p className="text-[11px] text-gray-500 mt-1 line-clamp-2">{project.content}</p>
                       {project.score ? (
                         <p className="text-[11px] font-semibold text-emerald-600 mt-2">Score: {project.score}/5</p>
@@ -2361,7 +2583,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                 sendBroadcastNotice();
                 setIsBroadcastNoticeOpen(false);
               }}
-              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 px-5 py-2 text-xs font-medium text-white"
+              className="rounded-xl bg-[#315C7D] hover:bg-[#284B66] px-5 py-2 text-xs font-medium text-white"
             >
               Broadcast
             </button>
@@ -2379,7 +2601,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
               value={noticesData.headline}
               onChange={(e) => onChangeBroadcastNotice(e)}
               placeholder="Headline..."
-              className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 outline-none text-gray-800 dark:text-gray-100 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
+              className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 outline-none text-[#202A35] dark:text-gray-100 focus:border-[#315C7D] focus:ring-2 focus:ring-[#315C7D]/15 dark:focus:border-[#7EB0D5]"
             />
           </div>
           <div>
@@ -2392,7 +2614,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
               value={noticesData.body}
               onChange={(e) => onChangeBroadcastNotice(e)}
               placeholder="Details..."
-              className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 outline-none text-gray-800 dark:text-gray-100 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
+              className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 outline-none text-[#202A35] dark:text-gray-100 focus:border-[#315C7D] focus:ring-2 focus:ring-[#315C7D]/15 dark:focus:border-[#7EB0D5]"
             />
           </div>
         </div>
@@ -2415,7 +2637,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
             <button
               type="submit"
               form="assign-task-form"
-              className="rounded-xl bg-indigo-600 px-5 py-2 text-xs font-medium text-white transition hover:bg-indigo-700"
+              className="rounded-xl bg-[#315C7D] px-5 py-2 text-xs font-medium text-white transition hover:bg-[#284B66]"
             >
               Assign Task
             </button>
@@ -2438,7 +2660,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                 setTaskForm({ ...taskForm, title: event.target.value })
               }
               placeholder="e.g. Prepare monthly report"
-              className="w-full rounded-xl border border-gray-200 bg-gray-50/50 p-2.5 text-gray-800 outline-none focus:border-indigo-400 dark:border-gray-700 dark:bg-[#0c1222] dark:text-gray-100"
+              className="w-full rounded-xl border border-gray-200 bg-[#F0F2F4] p-2.5 text-gray-800 outline-none focus:border-[#315C7D] dark:border-gray-700 dark:bg-[#0c1222] dark:text-gray-100"
             />
           </div>
           <div>
@@ -2451,7 +2673,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
               onChange={(event) =>
                 setTaskForm({ ...taskForm, assignee: event.target.value })
               }
-              className="w-full rounded-xl border border-gray-200 bg-gray-50/50 p-2.5 text-gray-800 outline-none focus:border-indigo-400 dark:border-gray-700 dark:bg-[#0c1222] dark:text-gray-100"
+              className="w-full rounded-xl border border-gray-200 bg-[#F0F2F4] p-2.5 text-gray-800 outline-none focus:border-[#315C7D] dark:border-gray-700 dark:bg-[#0c1222] dark:text-gray-100"
             >
               <option value="">Select an employee</option>
               {assignableEmployees.map((employee) => (
@@ -2471,7 +2693,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                 onChange={(event) =>
                   setTaskForm({ ...taskForm, priority: event.target.value })
                 }
-                className="w-full rounded-xl border border-gray-200 bg-gray-50/50 p-2.5 text-gray-800 outline-none focus:border-indigo-400 dark:border-gray-700 dark:bg-[#0c1222] dark:text-gray-100"
+                className="w-full rounded-xl border border-gray-200 bg-[#F0F2F4] p-2.5 text-gray-800 outline-none focus:border-[#315C7D] dark:border-gray-700 dark:bg-[#0c1222] dark:text-gray-100"
               >
                 <option>Low</option>
                 <option>Normal</option>
@@ -2488,7 +2710,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                 onChange={(event) =>
                   setTaskForm({ ...taskForm, deadline: event.target.value })
                 }
-                className="w-full rounded-xl border border-gray-200 bg-gray-50/50 p-2.5 text-gray-800 outline-none focus:border-indigo-400 dark:border-gray-700 dark:bg-[#0c1222] dark:text-gray-100"
+                className="w-full rounded-xl border border-gray-200 bg-[#F0F2F4] p-2.5 text-gray-800 outline-none focus:border-[#315C7D] dark:border-gray-700 dark:bg-[#0c1222] dark:text-gray-100"
               />
             </div>
           </div>
@@ -2503,7 +2725,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                 setTaskForm({ ...taskForm, description: event.target.value })
               }
               placeholder="Add task details..."
-              className="w-full rounded-xl border border-gray-200 bg-gray-50/50 p-2.5 text-gray-800 outline-none focus:border-indigo-400 dark:border-gray-700 dark:bg-[#0c1222] dark:text-gray-100"
+              className="w-full rounded-xl border border-gray-200 bg-[#F0F2F4] p-2.5 text-gray-800 outline-none focus:border-[#315C7D] dark:border-gray-700 dark:bg-[#0c1222] dark:text-gray-100"
             />
           </div>
         </form>
@@ -2543,8 +2765,8 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
             <strong>{employees.length} employees</strong> for{" "}
             <strong>October 2026</strong>.
           </p>
-          <div className="p-3 rounded-xl bg-gray-50/50 dark:bg-[#0c1222] border border-gray-200 dark:border-gray-700">
-            <p className="font-medium text-gray-800 dark:text-gray-100">
+          <div className="p-3 rounded-xl bg-[#F0F2F4] dark:bg-[#0c1222] border border-[#E3E7EB] dark:border-gray-700">
+            <p className="font-medium text-[#202A35] dark:text-gray-100">
               Total Net Amount: ₹32,45,000
             </p>
             <p className="text-[11px] text-gray-500 dark:text-gray-400">
@@ -2567,7 +2789,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
             </button>
             <button
               onClick={handleProjectReview}
-              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 px-5 py-2 text-xs font-medium text-white transition"
+              className="rounded-xl bg-[#315C7D] hover:bg-[#284B66] px-5 py-2 text-xs font-medium text-white transition"
             >
               Save Review
             </button>
@@ -2589,7 +2811,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                 setProjectReviewForm({ ...projectReviewForm, score: e.target.value })
               }
               placeholder="e.g. 8"
-              className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-gray-800 dark:text-gray-100 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10"
+              className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-[#202A35] dark:text-gray-100 outline-none focus:border-[#315C7D] focus:ring-2 focus:ring-[#315C7D]/15"
             />
           </div>
           <div>
@@ -2603,7 +2825,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                 setProjectReviewForm({ ...projectReviewForm, feedback: e.target.value })
               }
               placeholder="Provide comments on the project..."
-              className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-gray-800 dark:text-gray-100 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10"
+              className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-[#202A35] dark:text-gray-100 outline-none focus:border-[#315C7D] focus:ring-2 focus:ring-[#315C7D]/15"
             />
           </div>
         </form>

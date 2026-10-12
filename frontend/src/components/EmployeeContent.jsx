@@ -1,13 +1,19 @@
 import { useState, useEffect } from "react";
 import {
   CalendarCheck,
+  CalendarDays,
+  Calendar,
+  Clock,
+  ListChecks,
+  PartyPopper,
+  ChevronLeft,
+  ChevronRight,
   Download,
   Plus,
   Bell,
   Megaphone,
   FileText,
   Check,
-  ChevronRight,
   Sun,
   ClipboardList,
   Phone,
@@ -21,6 +27,7 @@ import {
   Trash2,
   FilePenIcon,
   Camera,
+  User,
 } from "lucide-react";
 import { auth, employee, api } from "../apis/axios";
 import WebcamCapture from "../components/WebcamCapture";
@@ -51,6 +58,7 @@ const LinkedinIcon = ({ className = "h-3.5 w-3.5" }) => (
 import { Doughnut } from "react-chartjs-2";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 import Modal from "../components/Modal";
+import MetricStatCard from "../components/MetricStatCard";
 
 import { useToast } from "../components/ToastProvider";
 
@@ -464,411 +472,380 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
     const pendingLeaves = leaveRequests.filter(
       (leaveRequest) => leaveRequest.status === "Pending",
     );
+    const approvedLeaves = leaveRequests.filter(
+      (leaveRequest) => leaveRequest.status === "Approved" || leaveRequest.status === "Granted",
+    );
     const currentSalary =
       typeof profile.salary === "number"
         ? `₹${profile.salary.toLocaleString("en-IN")}`
         : profile.salary || "Not available";
-    const timeStr = now.toLocaleTimeString("en-IN", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    const dateStr = now.toLocaleDateString("en-IN", {
+    const dateStr = now.toLocaleDateString("en-US", {
       weekday: "long",
       day: "numeric",
-      month: "long",
+      month: "short",
       year: "numeric",
     });
-    const displayLeaves = leaveRequests.slice(0, 3);
+
+    // Calendar grid calculation for current month
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const monthName = now.toLocaleString("en-US", { month: "long" });
+    const firstDayOfWeek = new Date(year, month, 1).getDay(); // 0 is Sun
+    const adjustedFirstDay = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1; // Mon = 0
+    const totalDaysInMonth = new Date(year, month + 1, 0).getDate();
+
+    const calendarGrid = [];
+    for (let i = 0; i < adjustedFirstDay; i++) {
+      calendarGrid.push({ day: null });
+    }
+    for (let day = 1; day <= totalDaysInMonth; day++) {
+      // Find if there is an attendance record for this day
+      const dayDateStr = new Date(year, month, day).toISOString().slice(0, 10);
+      const isPastOrToday = day <= now.getDate();
+      const isWeekend = (adjustedFirstDay + day - 1) % 7 >= 5;
+      
+      let status = "present";
+      if (isWeekend) {
+        status = "holiday";
+      } else if (day === now.getDate() && !isCheckedIn) {
+        status = "present";
+      } else if (day % 7 === 3) {
+        status = "leave";
+      } else if (day % 11 === 0) {
+        status = "absent";
+      }
+
+      calendarGrid.push({
+        day,
+        status: isPastOrToday ? status : isWeekend ? "holiday" : "none",
+        isToday: day === now.getDate(),
+      });
+    }
 
     return (
       <div className="space-y-6">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        {/* Welcome Section Matching Reference Image */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100 tracking-tight">
-              Good morning, {profile.firstName}!{" "}
-              <Sun className="inline-block h-5 w-5 text-amber-500 ml-2 mb-1" />
+            <h1 className="text-2xl sm:text-3xl font-bold text-[#172033] tracking-tight">
+              Welcome back, {profile.firstName || userDetails?.name || "Akash"}!
             </h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 font-medium">
-              Stay consistent, keep growing.
+            <p className="text-xs sm:text-sm text-[#667085] mt-1 font-medium">
+              Have a productive day at work.
             </p>
           </div>
-          <div className="flex gap-3 flex-wrap">
-            <div className="flex items-center gap-3 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft px-4 py-2.5">
-              <Sun className="h-6 w-6 text-amber-500 shrink-0" />
-              <div>
-                <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
-                  {dateStr}
-                </p>
-                <p className="text-xs text-gray-400 dark:text-gray-500">
-                  Have a productive day!
-                </p>
-              </div>
-            </div>
+          <div className="flex items-center gap-2 self-start sm:self-auto px-3.5 py-1.5 rounded-lg bg-white border border-[#E3E7EB] text-xs font-semibold text-[#172033] shadow-subtle">
+            <CalendarDays className="h-4 w-4 text-[#4F46E5]" />
+            <span>{dateStr}</span>
           </div>
         </div>
 
+        {/* 4 Summary Stat Cards matching reference image */}
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <div className="rounded-xl bg-white/80 dark:bg-[#151d2e] p-5 border border-gray-100/80 dark:border-gray-800/50 shadow-soft flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-900/20">
-                <CalendarCheck className="h-6 w-6 text-emerald-500 dark:text-emerald-400" />
-              </div>
-              <ChevronRight className="h-6 w-6 text-gray-300 dark:text-gray-600" />
-            </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">
-              Attendance Today
-            </p>
-            <p className="text-2xl font-bold text-gray-800 dark:text-gray-100 leading-tight">
-              Present
-            </p>
-            <p className="text-xs text-gray-400 mt-1">
-              Check-in: {isCheckedIn ? "09:12 AM" : "Not checked in"}
-            </p>
-          </div>
-          <div className="rounded-xl bg-white/80 dark:bg-[#151d2e] p-5 border border-gray-100/80 dark:border-gray-800/50 shadow-soft flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-900/20">
-                <FileText className="h-6 w-6 text-blue-500 dark:text-blue-400" />
-              </div>
-              <ChevronRight className="h-6 w-6 text-gray-300 dark:text-gray-600" />
-            </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">
-              Leave Requests
-            </p>
-            <p className="text-2xl font-bold text-gray-800 dark:text-gray-100 leading-tight">
-              {pendingLeaves.length} Pending
-            </p>
-            <p className="text-xs text-gray-400 mt-1">
-              {leaveRequests.length} submitted
-            </p>
-          </div>
-          <div className="rounded-xl bg-white/80 dark:bg-[#151d2e] p-5 border border-gray-100/80 dark:border-gray-800/50 shadow-soft flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-violet-50 dark:bg-violet-900/20">
-                <CheckSquare className="h-6 w-6 text-violet-500 dark:text-violet-400" />
-              </div>
-              <ChevronRight className="h-6 w-6 text-gray-300 dark:text-gray-600" />
-            </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">
-              My Tasks
-            </p>
-            <p className="text-2xl font-bold text-gray-800 dark:text-gray-100 leading-tight">
-              {activeTasks.length} Active
-            </p>
-            <p className="text-xs text-gray-400 mt-1">
-              {tasks.length - activeTasks.length} completed
-            </p>
-          </div>
-          <div className="rounded-xl bg-white/80 dark:bg-[#151d2e] p-5 border border-gray-100/80 dark:border-gray-800/50 shadow-soft flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-900/20">
-                <Wallet className="h-6 w-6 text-amber-500 dark:text-amber-400" />
-              </div>
-              <ChevronRight className="h-6 w-6 text-gray-300 dark:text-gray-600" />
-            </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">
-              Next Payroll
-            </p>
-            <p className="text-2xl font-bold text-gray-800 dark:text-gray-100 leading-tight">
-              {currentSalary}
-            </p>
-            <p className="text-xs text-gray-400 mt-1">From employee record</p>
-          </div>
+          <MetricStatCard
+            label="Total Leave"
+            value="20"
+            subtext="days/year"
+            icon={CalendarDays}
+            iconBg="bg-blue-50 text-blue-600"
+          />
+          <MetricStatCard
+            label="Used Leave"
+            value={`${approvedLeaves.length}`}
+            subtext="days"
+            icon={CalendarCheck}
+            iconBg="bg-emerald-50 text-emerald-600"
+          />
+          <MetricStatCard
+            label="Pending Approval"
+            value={`${pendingLeaves.length}`}
+            subtext={pendingLeaves.length === 1 ? "1 leave request" : `${pendingLeaves.length} leave requests`}
+            badge={pendingLeaves.length > 0 ? "Pending" : null}
+            badgeType="warning"
+            icon={Clock}
+            iconBg="bg-amber-50 text-amber-600"
+          />
+          <MetricStatCard
+            label="Assigned Tasks"
+            value={`${tasks.length}`}
+            subtext={`${activeTasks.length} active tasks`}
+            icon={ListChecks}
+            iconBg="bg-indigo-50 text-[#4F46E5]"
+          />
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
-          <div className="rounded-xl bg-white/80 dark:bg-[#151d2e] p-6 border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100">
-                Attendance Overview
-              </h3>
-              <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                This Month ▾
-              </span>
-            </div>
-            <div className="flex flex-col sm:flex-row items-center gap-6">
-              <div className="flex items-center justify-center">
-                <div className="relative h-40 w-40">
-                  <Doughnut
-                    data={{
-                      labels: ["Present", "Absent", "Late", "Half Day"],
-                      datasets: [
-                        {
-                          data: [20, 2, 1, 1],
-                          backgroundColor: [
-                            "#6366f1",
-                            "#f43f5e",
-                            "#f59e0b",
-                            "#9ca3af",
-                          ],
-                          borderWidth: 0,
-                        },
-                      ],
-                    }}
-                    options={{
-                      cutout: "75%",
-                      plugins: { legend: { display: false } },
-                      maintainAspectRatio: false,
-                    }}
-                  />
-                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span className="text-2xl font-bold text-gray-800 dark:text-gray-100">
-                      {profile.attendancePercentage}%
-                    </span>
-                    <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">
-                      Present
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex-1 w-full space-y-4">
-                <div className="space-y-2.5">
-                  {[
-                    { label: "Present", count: 20, color: "bg-[#6366f1]" },
-                    { label: "Absent", count: 2, color: "bg-[#f43f5e]" },
-                    { label: "Late", count: 1, color: "bg-[#f59e0b]" },
-                    { label: "Half Day", count: 1, color: "bg-[#9ca3af]" },
-                  ].map((item) => (
-                    <div
-                      key={item.label}
-                      className="flex items-center justify-between text-xs"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`h-2.5 w-2.5 rounded-full ${item.color}`}
-                        />
-                        <span className="text-gray-600 dark:text-gray-300 font-medium">
-                          {item.label}
-                        </span>
-                      </div>
-                      <span className="font-semibold text-gray-800 dark:text-gray-100">
-                        {item.count}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-                <div className="pt-4 border-t border-gray-100 dark:border-gray-800/50 grid grid-cols-2 text-center gap-4">
-                  <div>
-                    <p className="text-lg font-bold text-gray-800 dark:text-gray-100">
-                      24
-                    </p>
-                    <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">
-                      Total Days
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
-                      20
-                    </p>
-                    <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">
-                      Present Days
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="rounded-xl bg-white/80 dark:bg-[#151d2e] p-6 border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100">
-                Payroll Overview
-              </h3>
-              <button
-                onClick={() => setActiveSection("Payroll")}
-                className="text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:underline"
-              >
-                View Payslips
-              </button>
-            </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1 font-medium">
-              Current employee record
-            </p>
-            <p className="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-2">
-              {currentSalary}
-            </p>
-            <div className="flex items-center gap-2 mb-6">
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-semibold px-2.5 py-0.5">
-                <Check className="h-3 w-3" /> Salary
-              </span>
-              <p className="text-[10px] text-gray-400 dark:text-gray-500">
-                Loaded from employee record
-              </p>
-            </div>
-            <div className="space-y-3.5 border-t border-gray-100 dark:border-gray-800/50 pt-5">
-              {[
-                {
-                  label: "Designation",
-                  val: profile.designation || "Not available",
-                },
-                {
-                  label: "Department",
-                  val: profile.department || "Not available",
-                },
-                { label: "Employee ID", val: profile.empId || "Not available" },
-              ].map((r) => (
-                <div
-                  key={r.label}
-                  className="flex items-center justify-between text-xs"
-                >
-                  <span className="text-gray-500 dark:text-gray-400 font-medium">
-                    {r.label}
-                  </span>
-                  <span className="font-semibold text-gray-800 dark:text-gray-100">
-                    {r.val}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
+        {/* Middle Row (3-Column Layout from Reference Image) */}
         <div className="grid gap-6 lg:grid-cols-3">
-          <div className="rounded-xl bg-white/80 dark:bg-[#151d2e] p-6 border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100">
-                Leave Requests
-              </h3>
-              <button
-                onClick={() => setActiveSection("Leave")}
-                className="text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:underline"
-              >
-                View All
-              </button>
-            </div>
-            <div className="space-y-4">
-              {displayLeaves.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-4">
-                  No leave requests yet.
-                </p>
-              ) : (
-                displayLeaves.map((req) => {
-                  const leaveIcons = {
-                    "Sick Leave": <Thermometer className="h-4 w-4" />,
-                    "Casual Leave": <Coffee className="h-4 w-4" />,
-                    "Annual Leave": <Palmtree className="h-4 w-4" />,
-                    "Earned Leave": <Plane className="h-4 w-4" />,
-                  };
-                  return (
-                    <div key={req._id || req.id} className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
-                        {leaveIcons[req.type] || (
-                          <ClipboardList className="h-5 w-5" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-800 dark:text-gray-300">
-                          {req.type}
-                        </p>
-                        <p className="text-[10px] text-gray-400 dark:text-gray-500 truncate">
-                          {req.dates}
-                        </p>
-                      </div>
+          
+          {/* 1. Attendance Overview Card */}
+          <div className="rounded-xl bg-white p-5 border border-[#E3E7EB] shadow-card flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-bold text-[#172033]">
+                  Attendance Overview
+                </h3>
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-[#172033]">
+                  <span>{monthName} {year}</span>
+                </div>
+              </div>
+
+              {/* Day header */}
+              <div className="grid grid-cols-7 text-center text-[10px] font-semibold text-[#667085] mb-2 border-b border-[#E3E7EB]/70 pb-1.5">
+                {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => (
+                  <span key={d}>{d}</span>
+                ))}
+              </div>
+
+              {/* Mini Calendar Grid */}
+              <div className="grid grid-cols-7 gap-1 text-center text-xs">
+                {calendarGrid.slice(0, 28).map((cell, idx) => (
+                  <div key={idx} className="h-7 flex items-center justify-center relative">
+                    {cell.day && (
                       <span
-                        className={`shrink-0 text-[10px] font-medium rounded-full px-2 py-0.5 ${leaveBadge(req.status)}`}
+                        className={`h-6 w-6 rounded-full flex items-center justify-center text-[11px] font-medium transition ${
+                          cell.isToday
+                            ? 'bg-[#4F46E5] text-white font-bold shadow-xs'
+                            : 'text-[#172033] hover:bg-[#F6F7FB]'
+                        }`}
                       >
-                        {req.status}
+                        {cell.day}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Attendance Legend matching reference image */}
+            <div className="pt-4 mt-3 border-t border-[#E3E7EB] grid grid-cols-2 gap-2 text-[11px] text-[#667085]">
+              <div className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                <span>Present</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-rose-500" />
+                <span>Absent</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-amber-500" />
+                <span>Leave</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-blue-500" />
+                <span>Holiday</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 2. My Tasks Widget matching reference image */}
+          <div className="rounded-xl bg-white p-5 border border-[#E3E7EB] shadow-card flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-bold text-[#172033]">
+                  My Tasks
+                </h3>
+                <button
+                  onClick={() => setActiveSection("Tasks")}
+                  className="text-xs font-semibold text-[#4F46E5] hover:underline"
+                >
+                  View All
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {tasks.length === 0 ? (
+                  <p className="text-xs text-[#667085] text-center py-6">
+                    No tasks assigned yet.
+                  </p>
+                ) : (
+                  tasks.slice(0, 4).map((task) => (
+                    <div
+                      key={task._id}
+                      className="flex items-center justify-between gap-3 p-2 rounded-lg hover:bg-[#F6F7FB] transition border border-transparent hover:border-[#E3E7EB]"
+                    >
+                      <label className="flex items-center gap-2.5 min-w-0 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={task.status === "Completed"}
+                          onChange={() => handleTaskStatusChange(task)}
+                          className="h-4 w-4 rounded text-[#4F46E5] border-gray-300 focus:ring-[#4F46E5] cursor-pointer"
+                        />
+                        <span
+                          className={`text-xs font-medium truncate ${
+                            task.status === "Completed"
+                              ? "line-through text-gray-400"
+                              : "text-[#172033]"
+                          }`}
+                        >
+                          {task.title}
+                        </span>
+                      </label>
+                      <span
+                        className={`shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-md ${
+                          task.status === "Completed"
+                            ? "bg-emerald-50 text-emerald-700"
+                            : "bg-amber-50 text-amber-700"
+                        }`}
+                      >
+                        {task.status === "Completed" ? "Done" : "Pending"}
                       </span>
                     </div>
-                  );
-                })
-              )}
+                  ))
+                )}
+              </div>
             </div>
+
             <button
-              onClick={() => setIsApplyLeaveOpen(true)}
-              className="mt-5 w-full rounded-lg border border-dashed border-gray-300 dark:border-gray-700 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500 transition"
+              onClick={() => setActiveSection("Tasks")}
+              className="mt-4 w-full text-center text-xs font-semibold text-[#4F46E5] py-2 rounded-lg bg-indigo-50/70 hover:bg-indigo-100/70 transition"
             >
-              + Apply New Leave
+              Open Tasks Workspace
             </button>
           </div>
 
-          <div className="rounded-xl bg-white/80 dark:bg-[#151d2e] p-6 border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100">
-                Announcements
-              </h3>
-              <button
-                onClick={() => setActiveSection("Announcements")}
-                className="text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:underline"
-              >
-                View All
-              </button>
-            </div>
-            <div className="space-y-4">
-              {announcements.slice(0, 3).map((announcement) => (
-                <div key={announcement._id} className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-500 dark:bg-blue-900/20 dark:text-blue-400">
-                    <Megaphone className="h-5 w-5" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-800 dark:text-gray-300 leading-snug">
-                      {announcement.headline}
-                    </p>
-                    <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
-                      {new Date(
-                        announcement.createdAt || announcement.date,
-                      ).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-              ))}
-              {announcements.length === 0 && (
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  No announcements yet.
-                </p>
-              )}
-            </div>
-          </div>
+          {/* 3. Recent Announcements Widget matching reference image */}
+          <div className="rounded-xl bg-white p-5 border border-[#E3E7EB] shadow-card flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-bold text-[#172033]">
+                  Recent Announcements
+                </h3>
+                <button
+                  onClick={() => setActiveSection("Announcements")}
+                  className="text-xs font-semibold text-[#4F46E5] hover:underline"
+                >
+                  View All
+                </button>
+              </div>
 
-          <div className="rounded-xl bg-white/80 dark:bg-[#151d2e] p-6 border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
-            <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100 mb-5">
+              <div className="space-y-3.5">
+                {announcements.length === 0 ? (
+                  <p className="text-xs text-[#667085] text-center py-6">
+                    No announcements published.
+                  </p>
+                ) : (
+                  announcements.slice(0, 3).map((item, idx) => {
+                    const iconList = [
+                      <PartyPopper key={1} className="h-4 w-4 text-rose-500" />,
+                      <CalendarDays key={2} className="h-4 w-4 text-blue-500" />,
+                      <FileText key={3} className="h-4 w-4 text-emerald-500" />,
+                    ];
+                    const bgList = ["bg-rose-50", "bg-blue-50", "bg-emerald-50"];
+
+                    return (
+                      <div key={item._id || idx} className="flex items-start gap-3">
+                        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${bgList[idx % 3]}`}>
+                          {iconList[idx % 3]}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-1">
+                            <p className="text-xs font-bold text-[#172033] truncate">
+                              {item.headline || item.title}
+                            </p>
+                            <span className="text-[10px] text-[#667085] shrink-0 font-medium">
+                              {new Date(item.createdAt || item.date || Date.now()).toLocaleDateString("en-US", {
+                                day: "numeric",
+                                month: "short",
+                              })}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-[#667085] mt-0.5 line-clamp-1">
+                            {item.description || item.content || "Important company notification"}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            <button
+              onClick={() => setActiveSection("Announcements")}
+              className="mt-4 w-full text-center text-xs font-semibold text-[#667085] py-2 rounded-lg bg-[#F6F7FB] hover:bg-[#E3E7EB]/50 transition"
+            >
+              Browse All Notices
+            </button>
+          </div>
+        </div>
+
+        {/* Bottom Section: Quick Actions & Personal Payroll Info */}
+        <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
+          <div className="rounded-xl bg-white p-5 border border-[#E3E7EB] shadow-card">
+            <h3 className="text-sm font-bold text-[#172033] mb-4">
               Quick Actions
             </h3>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
                 {
                   icon: CalendarCheck,
-                  label: "Mark Attendance",
-                  color: "bg-emerald-50 dark:bg-emerald-900/20",
-                  iconColor: "text-emerald-500 dark:text-emerald-400",
-                  action: () => setIsCheckedIn(!isCheckedIn),
+                  label: isCheckedIn ? "Checked In" : "Punch In",
+                  sub: isCheckedIn ? "Active" : "Webcam Face",
+                  color: "bg-emerald-50 text-emerald-600",
+                  action: handlePunch,
                 },
                 {
                   icon: FileText,
                   label: "Apply Leave",
-                  color: "bg-blue-50 dark:bg-blue-900/20",
-                  iconColor: "text-blue-500 dark:text-blue-400",
+                  sub: "Request Off",
+                  color: "bg-blue-50 text-blue-600",
                   action: () => setIsApplyLeaveOpen(true),
                 },
                 {
                   icon: Download,
-                  label: "Request Doc",
-                  color: "bg-violet-50 dark:bg-violet-900/20",
-                  iconColor: "text-violet-500 dark:text-violet-400",
+                  label: "Documents",
+                  sub: "Payslips & Files",
+                  color: "bg-violet-50 text-violet-600",
                   action: () => setActiveSection("Documents"),
                 },
                 {
                   icon: Phone,
                   label: "Contact HR",
-                  color: "bg-amber-50 dark:bg-amber-900/20",
-                  iconColor: "text-amber-500 dark:text-amber-400",
-                  action: () => {},
+                  sub: "Assistance",
+                  color: "bg-amber-50 text-amber-600",
+                  action: () => setActiveSection("Help & Support"),
                 },
               ].map((qa, i) => (
                 <button
                   key={i}
                   onClick={qa.action}
-                  className="flex flex-col items-center gap-2.5 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition border border-gray-100 dark:border-gray-800/50"
+                  className="flex flex-col items-center gap-2 p-3.5 rounded-xl border border-[#E3E7EB] hover:bg-[#F6F7FB] transition text-center hover:shadow-subtle"
                 >
-                  <div
-                    className={`flex h-10 w-10 items-center justify-center rounded-lg ${qa.color}`}
-                  >
-                    <qa.icon className={`h-5 w-5 ${qa.iconColor}`} />
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${qa.color}`}>
+                    <qa.icon className="h-5 w-5" />
                   </div>
-                  <p className="text-[11px] font-semibold text-gray-700 dark:text-gray-300 text-center leading-tight">
-                    {qa.label}
-                  </p>
+                  <div>
+                    <p className="text-xs font-bold text-[#172033]">{qa.label}</p>
+                    <p className="text-[10px] text-[#667085] font-medium">{qa.sub}</p>
+                  </div>
                 </button>
               ))}
+            </div>
+          </div>
+
+          <div className="rounded-xl bg-white p-5 border border-[#E3E7EB] shadow-card">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold text-[#172033]">
+                Payroll Summary
+              </h3>
+              <button
+                onClick={() => setActiveSection("Payroll")}
+                className="text-xs font-semibold text-[#4F46E5] hover:underline"
+              >
+                Payslips →
+              </button>
+            </div>
+            <p className="text-xs text-[#667085] font-medium">Monthly Compensation</p>
+            <p className="text-2xl font-bold text-[#172033] mt-1">{currentSalary}</p>
+            <div className="mt-4 pt-3 border-t border-[#E3E7EB] grid grid-cols-2 gap-2 text-xs">
+              <div>
+                <span className="text-[10px] uppercase font-semibold text-[#667085]">Designation</span>
+                <p className="font-semibold text-[#172033] truncate">{profile.designation || "Employee"}</p>
+              </div>
+              <div>
+                <span className="text-[10px] uppercase font-semibold text-[#667085]">Department</span>
+                <p className="font-semibold text-[#172033] truncate">{profile.department || "General"}</p>
+              </div>
             </div>
           </div>
         </div>
@@ -884,17 +861,17 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
       case "My Profile":
         return (
           <div className="max-w-4xl space-y-6">
-            <div className="rounded-xl bg-white/80 dark:bg-[#151d2e] p-6 sm:p-8 border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
-              <div className="flex flex-col sm:flex-row items-center gap-6 pb-8 border-b border-gray-100 dark:border-gray-800/50">
-                <div className="relative flex h-24 w-24 items-center justify-center rounded-2xl bg-indigo-600 text-3xl font-bold text-white shadow-soft">
+            <div className="rounded-xl bg-white dark:bg-[#151d2e] p-6 sm:p-8 border border-[#E3E7EB] dark:border-gray-800 shadow-subtle">
+              <div className="flex flex-col sm:flex-row items-center gap-6 pb-8 border-b border-[#E3E7EB] dark:border-gray-800">
+                <div className="relative flex h-24 w-24 items-center justify-center rounded-2xl bg-[#715D78] text-3xl font-bold text-white shadow-subtle">
                   {profile.firstName.charAt(0)}
                   <span className="absolute bottom-1 right-1 h-3.5 w-3.5 rounded-full bg-emerald-400 ring-2 ring-white dark:ring-[#151d2e]" />
                 </div>
                 <div className="text-center sm:text-left">
-                  <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
+                  <h2 className="text-2xl font-semibold text-[#202A35] dark:text-gray-100">
                     {profile.firstName} {profile.lastName}
                   </h2>
-                  <p className="text-sm font-medium text-indigo-600 dark:text-indigo-400">
+                  <p className="text-sm font-medium text-[#715D78] dark:text-[#B29EB8]">
                     {profile.role}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -909,7 +886,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                   type="button"
                   onClick={() => setIsEditingProfile(true)}
                   disabled={isEditingProfile}
-                  className="sm:ml-auto rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-xs font-semibold text-indigo-600 transition hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-indigo-900/40 dark:bg-indigo-900/20 dark:text-indigo-400 dark:hover:bg-indigo-900/30"
+                  className="sm:ml-auto rounded-xl border border-[#715D78]/30 bg-[#F2EFF3] px-4 py-2 text-xs font-semibold text-[#715D78] transition hover:bg-[#E7E2E9] disabled:cursor-not-allowed disabled:opacity-50 dark:border-indigo-900/40 dark:bg-indigo-900/20 dark:text-indigo-400 dark:hover:bg-[#715D78]/30"
                 >
                   Edit Profile
                 </button>
@@ -928,7 +905,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                       onChange={(e) =>
                         setProfile({ ...profile, firstName: e.target.value })
                       }
-                      className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
+                      className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#715D78] focus:ring-2 focus:ring-[#715D78]/15 dark:focus:border-[#B29EB8]"
                     />
                   </div>
                   <div>
@@ -942,7 +919,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                       onChange={(e) =>
                         setProfile({ ...profile, lastName: e.target.value })
                       }
-                      className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
+                      className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#715D78] focus:ring-2 focus:ring-[#715D78]/15 dark:focus:border-[#B29EB8]"
                     />
                   </div>
                 </div>
@@ -958,7 +935,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                       onChange={(e) =>
                         setProfile({ ...profile, phone: e.target.value })
                       }
-                      className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
+                      className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#715D78] focus:ring-2 focus:ring-[#715D78]/15 dark:focus:border-[#B29EB8]"
                     />
                   </div>
                   <div>
@@ -972,7 +949,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                       onChange={(e) =>
                         setProfile({ ...profile, dateOfBirth: e.target.value })
                       }
-                      className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
+                      className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#715D78] focus:ring-2 focus:ring-[#715D78]/15 dark:focus:border-[#B29EB8]"
                     />
                   </div>
                 </div>
@@ -988,7 +965,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                       onChange={(e) =>
                         setProfile({ ...profile, gender: e.target.value })
                       }
-                      className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
+                      className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#715D78] focus:ring-2 focus:ring-[#715D78]/15 dark:focus:border-[#B29EB8]"
                     />
                   </div>
                   <div>
@@ -999,7 +976,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                       type="text"
                       disabled
                       value={profile.designation}
-                      className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 p-2.5 text-xs text-gray-500 cursor-not-allowed"
+                      className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-gray-100 dark:bg-gray-800 p-2.5 text-xs text-gray-500 cursor-not-allowed"
                     />
                   </div>
                 </div>
@@ -1014,7 +991,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                     onChange={(e) =>
                       setProfile({ ...profile, address: e.target.value })
                     }
-                    className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
+                    className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#715D78] focus:ring-2 focus:ring-[#715D78]/15 dark:focus:border-[#B29EB8]"
                   />
                 </div>
                 <div className="pt-4 flex justify-end">
@@ -1027,7 +1004,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                         setIsEditingProfile(false);
                       })()
                     }
-                    className="rounded-xl bg-indigo-600 px-6 py-2.5 text-xs font-semibold text-white shadow-soft transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-xl bg-[#715D78] px-6 py-2.5 text-xs font-semibold text-white shadow-subtle transition hover:bg-[#5D4C63] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Save Changes
                   </button>
@@ -1040,12 +1017,12 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
       case "Attendance":
         return (
           <div className="space-y-6">
-            <div className="rounded-xl bg-white/80 dark:bg-[#151d2e] p-6 border border-gray-100/80 dark:border-gray-800/50 shadow-soft flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="rounded-xl bg-white dark:bg-[#151d2e] p-6 border border-[#E3E7EB] dark:border-gray-800 shadow-subtle flex flex-col md:flex-row items-center justify-between gap-6">
               <div>
-                <span className="text-xs font-medium uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+                <span className="text-xs font-medium uppercase tracking-wider text-[#715D78] dark:text-[#B29EB8]">
                   Monthly Performance Index
                 </span>
-                <h3 className="text-3xl sm:text-4xl font-bold mt-1 text-gray-800 dark:text-gray-100">
+                <h3 className="text-3xl sm:text-4xl font-bold mt-1 text-[#202A35] dark:text-gray-100">
                   {profile.attendancePercentage}% Attendance Rate
                 </h3>
               </div>
@@ -1053,14 +1030,14 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                 {(!todayAttendance || !todayAttendance.checkInTime) ? (
                   <button
                     onClick={handlePunch}
-                    className="rounded-xl px-6 py-2.5 text-xs font-semibold text-white shadow-soft transition bg-indigo-600 hover:bg-indigo-700"
+                    className="rounded-xl px-6 py-2.5 text-xs font-semibold text-white shadow-subtle transition bg-[#715D78] hover:bg-[#5D4C63]"
                   >
                     Punch In
                   </button>
                 ) : (!todayAttendance.checkOutTime) ? (
                   <button
                     onClick={handlePunch}
-                    className="rounded-xl px-6 py-2.5 text-xs font-semibold text-white shadow-soft transition bg-rose-600 hover:bg-rose-700"
+                    className="rounded-xl px-6 py-2.5 text-xs font-semibold text-white shadow-subtle transition bg-rose-600 hover:bg-rose-700"
                   >
                     Punch Out
                   </button>
@@ -1072,8 +1049,8 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
               </div>
             </div>
             <div className="grid gap-6 lg:grid-cols-3">
-              <div className="rounded-xl bg-white/80 dark:bg-[#151d2e] p-6 border border-gray-100/80 dark:border-gray-800/50 shadow-soft flex flex-col items-center justify-center">
-                <h3 className="text-base font-semibold mb-4 self-start text-gray-800 dark:text-gray-100">
+              <div className="rounded-xl bg-white dark:bg-[#151d2e] p-6 border border-[#E3E7EB] dark:border-gray-800 shadow-subtle flex flex-col items-center justify-center">
+                <h3 className="text-base font-semibold mb-4 self-start text-[#202A35] dark:text-gray-100">
                   Attendance Ratio
                 </h3>
                 <div className="h-44 w-44 relative">
@@ -1083,7 +1060,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                       datasets: [
                         {
                           data: [profile.attendancePercentage, 100 - (profile.attendancePercentage || 0)],
-                          backgroundColor: ["#6366f1", "#f43f5e"],
+                          backgroundColor: ["#715D78", "#f43f5e"],
                           borderWidth: 0,
                         },
                       ],
@@ -1095,7 +1072,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                     }}
                   />
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span className="text-2xl font-bold text-gray-800 dark:text-gray-100">
+                    <span className="text-2xl font-bold text-[#202A35] dark:text-gray-100">
                       {profile.attendancePercentage}%
                     </span>
                     <span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase">
@@ -1104,8 +1081,8 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                   </div>
                 </div>
               </div>
-              <div className="lg:col-span-2 rounded-xl bg-white/80 dark:bg-[#151d2e] p-6 border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
-                <h3 className="text-base font-semibold mb-4 text-gray-800 dark:text-gray-100">
+              <div className="lg:col-span-2 rounded-xl bg-white dark:bg-[#151d2e] p-6 border border-[#E3E7EB] dark:border-gray-800 shadow-subtle">
+                <h3 className="text-base font-semibold mb-4 text-[#202A35] dark:text-gray-100">
                   Detailed Check-In Logs
                 </h3>
                 <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-2">
@@ -1122,7 +1099,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                     }
                     
                     let statusText = log.status || "Present";
-                    let badgeClass = "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400";
+                    let badgeClass = "bg-[#F2EFF3] text-[#715D78] dark:bg-indigo-900/20 dark:text-indigo-400";
                     if (log.checkInTime && log.checkOutTime) {
                       statusText += " (100%)";
                       badgeClass = "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400";
@@ -1136,15 +1113,15 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                     return (
                       <div
                         key={idx}
-                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl bg-gray-50 dark:bg-gray-800/50 p-3 text-xs border border-gray-100/80 dark:border-gray-800/50"
+                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl bg-gray-50 dark:bg-gray-800/50 p-3 text-xs border border-[#E3E7EB] dark:border-gray-800"
                       >
-                        <span className="font-semibold text-gray-800 dark:text-gray-100">
+                        <span className="font-semibold text-[#202A35] dark:text-gray-100">
                           {date}
                         </span>
                         <div className="flex items-center gap-4 text-gray-600 dark:text-gray-300 font-medium">
                           <span>In: {punchIn}</span>
                           <span>Out: {punchOut}</span>
-                          <span className="font-semibold text-gray-800 dark:text-gray-100">
+                          <span className="font-semibold text-[#202A35] dark:text-gray-100">
                             {duration}
                           </span>
                         </div>
@@ -1170,7 +1147,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">
+                <h2 className="text-2xl font-bold text-[#202A35] dark:text-gray-100">
                   Leave Tracker & Applications
                 </h2>
                 <p className="text-xs font-medium text-gray-600 dark:text-gray-300 mt-0.5">
@@ -1179,7 +1156,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
               </div>
               <button
                 onClick={() => setIsApplyLeaveOpen(true)}
-                className="flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-semibold text-white shadow-soft hover:bg-indigo-700 transition"
+                className="flex items-center gap-2 rounded-xl bg-[#715D78] px-5 py-2.5 text-xs font-semibold text-white shadow-subtle hover:bg-[#5D4C63] transition"
               >
                 <Plus className="h-4 w-4" /> Apply Leave
               </button>
@@ -1192,27 +1169,27 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
               ].map(([type, count, avail]) => (
                 <div
                   key={type}
-                  className="rounded-xl bg-white/80 dark:bg-[#151d2e] p-5 border border-gray-100/80 dark:border-gray-800/50 shadow-soft"
+                  className="rounded-xl bg-white dark:bg-[#151d2e] p-5 border border-[#E3E7EB] dark:border-gray-800 shadow-subtle"
                 >
                   <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">
                     {type}
                   </p>
-                  <p className="mt-2 text-2xl font-bold text-gray-800 dark:text-gray-100">
+                  <p className="mt-2 text-2xl font-bold text-[#202A35] dark:text-gray-100">
                     {count}
                   </p>
-                  <p className="mt-1 text-[11px] text-indigo-600 dark:text-indigo-400 font-semibold">
+                  <p className="mt-1 text-[11px] text-[#715D78] dark:text-[#B29EB8] font-semibold">
                     {avail}
                   </p>
                 </div>
               ))}
             </div>
-            <div className="rounded-xl bg-white/80 dark:bg-[#151d2e] p-6 border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
-              <h3 className="text-base font-semibold mb-4 text-gray-800 dark:text-gray-100">
+            <div className="rounded-xl bg-white dark:bg-[#151d2e] p-6 border border-[#E3E7EB] dark:border-gray-800 shadow-subtle">
+              <h3 className="text-base font-semibold mb-4 text-[#202A35] dark:text-gray-100">
                 My Leave History
               </h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm min-w-[600px]">
-                  <thead className="border-b border-gray-100 dark:border-gray-800/50 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                  <thead className="border-b border-[#E3E7EB] dark:border-gray-800 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                     <tr>
                       <th className="pb-3">Type</th>
                       <th className="pb-3">Dates</th>
@@ -1226,7 +1203,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                     {leaveRequests.map((req) => (
                       <tr
                         key={req._id || req.id}
-                        className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30"
+                        className="hover:bg-[#F0F2F4] dark:hover:bg-gray-800/30"
                       >
                         <td className="py-3.5 font-medium text-gray-700 dark:text-gray-300">
                           {req.type}
@@ -1244,12 +1221,12 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                         </td>
                         {req.documentLink ? (
                           <td className="py-3.5">
-                            <button className="rounded-lg bg-indigo-50 dark:bg-indigo-900/20 px-3 py-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-800/30 transition">
+                            <button className="rounded-lg bg-[#F2EFF3] dark:bg-[#715D78]/20 px-3 py-1.5 text-xs font-semibold text-[#715D78] dark:text-[#B29EB8] hover:bg-[#E7E2E9] dark:hover:bg-indigo-800/30 transition">
                               <a
                                 href={req.documentLink}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-indigo-600 dark:text-indigo-400 hover:underline"
+                                className="text-[#715D78] dark:text-[#B29EB8] hover:underline"
                               >
                                 View Document
                               </a>
@@ -1310,7 +1287,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
         return (
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">
+              <h2 className="text-xl font-bold text-[#202A35] dark:text-gray-100">
                 Assigned Deliverables
               </h2>
               <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -1321,18 +1298,18 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
               {tasks.map((task) => (
                 <div
                   key={task._id}
-                  className="rounded-xl bg-white/80 dark:bg-[#151d2e] p-5 border border-gray-100/80 dark:border-gray-800/50 shadow-soft flex flex-col justify-between"
+                  className="rounded-xl bg-white dark:bg-[#151d2e] p-5 border border-[#E3E7EB] dark:border-gray-800 shadow-subtle flex flex-col justify-between"
                 >
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-medium uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+                      <span className="text-xs font-medium uppercase tracking-wider text-[#715D78] dark:text-[#B29EB8]">
                         Assigned Task
                       </span>
                       <span className="rounded-full bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400 px-2 py-0.5 text-[10px] font-semibold">
                         {task.priority} Priority
                       </span>
                     </div>
-                    <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100">
+                    <h3 className="text-base font-semibold text-[#202A35] dark:text-gray-100">
                       {task.title}
                     </h3>
                     {task.description && (
@@ -1341,13 +1318,13 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                       </p>
                     )}
                   </div>
-                  <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-800/50 flex items-center justify-between">
+                  <div className="mt-6 pt-4 border-t border-[#E3E7EB] dark:border-gray-800 flex items-center justify-between">
                     <span className="text-xs text-gray-500 dark:text-gray-400">
                       Deadline: {task.deadline || "Not set"}
                     </span>
                     <button
                       onClick={() => handleTaskStatusChange(task)}
-                      className={`rounded-xl px-3 py-1.5 text-xs font-semibold shadow-soft transition ${task.status === "Completed" ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400" : "bg-indigo-600 hover:bg-indigo-700 text-white"}`}
+                      className={`rounded-xl px-3 py-1.5 text-xs font-semibold shadow-subtle transition ${task.status === "Completed" ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400" : "bg-[#715D78] hover:bg-[#5D4C63] text-white"}`}
                     >
                       {task.status === "Completed"
                         ? "Completed"
@@ -1364,16 +1341,16 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
         return (
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">
+              <h2 className="text-xl font-bold text-[#202A35] dark:text-gray-100">
                 Payroll & Payslips
               </h2>
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 Download your salary statements and tax reports
               </p>
             </div>
-            <div className="rounded-xl bg-white/80 dark:bg-[#151d2e] p-6 border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
+            <div className="rounded-xl bg-white dark:bg-[#151d2e] p-6 border border-[#E3E7EB] dark:border-gray-800 shadow-subtle">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100">
+                <h3 className="text-base font-semibold text-[#202A35] dark:text-gray-100">
                   Recent Payslips
                 </h3>
                 <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
@@ -1385,14 +1362,14 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                   (month, i) => (
                     <div
                       key={i}
-                      className="flex items-center justify-between p-3 rounded-xl border border-gray-100 dark:border-gray-800/50 bg-gray-50/50 dark:bg-[#0c1222] hover:bg-gray-100 dark:hover:bg-gray-800/80 transition cursor-pointer"
+                      className="flex items-center justify-between p-3 rounded-xl border border-[#E3E7EB] dark:border-gray-800 bg-[#F0F2F4] dark:bg-[#0c1222] hover:bg-gray-100 dark:hover:bg-gray-800/80 transition cursor-pointer"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-50 dark:bg-indigo-900/20 text-indigo-500 dark:text-indigo-400">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#F2EFF3] dark:bg-[#715D78]/20 text-[#715D78] dark:text-[#B29EB8]">
                           <FileText className="h-5 w-5" />
                         </div>
                         <div>
-                          <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                          <p className="text-sm font-semibold text-[#202A35] dark:text-gray-100">
                             Payslip - {month}
                           </p>
                           <p className="text-[10px] text-gray-400 dark:text-gray-500">
@@ -1408,20 +1385,20 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                 )}
               </div>
             </div>
-            <div className="rounded-xl bg-white/80 dark:bg-[#151d2e] p-6 border border-gray-100/80 dark:border-gray-800/50 shadow-soft">
-              <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100 mb-6">
+            <div className="rounded-xl bg-white dark:bg-[#151d2e] p-6 border border-[#E3E7EB] dark:border-gray-800 shadow-subtle">
+              <h3 className="text-base font-semibold text-[#202A35] dark:text-gray-100 mb-6">
                 CTC Structure Overview
               </h3>
               <div className="grid gap-4 sm:grid-cols-3">
-                <div className="p-4 rounded-xl bg-gray-50/50 dark:bg-[#0c1222] border border-gray-100 dark:border-gray-800/50">
+                <div className="p-4 rounded-xl bg-[#F0F2F4] dark:bg-[#0c1222] border border-[#E3E7EB] dark:border-gray-800">
                   <p className="text-gray-500 dark:text-gray-400 text-xs font-medium">
                     Gross Earnings
                   </p>
-                  <p className="text-xl font-bold text-gray-800 dark:text-gray-100 mt-1">
+                  <p className="text-xl font-bold text-[#202A35] dark:text-gray-100 mt-1">
                     ₹1,20,833
                   </p>
                 </div>
-                <div className="p-4 rounded-xl bg-gray-50/50 dark:bg-[#0c1222] border border-gray-100 dark:border-gray-800/50">
+                <div className="p-4 rounded-xl bg-[#F0F2F4] dark:bg-[#0c1222] border border-[#E3E7EB] dark:border-gray-800">
                   <p className="text-gray-500 dark:text-gray-400 text-xs font-medium">
                     Deductions (PF + Tax)
                   </p>
@@ -1429,7 +1406,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                     - ₹18,400
                   </p>
                 </div>
-                <div className="p-4 rounded-xl bg-gray-50/50 dark:bg-[#0c1222] border border-gray-100 dark:border-gray-800/50">
+                <div className="p-4 rounded-xl bg-[#F0F2F4] dark:bg-[#0c1222] border border-[#E3E7EB] dark:border-gray-800">
                   <p className="text-gray-500 dark:text-gray-400 text-xs font-medium">
                     Net Take Home
                   </p>
@@ -1446,7 +1423,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
         return (
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">
+              <h2 className="text-xl font-bold text-[#202A35] dark:text-gray-100">
                 Employee Documents
               </h2>
               <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -1460,12 +1437,12 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                 documents.map((doc) => (
                   <div
                     key={doc._id}
-                    className="p-4 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft flex justify-between items-center"
+                    className="p-4 rounded-xl bg-white dark:bg-[#151d2e] border border-[#E3E7EB] dark:border-gray-800 shadow-subtle flex justify-between items-center"
                   >
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-3">
-                        <FileText className="h-5 w-5 text-indigo-500 dark:text-indigo-400" />
-                        <span className="text-xs font-semibold text-gray-800 dark:text-gray-100">
+                        <FileText className="h-5 w-5 text-[#715D78] dark:text-[#B29EB8]" />
+                        <span className="text-xs font-semibold text-[#202A35] dark:text-gray-100">
                           {doc.title}
                         </span>
                       </div>
@@ -1475,7 +1452,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                       href={`http://localhost:3000${doc.fileUrl}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
+                      className="text-xs font-semibold text-[#715D78] dark:text-[#B29EB8] hover:underline"
                     >
                       View / Download
                     </a>
@@ -1489,17 +1466,17 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
       case "Notifications":
         return (
           <div className="max-w-2xl space-y-4">
-            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">
+            <h2 className="text-xl font-bold text-[#202A35] dark:text-gray-100">
               Alerts & Notifications
             </h2>
             {notifications.map((n) => (
               <div
                 key={n.id}
-                className="p-4 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft flex items-start gap-3"
+                className="p-4 rounded-xl bg-white dark:bg-[#151d2e] border border-[#E3E7EB] dark:border-gray-800 shadow-subtle flex items-start gap-3"
               >
-                <Bell className="h-4 w-4 text-indigo-500 dark:text-indigo-400 mt-0.5" />
+                <Bell className="h-4 w-4 text-[#715D78] dark:text-[#B29EB8] mt-0.5" />
                 <div>
-                  <h4 className="font-semibold text-xs text-gray-800 dark:text-gray-100">
+                  <h4 className="font-semibold text-xs text-[#202A35] dark:text-gray-100">
                     {n.title}
                   </h4>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
@@ -1514,23 +1491,23 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
       case "Announcements":
         return (
           <div className="space-y-4 max-w-2xl">
-            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">
+            <h2 className="text-xl font-bold text-[#202A35] dark:text-gray-100">
               Announcements
             </h2>
             {announcements.length === 0 ? (
-              <div className="p-5 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft text-sm text-gray-500 dark:text-gray-400">
+              <div className="p-5 rounded-xl bg-white dark:bg-[#151d2e] border border-[#E3E7EB] dark:border-gray-800 shadow-subtle text-sm text-gray-500 dark:text-gray-400">
                 No announcements yet.
               </div>
             ) : (
               announcements.map((announcement) => (
                 <div
                   key={announcement._id}
-                  className="p-5 rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50 shadow-soft"
+                  className="p-5 rounded-xl bg-white dark:bg-[#151d2e] border border-[#E3E7EB] dark:border-gray-800 shadow-subtle"
                 >
-                  <span className="text-[10px] font-semibold text-indigo-500 uppercase">
+                  <span className="text-[10px] font-semibold text-[#715D78] uppercase">
                     Notice
                   </span>
-                  <h4 className="text-base font-semibold mt-1 text-gray-800 dark:text-gray-100">
+                  <h4 className="text-base font-semibold mt-1 text-[#202A35] dark:text-gray-100">
                     {announcement.headline}
                   </h4>
                   <p className="text-xs text-gray-600 dark:text-gray-300 mt-2 font-medium">
@@ -1547,7 +1524,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">
+                <h2 className="text-xl font-bold text-[#202A35] dark:text-gray-100">
                   My Projects
                 </h2>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -1556,14 +1533,14 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
               </div>
               <button
                 onClick={() => setIsAddProjectOpen(true)}
-                className="flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-semibold text-white shadow-soft hover:bg-indigo-700 transition"
+                className="flex items-center gap-2 rounded-xl bg-[#715D78] px-5 py-2.5 text-xs font-semibold text-white shadow-subtle hover:bg-[#5D4C63] transition"
               >
                 <Plus className="h-4 w-4" /> Upload Project
               </button>
             </div>
 
             {projects.length === 0 ? (
-              <div className="p-8 text-center rounded-xl bg-white/80 dark:bg-[#151d2e] border border-gray-100/80 dark:border-gray-800/50">
+              <div className="p-8 text-center rounded-xl bg-white dark:bg-[#151d2e] border border-[#E3E7EB] dark:border-gray-800">
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   No projects uploaded yet. Click on "Upload Project" to add
                   one!
@@ -1574,21 +1551,21 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                 {projects.map((project) => (
                   <div
                     key={project._id}
-                    className="flex flex-col rounded-xl bg-white/80 dark:bg-[#151d2e] p-5 border border-gray-100/80 dark:border-gray-800/50 shadow-soft"
+                    className="flex flex-col rounded-xl bg-white dark:bg-[#151d2e] p-5 border border-[#E3E7EB] dark:border-gray-800 shadow-subtle"
                   >
-                    <h3 className="text-base font-bold text-gray-800 dark:text-gray-100">
+                    <h3 className="text-base font-bold text-[#202A35] dark:text-gray-100">
                       {project.title}
                     </h3>
                     <p className="mt-2 text-xs text-gray-600 dark:text-gray-400 line-clamp-3">
                       {project.content}
                     </p>
-                    <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800/50 flex flex-wrap gap-3">
+                    <div className="mt-4 pt-4 border-t border-[#E3E7EB] dark:border-gray-800 flex flex-wrap gap-3">
                       {project.githubLink && (
                         <a
                           href={project.githubLink}
                           target="_blank"
                           rel="noreferrer"
-                          className="flex items-center gap-1 text-[11px] font-semibold text-gray-600 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400"
+                          className="flex items-center gap-1 text-[11px] font-semibold text-gray-600 hover:text-[#715D78] dark:text-gray-400 dark:hover:text-indigo-400"
                         >
                           <GithubIcon className="h-3.5 w-3.5" />
                           GitHub
@@ -1630,10 +1607,10 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                       )}
                     </div>
                     {project.score && (
-                      <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800/50 bg-gray-50/50 dark:bg-gray-800/20 p-3 rounded-lg">
-                        <p className="text-xs font-semibold text-gray-800 dark:text-gray-100">
+                      <div className="mt-4 pt-4 border-t border-[#E3E7EB] dark:border-gray-800 bg-[#F0F2F4] dark:bg-gray-800/20 p-3 rounded-lg">
+                        <p className="text-xs font-semibold text-[#202A35] dark:text-gray-100">
                           Review Score:{" "}
-                          <span className="text-indigo-600 dark:text-indigo-400">
+                          <span className="text-[#715D78] dark:text-[#B29EB8]">
                             {project.score}/5
                           </span>
                         </p>
@@ -1674,7 +1651,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
             </button>
             <button
               onClick={handleApplyLeave}
-              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 px-5 py-2 text-xs font-semibold text-white shadow-soft"
+              className="rounded-xl bg-[#715D78] hover:bg-[#5D4C63] px-5 py-2 text-xs font-semibold text-white shadow-subtle"
             >
               Submit Application
             </button>
@@ -1691,7 +1668,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
               onChange={(e) =>
                 setNewLeave({ ...newLeave, type: e.target.value })
               }
-              className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500 cursor-pointer"
+              className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#715D78] focus:ring-2 focus:ring-[#715D78]/15 dark:focus:border-[#B29EB8] cursor-pointer"
             >
               <option value="">Select Leave Type</option>
               <option>Sick Leave</option>
@@ -1710,7 +1687,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                 onChange={(e) =>
                   setNewLeave({ ...newLeave, fromDate: e.target.value })
                 }
-                className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
+                className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#715D78] focus:ring-2 focus:ring-[#715D78]/15 dark:focus:border-[#B29EB8]"
               />
             </div>
             <div>
@@ -1723,7 +1700,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                 onChange={(e) =>
                   setNewLeave({ ...newLeave, toDate: e.target.value })
                 }
-                className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
+                className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#715D78] focus:ring-2 focus:ring-[#715D78]/15 dark:focus:border-[#B29EB8]"
               />
             </div>
           </div>
@@ -1738,7 +1715,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                 setNewLeave({ ...newLeave, reason: e.target.value })
               }
               placeholder="Provide reason for time off..."
-              className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
+              className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#715D78] focus:ring-2 focus:ring-[#715D78]/15 dark:focus:border-[#B29EB8]"
             />
           </div>
           {newLeave.type === "Sick Leave" && (
@@ -1753,7 +1730,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                   setNewLeave({ ...newLeave, documentLink: e.target.value })
                 }
                 placeholder="Paste the link to your medical certificate..."
-                className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
+                className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#715D78] focus:ring-2 focus:ring-[#715D78]/15 dark:focus:border-[#B29EB8]"
               />
             </div>
           )}
@@ -1774,7 +1751,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
             </button>
             <button
               onClick={handleUpdateLeave}
-              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 px-5 py-2 text-xs font-semibold text-white shadow-soft"
+              className="rounded-xl bg-[#715D78] hover:bg-[#5D4C63] px-5 py-2 text-xs font-semibold text-white shadow-subtle"
             >
               Save Changes
             </button>
@@ -1791,7 +1768,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
               onChange={(e) =>
                 setNewLeave({ ...newLeave, type: e.target.value })
               }
-              className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500 cursor-pointer"
+              className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#715D78] focus:ring-2 focus:ring-[#715D78]/15 dark:focus:border-[#B29EB8] cursor-pointer"
             >
               <option value="">Select Leave Type</option>
               <option>Sick Leave</option>
@@ -1810,7 +1787,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                 onChange={(e) =>
                   setNewLeave({ ...newLeave, fromDate: e.target.value })
                 }
-                className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
+                className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#715D78] focus:ring-2 focus:ring-[#715D78]/15 dark:focus:border-[#B29EB8]"
               />
             </div>
             <div>
@@ -1823,7 +1800,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                 onChange={(e) =>
                   setNewLeave({ ...newLeave, toDate: e.target.value })
                 }
-                className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
+                className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#715D78] focus:ring-2 focus:ring-[#715D78]/15 dark:focus:border-[#B29EB8]"
               />
             </div>
           </div>
@@ -1838,7 +1815,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                 setNewLeave({ ...newLeave, reason: e.target.value })
               }
               placeholder="Provide reason for time off..."
-              className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
+              className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#715D78] focus:ring-2 focus:ring-[#715D78]/15 dark:focus:border-[#B29EB8]"
             />
           </div>
           {newLeave.type === "Sick Leave" && (
@@ -1853,7 +1830,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                   setNewLeave({ ...newLeave, documentLink: e.target.value })
                 }
                 placeholder="Paste the link to your medical certificate..."
-                className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
+                className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#715D78] focus:ring-2 focus:ring-[#715D78]/15 dark:focus:border-[#B29EB8]"
               />
             </div>
           )}
@@ -1875,7 +1852,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
             </button>
             <button
               onClick={handleAddProject}
-              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 px-5 py-2 text-xs font-semibold text-white shadow-soft"
+              className="rounded-xl bg-[#715D78] hover:bg-[#5D4C63] px-5 py-2 text-xs font-semibold text-white shadow-subtle"
             >
               Upload Project
             </button>
@@ -1894,7 +1871,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                 setProjectForm({ ...projectForm, title: e.target.value })
               }
               placeholder="e.g. AI-Powered Resume Screener"
-              className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
+              className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#715D78] focus:ring-2 focus:ring-[#715D78]/15 dark:focus:border-[#B29EB8]"
             />
           </div>
           <div>
@@ -1908,10 +1885,10 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                 setProjectForm({ ...projectForm, content: e.target.value })
               }
               placeholder="Describe the project architecture, features, and technologies used..."
-              className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
+              className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#715D78] focus:ring-2 focus:ring-[#715D78]/15 dark:focus:border-[#B29EB8]"
             />
           </div>
-          <div className="space-y-3 pt-2 border-t border-gray-100 dark:border-gray-800/50">
+          <div className="space-y-3 pt-2 border-t border-[#E3E7EB] dark:border-gray-800">
             <div>
               <label className="flex items-center gap-1.5 font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
                 <GithubIcon className="h-3.5 w-3.5" /> GitHub Repository Link
@@ -1923,7 +1900,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                   setProjectForm({ ...projectForm, githubLink: e.target.value })
                 }
                 placeholder="https://github.com/username/project"
-                className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
+                className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#715D78] focus:ring-2 focus:ring-[#715D78]/15 dark:focus:border-[#B29EB8]"
               />
             </div>
             <div>
@@ -1953,7 +1930,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                   })
                 }
                 placeholder="https://example.com"
-                className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
+                className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#715D78] focus:ring-2 focus:ring-[#715D78]/15 dark:focus:border-[#B29EB8]"
               />
             </div>
             <div>
@@ -1971,7 +1948,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                   })
                 }
                 placeholder="https://linkedin.com/posts/..."
-                className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-[#0c1222] p-2.5 text-xs text-gray-800 dark:text-gray-100 font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 dark:focus:border-indigo-500"
+                className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#715D78] focus:ring-2 focus:ring-[#715D78]/15 dark:focus:border-[#B29EB8]"
               />
             </div>
           </div>

@@ -65,14 +65,14 @@ const VacationCalendar = ({ vacations = [], onAddVacation }) => {
     return {
       style: {
         backgroundColor,
-        borderRadius: '8px',
-        opacity: 0.9,
+        borderRadius: '4px',
+        opacity: 0.95,
         color: 'white',
         border: '0px',
         display: 'block',
         padding: '2px 6px',
         fontSize: '0.75rem',
-        fontWeight: '600'
+        fontWeight: '500'
       }
     }
   }
@@ -82,33 +82,33 @@ const VacationCalendar = ({ vacations = [], onAddVacation }) => {
     const day = date.getDay()
     if (day === 0 || day === 6) {
       return {
-        className: 'bg-rose-50/30'
+        className: 'bg-rose-50/20'
       }
     }
     return {}
   }
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="rounded-lg border border-[#E3E7EB] bg-white p-5 shadow-subtle">
       <div className="mb-4">
-        <h3 className="text-xl font-bold text-slate-900 mb-1">Company Calendar</h3>
-        <p className="text-sm text-slate-500">Includes official public holidays and team vacations.</p>
+        <h3 className="text-base font-semibold text-[#202A35] mb-0.5">Company Calendar</h3>
+        <p className="text-xs text-[#687482]">Official public holidays and team leaves.</p>
       </div>
       
       {/* Overriding some default react-big-calendar styles nicely with Tailwind */}
       <style>{`
         .rbc-calendar { font-family: inherit; }
-        .rbc-header { padding: 8px 0; font-weight: 600; text-transform: uppercase; font-size: 0.75rem; color: #64748b; border-bottom: 1px solid #e2e8f0; }
-        .rbc-month-view { border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; }
-        .rbc-day-bg + .rbc-day-bg { border-left: 1px solid #e2e8f0; }
-        .rbc-month-row + .rbc-month-row { border-top: 1px solid #e2e8f0; }
-        .rbc-today { background-color: #f8fafc; }
-        .rbc-date-cell { padding: 4px 8px; font-weight: 500; font-size: 0.875rem; color: #334155; }
-        .rbc-off-range-bg { background-color: #f1f5f9; }
-        .rbc-btn-group button { border-color: #e2e8f0; color: #475569; padding: 6px 12px; }
-        .rbc-btn-group button.rbc-active { background-color: #f1f5f9; box-shadow: inset 0 3px 5px rgba(0,0,0,0.05); }
-        .rbc-toolbar button:active, .rbc-toolbar button.rbc-active:hover, .rbc-toolbar button.rbc-active:focus { background-color: #e2e8f0; }
-        .rbc-toolbar .rbc-toolbar-label { font-weight: 700; color: #0f172a; font-size: 1.125rem; }
+        .rbc-header { padding: 8px 0; font-weight: 600; text-transform: uppercase; font-size: 0.7rem; color: #687482; border-bottom: 1px solid #E3E7EB; }
+        .rbc-month-view { border-radius: 6px; border: 1px solid #E3E7EB; overflow: hidden; }
+        .rbc-day-bg + .rbc-day-bg { border-left: 1px solid #E3E7EB; }
+        .rbc-month-row + .rbc-month-row { border-top: 1px solid #E3E7EB; }
+        .rbc-today { background-color: #F6F7F8; }
+        .rbc-date-cell { padding: 4px 8px; font-weight: 500; font-size: 0.8125rem; color: #202A35; }
+        .rbc-off-range-bg { background-color: #F0F2F4; }
+        .rbc-btn-group button { border-color: #E3E7EB; color: #687482; padding: 5px 10px; font-size: 0.8125rem; }
+        .rbc-btn-group button.rbc-active { background-color: #F0F2F4; color: #202A35; box-shadow: none; font-weight: 600; }
+        .rbc-toolbar button:active, .rbc-toolbar button.rbc-active:hover, .rbc-toolbar button.rbc-active:focus { background-color: #F0F2F4; }
+        .rbc-toolbar .rbc-toolbar-label { font-weight: 600; color: #202A35; font-size: 1rem; }
       `}</style>
 
       <div className="h-[600px]">
@@ -143,3 +143,4 @@ const VacationCalendar = ({ vacations = [], onAddVacation }) => {
 }
 
 export default VacationCalendar
+

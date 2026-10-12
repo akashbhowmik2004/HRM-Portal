@@ -9,9 +9,6 @@ const HRDashboard = () => {
   const [activeSection, setActiveSection] = useState("Dashboard");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [userDetails, setUserDetails] = useState(null);
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    return localStorage.getItem("theme") === "dark";
-  });
 
   const { showToast } = useToast();
 
@@ -30,32 +27,20 @@ const HRDashboard = () => {
     fetchUserDetails();
   }, []);
 
-  useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add("dark");
-      localStorage.setItem("theme", "dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-      localStorage.setItem("theme", "light");
-    }
-  }, [isDarkMode]);
-
   return (
-    <div className={`min-h-screen ${isDarkMode ? "dark bg-[#0c1222]" : "bg-[#f5f6f8]"}`}>
+    <div className="min-h-screen bg-[#F4F8F6]">
       <div className="flex min-h-screen">
         <HRSidebar
           activeItem={activeSection}
           onSelect={(item) => setActiveSection(item)}
           isOpen={isMobileMenuOpen}
           onClose={() => setIsMobileMenuOpen(false)}
-          isDarkMode={isDarkMode}
-          onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
         />
-        <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden p-4 sm:p-6 lg:p-8">
+        <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden p-4 sm:p-5 lg:p-6">
           <TopHeader
             user={{ name: userDetails?.name || "HR Manager", role: userDetails?.role || "HR", avatar: null }}
+            role="hr"
             onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
-            isDarkMode={isDarkMode}
           />
           <main className="flex-1">
             <HRContent

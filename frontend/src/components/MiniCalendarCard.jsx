@@ -56,24 +56,24 @@ const MiniCalendarCard = () => {
   }
 
   return (
-    <div className="rounded-2xl bg-white dark:bg-slate-800 p-6 shadow-sm ring-1 ring-slate-200/70 dark:ring-slate-700 transition-colors">
+    <div className="rounded-lg bg-white dark:bg-[#151d2e] p-5 shadow-subtle border border-[#E3E7EB] dark:border-gray-800 transition-colors">
       {/* Header with Navigation */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-3">
         <button
           onClick={handlePrevMonth}
-          className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700"
+          className="rounded-md p-1 text-[#687482] hover:bg-[#F0F2F4] hover:text-[#202A35] dark:hover:bg-slate-700"
           aria-label="Previous month"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
 
-        <span className="text-sm font-black text-slate-900 dark:text-white tracking-tight">
+        <span className="text-xs font-semibold text-[#202A35] dark:text-white tracking-tight">
           {monthName} {year}
         </span>
 
         <button
           onClick={handleNextMonth}
-          className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700"
+          className="rounded-md p-1 text-[#687482] hover:bg-[#F0F2F4] hover:text-[#202A35] dark:hover:bg-slate-700"
           aria-label="Next month"
         >
           <ChevronRight className="h-4 w-4" />
@@ -81,9 +81,9 @@ const MiniCalendarCard = () => {
       </div>
 
       {/* Weekday Names */}
-      <div className="grid grid-cols-7 text-center text-xs font-bold text-slate-600 dark:text-slate-300 mb-2">
+      <div className="grid grid-cols-7 text-center text-[11px] font-semibold text-[#687482] dark:text-slate-300 mb-1.5">
         {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, idx) => (
-          <div key={idx} className="py-1">{day}</div>
+          <div key={idx} className="py-0.5">{day}</div>
         ))}
       </div>
 
@@ -91,14 +91,14 @@ const MiniCalendarCard = () => {
       <div className="grid grid-cols-7 text-center text-xs gap-y-1">
         {calendarDays.slice(0, 35).map((item, idx) => {
           return (
-            <div key={idx} className="py-1 flex items-center justify-center">
+            <div key={idx} className="py-0.5 flex items-center justify-center">
               <span
-                className={`flex h-7 w-7 items-center justify-center rounded-full font-bold transition ${
+                className={`flex h-6 w-6 items-center justify-center rounded-md text-[11px] font-medium transition ${
                   item.isToday
-                    ? 'bg-sky-500 text-white font-black shadow-md'
+                    ? 'bg-[#202A35] text-white font-semibold dark:bg-white dark:text-[#202A35]'
                     : item.isCurrentMonth
-                    ? 'text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-700'
-                    : 'text-slate-400 dark:text-slate-500 font-medium'
+                    ? 'text-[#202A35] dark:text-white hover:bg-[#F0F2F4] dark:hover:bg-slate-700'
+                    : 'text-[#687482]/40 dark:text-slate-500'
                 }`}
               >
                 {item.day}
@@ -112,3 +112,4 @@ const MiniCalendarCard = () => {
 }
 
 export default MiniCalendarCard
+

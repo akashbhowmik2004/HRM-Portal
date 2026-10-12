@@ -99,6 +99,33 @@ const categorizeItems = (role, items) => {
   ]
 }
 
+const roleThemeMap = {
+  admin: {
+    sidebarBg: 'bg-[#202938]',
+    sidebarStyle: { backgroundColor: '#202938' },
+    accentBg: 'bg-[#2563EB]',
+    activeClass: 'bg-[#2563EB] text-white font-semibold shadow-sm',
+    activeIcon: 'text-white',
+    roleTag: 'System Admin',
+  },
+  hr: {
+    sidebarBg: 'bg-[#0A362C]',
+    sidebarStyle: { backgroundColor: '#0A362C' },
+    accentBg: 'bg-[#0F766E]',
+    activeClass: 'bg-[#0F766E] text-white font-semibold shadow-sm',
+    activeIcon: 'text-white',
+    roleTag: 'HR Suite',
+  },
+  employee: {
+    sidebarBg: 'bg-[#182234]',
+    sidebarStyle: { backgroundColor: '#182234' },
+    accentBg: 'bg-[#4F46E5]',
+    activeClass: 'bg-[#4F46E5] text-white font-semibold shadow-sm',
+    activeIcon: 'text-white',
+    roleTag: 'Employee Space',
+  },
+}
+
 const Sidebar = ({
   role = 'employee',
   items = [],
@@ -106,12 +133,11 @@ const Sidebar = ({
   onSelect = () => {},
   isOpen = false,
   onClose = () => {},
-  isDarkMode = false,
-  onToggleDarkMode = () => {}
 }) => {
   const navigate = useNavigate()
   const { setUser } = useAuth()
   const sections = categorizeItems(role, items.filter(item => item !== 'Logout'))
+  const theme = roleThemeMap[role] || roleThemeMap.employee
 
   const handleItemClick = (item) => {
     onSelect(item)
@@ -132,40 +158,41 @@ const Sidebar = ({
       {/* Mobile Backdrop Overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-40 bg-gray-900/40 backdrop-blur-sm lg:hidden transition-opacity"
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs lg:hidden transition-opacity"
           onClick={onClose}
         />
       )}
 
       {/* Sidebar Container */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-white/90 dark:bg-[#0f1729] backdrop-blur-md border-r border-gray-100 dark:border-gray-800/50 transition-transform duration-300 ease-in-out lg:static lg:flex lg:translate-x-0 ${
+        style={theme.sidebarStyle}
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col text-white border-r border-white/10 shadow-elevated transition-transform duration-200 ease-in-out lg:static lg:flex lg:translate-x-0 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Top Branding Section */}
-        <div className="flex h-16 items-center justify-between px-5 border-b border-gray-100 dark:border-gray-800/50">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-600 text-white">
-              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <div className="flex h-16 items-center justify-between px-5 border-b border-white/10">
+          <div className="flex items-center gap-3">
+            <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${theme.accentBg} text-white shadow-subtle`}>
+              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="m21 16-9 5-9-5V8l9-5 9 5v8Z" />
                 <path d="m3.3 7 8.7 5 8.7-5" />
                 <path d="M12 22V12" />
               </svg>
             </div>
             <div>
-              <span className="text-base font-semibold tracking-tight text-gray-800 dark:text-gray-100">
+              <span className="text-sm font-bold tracking-tight text-white block leading-tight">
                 HRM Portal
               </span>
-              <span className="block text-[10px] uppercase tracking-widest text-gray-400 dark:text-gray-500 font-medium">
-                Enterprise Suite
+              <span className="block text-[10px] uppercase tracking-wider text-slate-300/70 font-medium">
+                {theme.roleTag}
               </span>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 lg:hidden"
+            className="rounded-md p-1.5 text-white/60 hover:bg-white/10 hover:text-white lg:hidden"
             aria-label="Close menu"
           >
             <X className="h-4 w-4" />
@@ -173,12 +200,12 @@ const Sidebar = ({
         </div>
 
         {/* Navigation Items List */}
-        <div className="flex-1 overflow-y-auto px-3 py-4">
+        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-4">
           {sections.map((sec) => {
             if (!sec.items.length) return null
             return (
-              <div key={sec.title} className="mb-5">
-                <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+              <div key={sec.title}>
+                <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400/60">
                   {sec.title}
                 </p>
                 <div className="space-y-0.5">
@@ -189,16 +216,16 @@ const Sidebar = ({
                       <button
                         key={item}
                         onClick={() => handleItemClick(item)}
-                        className={`group flex w-full items-center rounded-lg px-3 py-2 text-[13px] transition-all duration-150 ${
+                        className={`group flex w-full items-center rounded-lg px-3 py-2 text-[13px] transition-colors duration-150 text-left ${
                           isActive
-                            ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/25 dark:text-indigo-300 font-semibold'
-                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/40 hover:text-gray-800 dark:hover:text-gray-200 font-medium'
+                            ? theme.activeClass
+                            : 'text-slate-300 hover:bg-white/[0.08] hover:text-white font-medium'
                         }`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
                           <IconComponent
                             className={`h-4 w-4 shrink-0 transition-colors ${
-                              isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300'
+                              isActive ? theme.activeIcon : 'text-slate-400 group-hover:text-white'
                             }`}
                           />
                           <span className="truncate">{item}</span>
@@ -212,39 +239,15 @@ const Sidebar = ({
           })}
         </div>
 
-        {/* Footer Actions */}
-        <div className="p-3 border-t border-gray-100 dark:border-gray-800/50 space-y-1.5">
+        {/* Footer Actions — No theme toggle, clean logout */}
+        <div className="p-3 border-t border-white/10">
           <button
             onClick={handleLogout}
-            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium text-gray-500 dark:text-gray-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-900/15 dark:hover:text-rose-400 transition"
+            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium text-slate-300 hover:bg-rose-500/15 hover:text-rose-200 transition"
           >
-            <LogOut className="h-4 w-4 shrink-0" />
+            <LogOut className="h-4 w-4 shrink-0 text-slate-400" />
             <span>Logout</span>
           </button>
-
-          <div className="flex items-center justify-between rounded-lg px-3 py-2 text-[13px] text-gray-600 dark:text-gray-300 font-medium border border-gray-100 dark:border-gray-800/50 bg-gray-50/50 dark:bg-[#0c1222]">
-            <div className="flex items-center gap-2.5">
-              {isDarkMode ? (
-                <Moon className="h-3.5 w-3.5 text-gray-400" />
-              ) : (
-                <Sun className="h-3.5 w-3.5 text-gray-400" />
-              )}
-              <span className="text-xs text-gray-500 dark:text-gray-400">Dark Mode</span>
-            </div>
-            <button
-              type="button"
-              onClick={onToggleDarkMode}
-              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${
-                isDarkMode ? 'bg-indigo-600' : 'bg-gray-300'
-              }`}
-            >
-              <span
-                className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform shadow-sm ${
-                  isDarkMode ? 'translate-x-[18px]' : 'translate-x-[3px]'
-                }`}
-              />
-            </button>
-          </div>
         </div>
       </aside>
     </>
@@ -252,3 +255,5 @@ const Sidebar = ({
 }
 
 export default Sidebar
+
+

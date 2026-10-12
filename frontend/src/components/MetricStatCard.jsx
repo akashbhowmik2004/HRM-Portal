@@ -4,23 +4,46 @@ const MetricStatCard = ({
   icon: Icon,
   value,
   label,
-  iconBg = 'bg-gray-50 text-gray-600 dark:bg-gray-800/50 dark:text-gray-300'
+  subtext,
+  badge,
+  badgeType = 'positive', // 'positive' | 'warning' | 'neutral'
+  iconBg = 'bg-blue-50 text-blue-600',
 }) => {
   return (
-    <div className="flex items-center justify-between rounded-xl bg-white/80 dark:bg-[#151d2e] p-5 border border-gray-100/80 dark:border-gray-800/50 shadow-soft transition-colors">
-      <div className="flex items-center gap-3.5">
+    <div className="flex items-center justify-between rounded-xl bg-white p-4 sm:p-5 border border-[#E3E7EB] shadow-card transition-all hover:shadow-elevated">
+      <div className="flex items-center gap-3.5 min-w-0">
         {Icon && (
-          <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${iconBg}`}>
+          <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${iconBg}`}>
             <Icon className="h-5 w-5" />
           </div>
         )}
-        <div>
-          <p className="text-xl font-semibold text-gray-800 dark:text-gray-100 leading-tight tracking-tight">
-            {value}
-          </p>
-          <p className="mt-0.5 text-xs font-medium text-gray-500 dark:text-gray-400">
+        <div className="min-w-0">
+          <p className="text-xs font-medium text-[#667085] truncate">
             {label}
           </p>
+          <div className="flex items-baseline gap-2 mt-0.5">
+            <span className="text-2xl font-bold text-[#172033] tracking-tight leading-tight">
+              {value}
+            </span>
+            {badge && (
+              <span
+                className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md ${
+                  badgeType === 'positive'
+                    ? 'text-emerald-700 bg-emerald-50'
+                    : badgeType === 'warning'
+                    ? 'text-amber-700 bg-amber-50'
+                    : 'text-slate-600 bg-slate-100'
+                }`}
+              >
+                {badge}
+              </span>
+            )}
+          </div>
+          {subtext && (
+            <p className="text-[11px] font-medium text-[#667085] mt-0.5 truncate">
+              {subtext}
+            </p>
+          )}
         </div>
       </div>
     </div>
@@ -28,3 +51,5 @@ const MetricStatCard = ({
 }
 
 export default MetricStatCard
+
+

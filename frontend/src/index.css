@@ -3,70 +3,60 @@
 @tailwind utilities;
 
 /* ============================================================
-   HRM PORTAL — CALM ENTERPRISE THEME
-   A muted, professional design system with soft contrasts
+   HRM PORTAL — PRODUCTION ENTERPRISE SYSTEM
    ============================================================ */
 
-/* Smooth rendering */
+/* Typography & Smoothing */
 body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  color: #172033;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 }
 
-/* ── Light Mode Canvas ── */
-html:not(.dark) {
-  background-color: #f5f6f8;
+/* ── Light Mode Canvas Defaults ── */
+html {
+  background-color: #F6F7FB;
 }
-html:not(.dark) body {
-  background-color: #f5f6f8;
-}
-
-/* ── Dark Mode Canvas ── */
-.dark {
-  background-color: #0c1222;
-}
-.dark body {
-  background-color: #0c1222;
+body {
+  background-color: #F6F7FB;
 }
 
 /* ── Form Elements ── */
-select {
-  color-scheme: light dark;
-}
 select option {
   background-color: #ffffff;
-  color: #1e293b;
-}
-.dark select option {
-  background-color: #1e293b;
-  color: #e2e8f0;
+  color: #172033;
 }
 
-/* ── Custom Scrollbar ── */
+/* ── Enterprise Scrollbar ── */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 999px;
-}
-.dark ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: #E3E7EB;
+  border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
-}
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: #cbd5e1;
 }
 
-/* ── Smooth Transitions ── */
-* {
-  transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow;
+/* ── Subtle Interactive Transitions ── */
+button, a, input, select, textarea {
+  transition-property: background-color, border-color, color, opacity, box-shadow, transform;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 75ms;
+  transition-duration: 150ms;
+}
+
+/* ── Reduced Motion Preference ── */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
