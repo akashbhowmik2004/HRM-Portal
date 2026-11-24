@@ -6,6 +6,7 @@ import Announcement from "../models/Announcement.js";
 import Department from "../models/Depertment.js";
 import Project from "../models/Project.js";
 import { generateEmployeeId } from "../utils/generateEmployeeId.js";
+import { emitNotification } from "../config/socket.js";
 
 export const getAllUsers = async (req, res) => {
   try {
@@ -278,7 +279,6 @@ export const acceptLeaveRequest = async (req, res) => {
     await leaveRequest.save();
 
     try {
-      const { emitNotification } = await import("../../server.js");
       await emitNotification(leaveRequest.employeeId, "Leave Approved", "Your leave request has been approved.");
     } catch (err) {}
 
@@ -316,7 +316,6 @@ export const rejectLeaveRequest = async (req, res) => {
     await leaveRequest.save();
 
     try {
-      const { emitNotification } = await import("../../server.js");
       await emitNotification(leaveRequest.employeeId, "Leave Rejected", `Your leave request was rejected: ${rejectionReason}`);
     } catch (err) {}
 
@@ -360,7 +359,6 @@ export const assignTask = async (req, res) => {
     
     // Attempt to emit notification
     try {
-      const { emitNotification } = await import("../../server.js");
       await emitNotification(assignee, "New Task Assigned", `You have been assigned a new task: ${title}`);
     } catch (err) {
       console.error("Socket emit failed", err);
@@ -471,7 +469,6 @@ export const createAnnouncement = async (req, res) => {
     await Announcement.create({ headline, body });
 
     try {
-      const { emitNotification } = await import("../../server.js");
       const User = (await import("../models/User.js")).default;
       const allUsers = await User.find({ status: "Active" });
       for (const u of allUsers) {

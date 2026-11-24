@@ -5,5 +5,5 @@ dotenv.config();
 const bucket = new Bucket({
   token: process.env.UPSTASH_BLOB_TOKEN,
 });
-console.log("Upstash bucket initialized", bucket);
+// console.log("Upstash bucket initialized", bucket);
 export default bucket;

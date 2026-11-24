@@ -1,45 +1,65 @@
+
+import "dotenv/config";
+
 import express from "express";
-import dotenv from "dotenv";
 import mongoose from "mongoose";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import { Server } from "socket.io";
 import http from "http";
-import jwt from "jsonwebtoken";
+
+import { initSocket } from "./src/config/socket.js";
 
 import authRoutes from "./src/routes/authRoutes.js";
 import adminRoutes from "./src/routes/adminRoutes.js";
-import requireAuth from "./src/middlewares/authMiddleware.js";
 import employeeRoutes from "./src/routes/employeeRoutes.js";
 import attendanceRoutes from "./src/routes/attendanceRoutes.js";
 import notificationRoutes from "./src/routes/notificationRoutes.js";
 import issueRoutes from "./src/routes/issueRoutes.js";
-import Notification from "./src/models/Notification.js";
+import documentRoutes from "./src/routes/documentRoutes.js";
 
-dotenv.config();
+import requireAuth from "./src/middlewares/authMiddleware.js";
 
 const app = express();
 const server = http.createServer(app);
 
-const io = new Server(server, {
-  cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
-    credentials: true,
-  },
-});
+const PORT = Number(process.env.PORT) || 3000;
 
+const allowedOrigins = (process.env.CLIENT_ORIGIN || "http://localhost:5173")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+// Required when running behind an HTTPS reverse proxy such as Nginx.
+if (process.env.NODE_ENV === "production") {
+  app.set("trust proxy", 1);
+}
+
+// Socket.IO
+initSocket(server, allowedOrigins);
+
+// Middleware
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    origin: allowedOrigins,
     credentials: true,
-  }),
+  })
 );
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-import documentRoutes from "./src/routes/documentRoutes.js";
+// Health check
+app.get("/api/health", (req, res) => {
+  const databaseConnected = mongoose.connection.readyState === 1;
 
+  res.status(databaseConnected ? 200 : 503).json({
+    status: databaseConnected ? "ok" : "unhealthy",
+    database: databaseConnected ? "connected" : "disconnected",
+  });
+});
+
+// Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/employee", requireAuth, employeeRoutes);
 app.use("/api/admin", requireAuth, adminRoutes);
@@ -48,62 +68,48 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/issues", issueRoutes);
 app.use("/api/documents", requireAuth, documentRoutes);
 
-// Socket.io mapping
-export const userSockets = new Map();
+// Graceful shutdown
+const shutdown = async (signal) => {
+  console.log(`${signal} received. Shutting down...`);
 
-io.on("connection", (socket) => {
-  const cookies = Object.fromEntries(
-    (socket.handshake.headers.cookie || "")
-      .split(";")
-      .map((cookie) => cookie.trim().split("="))
-      .filter(([name]) => name)
-      .map(([name, value]) => [name, decodeURIComponent(value || "")]),
-  );
-  const token = cookies.jwt;
-
-  let userId = null;
-  try {
-    if (token) {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      userId = decoded.id;
+  server.close(async () => {
+    try {
+      await mongoose.disconnect();
+      console.log("MongoDB disconnected.");
+      process.exit(0);
+    } catch (error) {
+      console.error("Shutdown error:", error);
+      process.exit(1);
     }
-  } catch (error) {
-    console.warn("Socket authentication failed:", error.message);
-  }
-
-  if (!userId) {
-    socket.emit("unauthorized");
-    socket.disconnect(true);
-    return;
-  }
-
-  socket.data.userId = userId;
-  socket.join(`user:${userId}`);
-  console.log(`User ${userId} connected to Socket.IO`, socket.id);
-
-  socket.on("disconnect", () => {
-    console.log("User disconnected", socket.id);
   });
-});
 
-export const emitNotification = async (userId, title, message) => {
+  setTimeout(() => {
+    console.error("Graceful shutdown timed out.");
+    process.exit(1);
+  }, 10000).unref();
+};
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
+
+// Start server only after MongoDB connects
+const startServer = async () => {
   try {
-    const newNotification = await Notification.create({ userId, title, message });
-    io.to(`user:${userId.toString()}`).emit("newNotification", newNotification);
-    return newNotification;
+    if (!process.env.MONGO_URI) {
+      throw new Error("MONGO_URI is missing");
+    }
+
+    await mongoose.connect(process.env.MONGO_URI);
+
+    console.log("Connected to MongoDB");
+
+    server.listen(PORT, "0.0.0.0", () => {
+      console.log(`Server running on port ${PORT}`);
+    });
   } catch (error) {
-    console.error("Error emitting notification:", error);
+    console.error("Application startup failed:", error);
+    process.exit(1);
   }
 };
 
-mongoose
-  .connect(process.env.MONGO_URI, {})
-  .then(() => {
-    console.log("Connected to MongoDB");
-    server.listen(process.env.PORT, () => {
-      console.log(`Server is running on port ${process.env.PORT}`);
-    });
-  })
-  .catch((error) => {
-    console.error("Error connecting to MongoDB:", error);
-  });
+startServer();

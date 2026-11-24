@@ -1,21 +1,22 @@
 import axios from 'axios';
+const baseURL = import.meta.env.VITE_BACKEND_URL || '';
 
 export const auth = axios.create({
-    baseURL: "http://localhost:3000/api/auth",
+    baseURL: `${baseURL}/api/auth`,
     withCredentials: true
 });
 
 export const admin = axios.create({
-    baseURL: "http://localhost:3000/api/admin",
+    baseURL: `${baseURL}/api/admin`,
     withCredentials: true
 });
 
 export const employee = axios.create({
-    baseURL: "http://localhost:3000/api/employee",
+    baseURL: `${baseURL}/api/employee`,
     withCredentials: true
 });
 
 export const api = axios.create({
-    baseURL: "http://localhost:3000/api",
+    baseURL: `${baseURL}/api`,
     withCredentials: true
 });

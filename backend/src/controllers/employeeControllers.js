@@ -3,6 +3,7 @@ import Employee from "../models/Employee.js";
 import Leave from "../models/Leave.js";
 import Task from "../models/Task.js";
 import Project from "../models/Project.js";
+import { emitNotification } from "../config/socket.js";
 
 export const fetchTasks = async (req, res) => {
   try {
@@ -117,7 +118,6 @@ export const applyLeave = async (req, res) => {
     await newLeave.save();
 
     try {
-      const { emitNotification } = await import("../../server.js");
       const adminsAndHrs = await User.find({ role: { $in: ["admin", "hr"] }, status: "Active" });
       
       // Need user's name, so let's fetch it

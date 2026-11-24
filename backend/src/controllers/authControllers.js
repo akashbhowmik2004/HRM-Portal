@@ -46,7 +46,7 @@ export const requestOTP = async (req, res) => {
         message: "Your account has been disabled or suspended.",
       });
     }
-    
+
     await OTP.deleteMany({ email });
 
     const otp = generateOTP();
@@ -227,6 +227,7 @@ export const verifyOTP = async (req, res) => {
 
     res.cookie("jwt", token, {
       httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
       maxAge: maxAge * 1000,
       path: "/",
     });
@@ -282,7 +283,7 @@ export const verifyUsers = async (req, res) => {
       });
     }
     const userData = await User.findById(req.user.id).select("-password");
-    
+
     // Calculate attendance percentage for the user
     let attendancePercentage = 0;
     let attendanceCount = 0;
@@ -290,17 +291,23 @@ export const verifyUsers = async (req, res) => {
       const Attendance = (await import("../models/Attendance.js")).default;
       const Employee = (await import("../models/Employee.js")).default;
       const employee = await Employee.findOne({ userId: req.user.id });
-      
-      const totalPresent = await Attendance.countDocuments({ userId: req.user.id, status: "Present" });
+
+      const totalPresent = await Attendance.countDocuments({
+        userId: req.user.id,
+        status: "Present",
+      });
       attendanceCount = totalPresent;
-      
+
       let totalDays = 1;
-      const startDate = (employee && employee.joiningDate) ? new Date(employee.joiningDate) : new Date(userData.createdAt);
+      const startDate =
+        employee && employee.joiningDate
+          ? new Date(employee.joiningDate)
+          : new Date(userData.createdAt);
       const today = new Date();
       const diffTime = Math.abs(today - startDate);
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       totalDays = diffDays > 0 ? diffDays : 1;
-      
+
       attendancePercentage = Math.round((totalPresent / totalDays) * 100);
     } catch (err) {
       console.error("Error calculating attendance in verify:", err);

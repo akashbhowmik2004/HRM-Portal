@@ -3,6 +3,7 @@ import Employee from "../models/Employee.js";
 import transporter from "../config/email.js";
 import dotenv from "dotenv";
 import bucket from "../config/upstash.js";
+import { emitNotification } from "../config/socket.js";
 
 dotenv.config();
 
@@ -43,7 +44,6 @@ export const uploadDocument = async (req, res) => {
       );
       if (emp && emp.userId && emp.userId.email) {
         try {
-          const { emitNotification } = await import("../../server.js");
           await emitNotification(
             emp.userId._id,
             "New Document Uploaded",

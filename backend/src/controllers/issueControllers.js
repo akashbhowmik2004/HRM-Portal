@@ -1,6 +1,6 @@
 import Issue from "../models/Issue.js";
 import User from "../models/User.js";
-import { emitNotification } from "../../server.js";
+import { emitNotification } from "../config/socket.js";
 
 export const createIssue = async (req, res) => {
   try {
