@@ -644,7 +644,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
         </div>
 
         {/* 4 Summary Stat Cards matching reference image */}
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <MetricStatCard
             label="Leave Requests"
             value={`${leaveRequests.length}`}
@@ -678,7 +678,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
         </div>
 
         {/* Middle Row (3-Column Layout from Reference Image) */}
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid gap-4 sm:gap-6 lg:grid-cols-3">
           
           {/* 1. Attendance Overview Card */}
           <div className="rounded-xl bg-white p-5 border border-[#E3E7EB] shadow-card flex flex-col justify-between">
@@ -873,7 +873,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
         </div>
 
         {/* Bottom Section: Quick Actions & Personal Payroll Info */}
-        <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
+        <div className="grid gap-4 sm:gap-6 lg:grid-cols-[1.5fr_1fr]">
           <div className="rounded-xl bg-white p-5 border border-[#E3E7EB] shadow-card">
             <h3 className="text-sm font-bold text-[#172033] mb-4">
               Quick Actions
@@ -964,7 +964,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
       case "My Profile":
         return (
           <div className="max-w-4xl space-y-6">
-            <div className="rounded-xl bg-white p-6 sm:p-8 border border-[#E4E7EC] shadow-card">
+            <div className="rounded-xl bg-white p-4 sm:p-6 lg:p-8 border border-[#E4E7EC] shadow-card">
               <div className="flex flex-col sm:flex-row items-center gap-6 pb-8 border-b border-[#E4E7EC]">
                 <div className="relative flex h-24 w-24 items-center justify-center rounded-2xl bg-[#4F46E5] text-3xl font-bold text-white shadow-soft">
                   {profile.firstName.charAt(0)}
@@ -1120,20 +1120,20 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
       case "Attendance":
         return (
           <div className="space-y-6">
-            <div className="rounded-xl bg-white p-6 border border-[#E4E7EC] shadow-card flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="rounded-xl bg-white p-4 sm:p-6 border border-[#E4E7EC] shadow-card flex flex-col md:flex-row items-center justify-between gap-4 sm:gap-6">
               <div>
                 <span className="text-xs font-semibold uppercase tracking-wider text-[#4F46E5]">
                   Monthly Performance Index
                 </span>
-                <h3 className="text-3xl sm:text-4xl font-bold mt-1 text-[#172033]">
+                <h3 className="text-2xl sm:text-4xl font-bold mt-1 text-[#172033]">
                   {profile.attendancePercentage}% Attendance Rate
                 </h3>
               </div>
-              <div className="flex flex-wrap items-center justify-end gap-3">
+              <div className="flex flex-wrap items-center justify-start sm:justify-end gap-2.5 sm:gap-3 w-full sm:w-auto">
                 {(!todayAttendance || !todayAttendance.checkInTime) ? (
                   <button
                     onClick={handlePunch}
-                    className="rounded-xl px-6 py-2.5 text-xs font-semibold text-white shadow-soft transition bg-[#4F46E5] hover:bg-[#4338CA]"
+                    className="rounded-xl px-5 sm:px-6 py-2.5 text-xs font-semibold text-white shadow-soft transition bg-[#4F46E5] hover:bg-[#4338CA]"
                   >
                     Punch In
                   </button>
@@ -1142,21 +1142,21 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                     {todayAttendance.isOnBreak ? (
                       <button
                         onClick={handleEndBreak}
-                        className="rounded-xl px-5 py-2.5 text-xs font-semibold text-white shadow-soft transition bg-[#15803D] hover:bg-[#166534]"
+                        className="rounded-xl px-4 sm:px-5 py-2.5 text-xs font-semibold text-white shadow-soft transition bg-[#15803D] hover:bg-[#166534]"
                       >
                         End Break
                       </button>
                     ) : (
                       <button
                         onClick={handleStartBreak}
-                        className="rounded-xl px-5 py-2.5 text-xs font-semibold text-[#92400E] shadow-soft transition bg-amber-100 hover:bg-amber-200"
+                        className="rounded-xl px-4 sm:px-5 py-2.5 text-xs font-semibold text-[#92400E] shadow-soft transition bg-amber-100 hover:bg-amber-200"
                       >
                         Take Break
                       </button>
                     )}
                     <button
                       onClick={handlePunch}
-                      className="rounded-xl px-6 py-2.5 text-xs font-semibold text-white shadow-soft transition bg-[#DC2626] hover:bg-[#B91C1C]"
+                      className="rounded-xl px-5 sm:px-6 py-2.5 text-xs font-semibold text-white shadow-soft transition bg-[#DC2626] hover:bg-[#B91C1C]"
                     >
                       Punch Out
                     </button>
@@ -1169,7 +1169,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
               </div>
             </div>
             {todayAttendance?.checkInTime && !todayAttendance.checkOutTime && (
-              <div className="grid grid-cols-2 gap-3 mb-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-2">
                 <div className="rounded-xl border border-[#E4E7EC] bg-[#F8FAFC] px-4 py-3">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-[#667085]">Working Time</p>
                   <p className="mt-1 text-lg font-bold tabular-nums text-[#172033]">{formatRealtimeDuration(getLiveWorkingMilliseconds())}</p>
@@ -1180,8 +1180,8 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                 </div>
               </div>
             )}
-            <div className="grid gap-6 lg:grid-cols-3">
-              <div className="rounded-xl bg-white p-6 border border-[#E4E7EC] shadow-card flex flex-col items-center justify-center">
+            <div className="grid gap-4 sm:gap-6 lg:grid-cols-3">
+              <div className="rounded-xl bg-white p-4 sm:p-6 border border-[#E4E7EC] shadow-card flex flex-col items-center justify-center">
                 <h3 className="text-base font-bold mb-4 self-start text-[#172033]">
                   Attendance Ratio
                 </h3>
@@ -1213,11 +1213,11 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                   </div>
                 </div>
               </div>
-              <div className="lg:col-span-2 rounded-xl bg-white p-6 border border-[#E4E7EC] shadow-card">
+              <div className="lg:col-span-2 rounded-xl bg-white p-4 sm:p-6 border border-[#E4E7EC] shadow-card">
                 <h3 className="text-base font-bold mb-4 text-[#172033]">
                   Detailed Check-In Logs
                 </h3>
-                <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-2">
+                <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
                   {attendanceLogs.map((log, idx) => {
                     const date = new Date(log.date).toLocaleDateString('en-US', { weekday: 'short', day: '2-digit', month: 'short' });
                     const punchIn = log.checkInTime ? new Date(log.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A";
@@ -1254,7 +1254,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                         <span className="font-semibold text-[#172033]">
                           {date}
                         </span>
-                        <div className="flex items-center gap-4 text-[#667085] font-medium">
+                        <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1 text-[#667085] font-medium text-xs">
                           <span>In: <strong className="text-[#172033] font-semibold">{punchIn}</strong></span>
                           <span>Out: <strong className="text-[#172033] font-semibold">{punchOut}</strong></span>
                           <span className="font-semibold text-[#172033]">
@@ -1265,7 +1265,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                           </span>
                         </div>
                         <span
-                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${badgeClass}`}
+                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold self-start sm:self-auto ${badgeClass}`}
                         >
                           {statusText}
                         </span>
@@ -1302,7 +1302,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
             </div>
             
             {/* 3 Leave Summary Cards */}
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-3 sm:gap-4 sm:grid-cols-3">
               {[
                 { type: "Casual Leave", count: "06 / 12", avail: "6 days available", icon: Coffee, iconColor: "text-blue-600 bg-blue-50" },
                 { type: "Sick Leave", count: "05 / 08", avail: "5 days available", icon: Thermometer, iconColor: "text-amber-600 bg-amber-50" },
@@ -1312,7 +1312,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                 return (
                   <div
                     key={card.type}
-                    className="rounded-xl bg-white p-5 border border-[#E4E7EC] shadow-card hover:shadow-elevated transition"
+                    className="rounded-xl bg-white p-4 sm:p-5 border border-[#E4E7EC] shadow-card hover:shadow-elevated transition"
                   >
                     <div className="flex items-center justify-between">
                       <p className="text-xs font-semibold text-[#667085]">
@@ -1334,7 +1334,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
             </div>
 
             {/* My Leave History Section */}
-            <div className="rounded-xl bg-white p-6 border border-[#E4E7EC] shadow-card">
+            <div className="rounded-xl bg-white p-4 sm:p-6 border border-[#E4E7EC] shadow-card">
               <h3 className="text-base font-bold mb-4 text-[#172033]">
                 My Leave History
               </h3>
@@ -1444,11 +1444,11 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                 Track and update sprint tasks
               </p>
             </div>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-3.5 sm:gap-4 md:grid-cols-2">
               {tasks.map((task) => (
                 <div
                   key={task._id}
-                  className="rounded-xl bg-white p-5 border border-[#E4E7EC] shadow-card flex flex-col justify-between"
+                  className="rounded-xl bg-white p-4 sm:p-5 border border-[#E4E7EC] shadow-card flex flex-col justify-between"
                 >
                   <div>
                     <div className="flex items-center justify-between mb-2">
@@ -1468,7 +1468,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                       </p>
                     )}
                   </div>
-                  <div className="mt-6 pt-4 border-t border-[#E4E7EC] flex items-center justify-between">
+                  <div className="mt-5 sm:mt-6 pt-3.5 sm:pt-4 border-t border-[#E4E7EC] flex flex-wrap items-center justify-between gap-2">
                     <span className="text-xs text-[#667085] font-medium">
                       Deadline: {task.deadline || "Not set"}
                     </span>
@@ -1498,7 +1498,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                 Download your salary statements and tax reports
               </p>
             </div>
-            <div className="rounded-xl bg-white p-6 border border-[#E4E7EC] shadow-card">
+            <div className="rounded-xl bg-white p-4 sm:p-6 border border-[#E4E7EC] shadow-card">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-base font-bold text-[#172033]">
                   Recent Payslips
@@ -1512,22 +1512,22 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                   (month, i) => (
                     <div
                       key={i}
-                      className="flex items-center justify-between p-3.5 rounded-xl border border-[#E4E7EC] bg-[#F8FAFC] hover:bg-[#F1F3FF] transition cursor-pointer"
+                      className="flex items-center justify-between p-3 sm:p-3.5 rounded-xl border border-[#E4E7EC] bg-[#F8FAFC] hover:bg-[#F1F3FF] transition cursor-pointer"
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#F1F3FF] text-[#4F46E5]">
-                          <FileText className="h-5 w-5" />
+                      <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                        <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-lg bg-[#F1F3FF] text-[#4F46E5]">
+                          <FileText className="h-4 w-4 sm:h-5 sm:w-5" />
                         </div>
-                        <div>
-                          <p className="text-sm font-semibold text-[#172033]">
+                        <div className="min-w-0">
+                          <p className="text-xs sm:text-sm font-semibold text-[#172033] truncate">
                             Payslip - {month}
                           </p>
-                          <p className="text-[10px] text-[#667085]">
+                          <p className="text-[10px] text-[#667085] truncate">
                             Generated on 1st {month}
                           </p>
                         </div>
                       </div>
-                      <button className="flex items-center justify-center h-8 w-8 rounded-lg bg-white border border-[#E4E7EC] text-[#64748B] hover:text-[#4F46E5] hover:bg-[#F1F3FF] transition">
+                      <button className="flex items-center justify-center h-8 w-8 shrink-0 rounded-lg bg-white border border-[#E4E7EC] text-[#64748B] hover:text-[#4F46E5] hover:bg-[#F1F3FF] transition">
                         <Download className="h-4 w-4" />
                       </button>
                     </div>
@@ -1535,32 +1535,32 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                 )}
               </div>
             </div>
-            <div className="rounded-xl bg-white p-6 border border-[#E4E7EC] shadow-card">
-              <h3 className="text-base font-bold text-[#172033] mb-6">
+            <div className="rounded-xl bg-white p-4 sm:p-6 border border-[#E4E7EC] shadow-card">
+              <h3 className="text-base font-bold text-[#172033] mb-4 sm:mb-6">
                 CTC Structure Overview
               </h3>
-              <div className="grid gap-4 sm:grid-cols-3">
-                <div className="p-4 rounded-xl bg-[#F8FAFC] border border-[#E4E7EC]">
+              <div className="grid gap-3 sm:gap-4 sm:grid-cols-3">
+                <div className="p-3.5 sm:p-4 rounded-xl bg-[#F8FAFC] border border-[#E4E7EC]">
                   <p className="text-[#667085] text-xs font-semibold">
                     Gross Earnings
                   </p>
-                  <p className="text-xl font-bold text-[#172033] mt-1">
+                  <p className="text-lg sm:text-xl font-bold text-[#172033] mt-1">
                     ₹1,20,833
                   </p>
                 </div>
-                <div className="p-4 rounded-xl bg-[#F8FAFC] border border-[#E4E7EC]">
+                <div className="p-3.5 sm:p-4 rounded-xl bg-[#F8FAFC] border border-[#E4E7EC]">
                   <p className="text-[#667085] text-xs font-semibold">
                     Deductions (PF + Tax)
                   </p>
-                  <p className="text-xl font-bold text-[#DC2626] mt-1">
+                  <p className="text-lg sm:text-xl font-bold text-[#DC2626] mt-1">
                     - ₹18,400
                   </p>
                 </div>
-                <div className="p-4 rounded-xl bg-[#F8FAFC] border border-[#E4E7EC]">
+                <div className="p-3.5 sm:p-4 rounded-xl bg-[#F8FAFC] border border-[#E4E7EC]">
                   <p className="text-[#667085] text-xs font-semibold">
                     Net Take Home
                   </p>
-                  <p className="text-xl font-bold text-[#15803D] mt-1">
+                  <p className="text-lg sm:text-xl font-bold text-[#15803D] mt-1">
                     ₹1,02,433
                   </p>
                 </div>
@@ -1580,30 +1580,30 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                 Official letters and credentials
               </p>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-3 sm:gap-4 sm:grid-cols-2">
               {documents.length === 0 ? (
                 <div className="col-span-2 text-sm text-[#667085] p-6 bg-white rounded-xl border border-[#E4E7EC] text-center">No documents uploaded yet.</div>
               ) : (
                 documents.map((doc) => (
                   <div
                     key={doc._id}
-                    className="p-4 rounded-xl bg-white border border-[#E4E7EC] shadow-card flex justify-between items-center"
+                    className="p-3.5 sm:p-4 rounded-xl bg-white border border-[#E4E7EC] shadow-card flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                   >
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#F1F3FF] text-[#4F46E5]">
+                    <div className="flex flex-col gap-1 min-w-0">
+                      <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                        <div className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-lg bg-[#F1F3FF] text-[#4F46E5]">
                           <FileText className="h-4 w-4" />
                         </div>
                         <span className="truncate text-xs font-bold text-[#172033]">
                           {doc.title}
                         </span>
                       </div>
-                      <span className="text-[10px] text-[#667085] ml-12 font-medium">{doc.documentType}</span>
+                      <span className="text-[10px] text-[#667085] ml-10 sm:ml-12 font-medium">{doc.documentType}</span>
                     </div>
                     <button
                       type="button"
                       onClick={() => openDocument(doc._id)}
-                      className="text-xs font-semibold text-[#4F46E5] hover:underline bg-[#F1F3FF] px-3 py-1.5 rounded-lg transition"
+                      className="text-xs font-semibold text-[#4F46E5] hover:underline bg-[#F1F3FF] px-3 py-1.5 rounded-lg transition self-start sm:self-auto shrink-0"
                     >
                       View / Download
                     </button>
@@ -1706,11 +1706,11 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                 </p>
               </div>
             ) : (
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {projects.map((project) => (
                   <div
                     key={project._id}
-                    className="flex flex-col rounded-xl bg-white p-5 border border-[#E4E7EC] shadow-card hover:shadow-elevated transition"
+                    className="flex flex-col rounded-xl bg-white p-4 sm:p-5 border border-[#E4E7EC] shadow-card hover:shadow-elevated transition"
                   >
                     <h3 className="text-base font-bold text-[#172033]">
                       {project.title}
@@ -1835,7 +1835,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
               <option>Earned Leave</option>
             </select>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block font-semibold text-[#172033] mb-1.5">
                 From Date
@@ -1935,7 +1935,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
               <option>Earned Leave</option>
             </select>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block font-semibold text-[#172033] mb-1.5">
                 From Date

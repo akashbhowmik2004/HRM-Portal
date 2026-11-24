@@ -12,7 +12,7 @@ const TaskStatisticsCard = ({
   ]
 }) => {
   return (
-    <div className="rounded-xl bg-white p-5 shadow-xs border border-[#E2E8E5] transition-colors dark:bg-[#151d2e] dark:border-gray-800">
+    <div className="rounded-xl bg-white p-4 sm:p-5 shadow-xs border border-[#E2E8E5] transition-colors dark:bg-[#151d2e] dark:border-gray-800">
       <h3 className="text-xs font-bold uppercase tracking-wider text-[#647572] mb-3.5 dark:text-gray-300">
         Task Statistics
       </h3>

@@ -56,7 +56,7 @@ const MiniCalendarCard = () => {
   }
 
   return (
-    <div className="rounded-lg bg-white dark:bg-[#151d2e] p-5 shadow-subtle border border-[#E3E7EB] dark:border-gray-800 transition-colors">
+    <div className="rounded-lg bg-white dark:bg-[#151d2e] p-3.5 sm:p-5 shadow-subtle border border-[#E3E7EB] dark:border-gray-800 transition-colors">
       {/* Header with Navigation */}
       <div className="flex items-center justify-between mb-3">
         <button

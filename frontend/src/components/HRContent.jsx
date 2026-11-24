@@ -715,7 +715,7 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
             </div>
 
             {/* 4 Top Stat Cards */}
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               <MetricStatCard
                 icon={Users}
                 value={`${employees.length}`}
@@ -906,7 +906,7 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
             </div>
 
             {/* Bottom Row: Employee Directory Snapshot */}
-            <div className="rounded-xl bg-white border border-[#E3E7EB] shadow-card p-5">
+            <div className="rounded-xl bg-white border border-[#E3E7EB] shadow-card p-4 sm:p-5">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                 <div>
                   <h3 className="text-base font-semibold text-[#172033]">
@@ -916,7 +916,7 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
                     Real-time roster with verified attendance percentages and roles
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <button
                     onClick={() => setActiveSection('Employees')}
                     className="text-xs font-semibold text-[#0F766E] hover:underline px-2.5 py-1.5"
@@ -934,7 +934,7 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
               </div>
 
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+                <table className="w-full text-left text-xs min-w-[550px]">
                   <thead className="border-b border-slate-100 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                     <tr>
                       <th className="pb-2.5">Employee</th>
@@ -1014,7 +1014,7 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
                   Complete personnel records with phone, department, designation, attendance and verified credentials
                 </p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setIsAddUserOpen(true)}
                   className="flex items-center gap-1.5 rounded-xl bg-[#0F766E] hover:bg-[#115E59] px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition active:scale-[0.98]"
@@ -1053,7 +1053,7 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
             </div>
 
             {/* Employee Directory Table */}
-            <div className="rounded-xl bg-white border border-[#E2E8E5] shadow-card p-6 overflow-x-auto">
+            <div className="rounded-xl bg-white border border-[#E2E8E5] shadow-card p-4 sm:p-6 overflow-x-auto">
               <table className="w-full text-left text-xs min-w-[850px]">
                 <thead className="border-b border-[#E2E8E5] text-[11px] font-semibold uppercase tracking-wider text-[#647572]">
                   <tr>
@@ -1143,7 +1143,7 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
             </div>
             
             {/* System Users Section */}
-            <div className="mt-8 rounded-xl bg-white border border-[#E2E8E5] shadow-card p-6 overflow-x-auto">
+            <div className="mt-8 rounded-xl bg-white border border-[#E2E8E5] shadow-card p-4 sm:p-6 overflow-x-auto">
               <div className="mb-4">
                 <h3 className="text-base font-semibold text-[#172B2A]">
                   Portal System Accounts
@@ -1219,7 +1219,7 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
               </p>
             </div>
 
-            <div className="rounded-xl bg-white border border-[#E2E8E5] shadow-card p-6">
+            <div className="rounded-xl bg-white border border-[#E2E8E5] shadow-card p-4 sm:p-6">
               <h3 className="text-base font-semibold mb-4 text-[#172B2A]">
                 All Leave Requests ({leaveRequests.length})
               </h3>
@@ -1252,7 +1252,7 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
                       <p className="text-xs font-medium text-[#647572] mt-0.5">Reason: "{req.reason}"</p>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <button
                         onClick={() => handleRejectLeave(req._id || req.id)}
                         className="flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 px-3.5 py-1.5 text-xs font-semibold text-[#DC2626] transition shadow-xs"
@@ -1315,8 +1315,8 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
 
             {todayStatus && (
               <>
-                <div className="grid gap-4 sm:grid-cols-4">
-                  <div className="p-5 rounded-xl bg-white border border-[#E2E8E5] shadow-card">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                  <div className="p-4 sm:p-5 rounded-xl bg-white border border-[#E2E8E5] shadow-card">
                     <p className="text-xs text-[#647572] font-medium">Present Today</p>
                     <p className="mt-2 text-3xl font-bold text-[#15803D]">
                       {Math.round((todayStatus.stats.presentCount / todayStatus.stats.totalEmployees) * 100) || 0}%
@@ -1418,8 +1418,8 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
               <div className="p-4 border-b border-[#E2E8E5] bg-white">
                 <h3 className="font-semibold text-sm text-[#172B2A]">Historical Check-In Logs</h3>
               </div>
-              <div className="max-h-[500px] overflow-y-auto">
-                <table className="w-full text-left border-collapse text-xs">
+              <div className="max-h-[500px] overflow-auto">
+                <table className="w-full text-left border-collapse text-xs min-w-[680px]">
                   <thead className="bg-[#F8FAF9] border-b border-[#E2E8E5] sticky top-0 text-[11px] font-semibold uppercase tracking-wider text-[#647572]">
                     <tr>
                       <th className="p-3.5">Employee</th>
@@ -1504,9 +1504,9 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
                 Organizational business units and team leads
               </p>
             </div>
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {departments.map((d, i) => (
-                <div key={i} className="p-5 rounded-xl bg-white border border-[#E2E8E5] shadow-card">
+                <div key={i} className="p-4 sm:p-5 rounded-xl bg-white border border-[#E2E8E5] shadow-card">
                   <Building2 className="h-6 w-6 text-[#0F766E] mb-2" />
                   <h4 className="font-semibold text-base text-[#172B2A]">
                     {d.name}
@@ -1522,7 +1522,7 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
       case 'Tasks':
         return (
           <div className="space-y-6">
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
               <div>
                 <h2 className="text-2xl font-bold tracking-tight text-[#172B2A]">
                   Organization Tasks Matrix
@@ -1533,14 +1533,14 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
               </div>
               <button
                 onClick={() => setIsAssignTaskOpen(true)}
-                className="flex items-center gap-1.5 rounded-xl bg-[#0F766E] hover:bg-[#115E59] px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition active:scale-[0.98]"
+                className="flex items-center gap-1.5 rounded-xl bg-[#0F766E] hover:bg-[#115E59] px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition active:scale-[0.98] self-start sm:self-auto"
               >
                 <Plus className="h-4 w-4" />
                 Assign Task
               </button>
             </div>
             <TaskStatisticsCard totalTask={245} overdueTask={17} />
-            <div className="rounded-xl border border-[#E2E8E5] bg-white p-6 shadow-card">
+            <div className="rounded-xl border border-[#E2E8E5] bg-white p-4 sm:p-6 shadow-card">
               <h3 className="mb-4 text-base font-semibold text-[#172B2A]">
                 Assigned Tasks ({tasks.length})
               </h3>
@@ -1651,7 +1651,7 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
       case 'Announcements':
         return (
           <div className="space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h2 className="text-2xl font-bold tracking-tight text-[#172B2A]">
                   Announcements
@@ -1662,7 +1662,7 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
               </div>
               <button
                 onClick={() => setIsNewAnnouncementOpen(true)}
-                className="rounded-xl bg-[#0F766E] hover:bg-[#115E59] px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition active:scale-[0.98]"
+                className="rounded-xl bg-[#0F766E] hover:bg-[#115E59] px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition active:scale-[0.98] self-start sm:self-auto"
               >
                 + New Notice
               </button>
@@ -1780,11 +1780,11 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
                 </p>
               </div>
             ) : (
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {projects.map((project) => (
                   <div
                     key={project._id}
-                    className="flex flex-col rounded-xl bg-white p-5 border border-[#E2E8E5] shadow-card"
+                    className="flex flex-col rounded-xl bg-white p-4 sm:p-5 border border-[#E2E8E5] shadow-card"
                   >
                     <h3 className="text-sm font-bold text-[#172B2A]">
                       {project.title}
@@ -2021,7 +2021,7 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
         }
       >
         <form onSubmit={handleAddEmployee} className="space-y-4 text-xs">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block font-semibold text-[#172B2A] mb-1.5">Full Name</label>
               <input
@@ -2044,7 +2044,7 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block font-semibold text-[#172B2A] mb-1.5">Phone Number</label>
               <input
@@ -2078,7 +2078,7 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block font-semibold text-[#172B2A] mb-1.5">Department</label>
               <select
@@ -2106,7 +2106,7 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block font-semibold text-[#172B2A] mb-1.5">Joining Date</label>
               <input
@@ -2158,7 +2158,7 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
           }
         >
           <div className="space-y-4 text-xs">
-            <div className="p-4 rounded-xl bg-[#F8FAF9] border border-[#E2E8E5] flex items-center justify-between">
+            <div className="p-4 rounded-xl bg-[#F8FAF9] border border-[#E2E8E5] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <p className="font-bold text-base text-[#172B2A]">
                   {selectedEmployeeDetails.name}
@@ -2166,14 +2166,14 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
                 <p className="text-[#0F766E] font-semibold">{selectedEmployeeDetails.designation}</p>
                 <p className="text-[11px] font-medium text-[#647572]">{selectedEmployeeDetails.email}</p>
               </div>
-              <div className="text-right">
-                <span className="rounded-full bg-[#EAF5F1] text-[#15803D] border border-[#C5E5D8] px-3 py-1 text-xs font-semibold">
+              <div className="self-start sm:self-auto">
+                <span className="rounded-full bg-[#EAF5F1] text-[#15803D] border border-[#C5E5D8] px-3 py-1 text-xs font-semibold inline-block">
                   {selectedEmployeeDetails.attendancePercentage}% Attendance
                 </span>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="p-3 rounded-xl border border-[#E2E8E5] bg-white">
                 <p className="text-[#647572] font-medium">Phone Number</p>
                 <p className="font-semibold mt-0.5 text-[#172B2A]">

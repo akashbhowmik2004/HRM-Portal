@@ -289,24 +289,24 @@ const Login = () => {
         <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-indigo-100/30 rounded-full blur-[120px] opacity-60 translate-y-1/3 -translate-x-1/4"></div>
 
         {/* Top Right Contact */}
-        <div className="absolute top-8 right-8 md:right-12 text-sm text-gray-500 z-20">
+        <div className="absolute top-4 right-4 sm:top-8 sm:right-8 md:right-12 text-xs sm:text-sm text-gray-500 z-20">
           Don't have an account?{" "}
           <Link to="/contact-hr" className="text-indigo-600 font-semibold hover:underline">
             Contact HR
           </Link>
         </div>
 
-        <div className="flex-1 flex flex-col justify-center px-6 sm:px-12 lg:px-20 z-10 pt-20 lg:pt-0">
-          <div className="bg-white/80 backdrop-blur-sm p-8 sm:p-12 rounded-2xl shadow-soft w-full max-w-[500px] mx-auto border border-gray-100/80">
+        <div className="flex-1 flex flex-col justify-center px-4 sm:px-12 lg:px-20 z-10 pt-16 sm:pt-20 lg:pt-0 pb-8">
+          <div className="bg-white/80 backdrop-blur-sm p-5 sm:p-8 md:p-12 rounded-2xl shadow-soft w-full max-w-[500px] mx-auto border border-gray-100/80">
             {/* Form header */}
-            <div className="mb-8">
-              <p className="text-xs font-bold text-gray-500 tracking-[0.2em] uppercase mb-3">
+            <div className="mb-6 sm:mb-8">
+              <p className="text-xs font-bold text-gray-500 tracking-[0.2em] uppercase mb-2 sm:mb-3">
                 WELCOME BACK
               </p>
-              <h2 className="text-3xl font-bold text-gray-800 mb-2 tracking-tight">
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2 tracking-tight">
                 Sign in to your account
               </h2>
-              <p className="text-gray-500 text-sm">
+              <p className="text-gray-500 text-xs sm:text-sm">
                 Access your HRM portal and continue your journey.
               </p>
             </div>
@@ -314,10 +314,10 @@ const Login = () => {
             {/* Form */}
             <form
               onSubmit={otpSent ? handleVerifyOTP : handleRequestOTP}
-              className="space-y-6"
+              className="space-y-5 sm:space-y-6"
             >
               {/* Role Switcher */}
-              <div className="flex p-1.5 bg-gray-50 border border-gray-100 rounded-2xl">
+              <div className="flex p-1 sm:p-1.5 bg-gray-50 border border-gray-100 rounded-2xl gap-1">
                 {[
                   { key: "employee", label: "Employee", icon: User },
                   { key: "hr", label: "HR", icon: Users },
@@ -333,13 +333,13 @@ const Login = () => {
                         console.log(r.key);
                         setRole(r.key);
                       }}
-                      className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                      className={`flex-1 flex items-center justify-center gap-1 sm:gap-2 py-2 sm:py-3 px-1 sm:px-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 ${
                         role === r.key
                           ? "bg-indigo-600 text-white shadow-sm"
                           : "text-gray-500 hover:text-gray-700 hover:bg-gray-100/50"
                       } ${otpSent ? "opacity-50 cursor-not-allowed" : ""}`}
                     >
-                      <Icon className="w-4 h-4" /> {r.label}
+                      <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" /> {r.label}
                     </button>
                   );
                 })}
@@ -433,26 +433,26 @@ const Login = () => {
             </form>
 
             {/* Trust Badges */}
-            <div className="mt-10 flex justify-between items-start border-t border-gray-100 pt-8 px-2">
-              <div className="flex flex-col items-center text-center gap-3">
-                <Shield className="w-6 h-6 text-gray-500" strokeWidth={1.5} />
-                <span className="text-[11px] font-medium text-gray-400 leading-tight">
+            <div className="mt-8 sm:mt-10 flex justify-between items-start border-t border-gray-100 pt-6 sm:pt-8 px-1 sm:px-2">
+              <div className="flex flex-col items-center text-center gap-2 sm:gap-3">
+                <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-gray-500" strokeWidth={1.5} />
+                <span className="text-[10px] sm:text-[11px] font-medium text-gray-400 leading-tight">
                   Secure
                   <br />
                   and Encrypted
                 </span>
               </div>
-              <div className="flex flex-col items-center text-center gap-3">
-                <Lock className="w-6 h-6 text-gray-500" strokeWidth={1.5} />
-                <span className="text-[11px] font-medium text-gray-400 leading-tight">
+              <div className="flex flex-col items-center text-center gap-2 sm:gap-3">
+                <Lock className="w-5 h-5 sm:w-6 sm:h-6 text-gray-500" strokeWidth={1.5} />
+                <span className="text-[10px] sm:text-[11px] font-medium text-gray-400 leading-tight">
                   OTP Based
                   <br />
                   Authentication
                 </span>
               </div>
-              <div className="flex flex-col items-center text-center gap-3">
-                <Globe className="w-6 h-6 text-gray-500" strokeWidth={1.5} />
-                <span className="text-[11px] font-medium text-gray-400 leading-tight">
+              <div className="flex flex-col items-center text-center gap-2 sm:gap-3">
+                <Globe className="w-5 h-5 sm:w-6 sm:h-6 text-gray-500" strokeWidth={1.5} />
+                <span className="text-[10px] sm:text-[11px] font-medium text-gray-400 leading-tight">
                   Access
                   <br />
                   Anywhere
@@ -463,7 +463,7 @@ const Login = () => {
         </div>
 
         {/* Footer */}
-        <div className="mt-auto px-8 pb-8 pt-4 flex flex-col sm:flex-row justify-between items-center text-xs font-medium text-gray-400 z-20 gap-4">
+        <div className="mt-auto px-4 sm:px-8 pb-6 sm:pb-8 pt-4 flex flex-col sm:flex-row justify-between items-center text-[11px] sm:text-xs font-medium text-gray-400 z-20 gap-3 text-center sm:text-left">
           <span>© 2025 HRM Portal. All rights reserved.</span>
           <div className="flex gap-4">
             <a href="#" className="hover:text-gray-600 transition-colors">

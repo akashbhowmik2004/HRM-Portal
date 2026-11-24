@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router'
 import { auth } from '../apis/axios'
 import useAuth from '../context/useAuth'
@@ -144,6 +145,17 @@ const Sidebar = ({
     if (onClose) onClose()
   }
 
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [isOpen])
+
   const handleLogout = async () => {
     try {
       await auth.post('/logout')
@@ -166,7 +178,7 @@ const Sidebar = ({
       {/* Sidebar Container */}
       <aside
         style={theme.sidebarStyle}
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col text-white border-r border-white/10 shadow-elevated transition-transform duration-200 ease-in-out lg:static lg:flex lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 max-w-[85vw] flex-col text-white border-r border-white/10 shadow-elevated transition-transform duration-200 ease-in-out lg:static lg:flex lg:translate-x-0 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >

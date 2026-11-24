@@ -89,7 +89,7 @@ const VacationCalendar = ({ vacations = [], onAddVacation }) => {
   }
 
   return (
-    <div className="rounded-lg border border-[#E3E7EB] bg-white p-5 shadow-subtle">
+    <div className="rounded-lg border border-[#E3E7EB] bg-white p-3.5 sm:p-5 shadow-subtle">
       <div className="mb-4">
         <h3 className="text-base font-semibold text-[#202A35] mb-0.5">Company Calendar</h3>
         <p className="text-xs text-[#687482]">Official public holidays and team leaves.</p>
@@ -109,9 +109,30 @@ const VacationCalendar = ({ vacations = [], onAddVacation }) => {
         .rbc-btn-group button.rbc-active { background-color: #F0F2F4; color: #202A35; box-shadow: none; font-weight: 600; }
         .rbc-toolbar button:active, .rbc-toolbar button.rbc-active:hover, .rbc-toolbar button.rbc-active:focus { background-color: #F0F2F4; }
         .rbc-toolbar .rbc-toolbar-label { font-weight: 600; color: #202A35; font-size: 1rem; }
+        @media (max-width: 640px) {
+          .rbc-toolbar {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: center;
+          }
+          .rbc-toolbar-label {
+            margin: 4px 0;
+            font-size: 0.9rem !important;
+          }
+          .rbc-btn-group {
+            display: inline-flex;
+            flex-wrap: wrap;
+            justify-content: center;
+          }
+          .rbc-btn-group button {
+            padding: 3px 8px !important;
+            font-size: 0.75rem !important;
+          }
+        }
       `}</style>
 
-      <div className="h-[600px]">
+      <div className="h-[480px] sm:h-[600px]">
         <Calendar
           localizer={localizer}
           events={events}

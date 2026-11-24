@@ -20,7 +20,7 @@ export const ToastProvider = ({ children }) => {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      <div className="fixed bottom-4 right-4 z-[200] flex flex-col gap-3 pointer-events-none">
+      <div className="fixed bottom-3 right-3 sm:bottom-4 sm:right-4 z-[200] flex flex-col gap-2.5 sm:gap-3 pointer-events-none max-w-[calc(100vw-1.5rem)]">
         {toasts.map((toast) => (
           <ToastCard key={toast.id} toast={toast} onRemove={removeToast} />
         ))}
@@ -56,7 +56,7 @@ const ToastCard = ({ toast, onRemove }) => {
 
   return (
     <div
-      className={`pointer-events-auto flex w-80 max-w-sm items-center gap-3 rounded-xl border border-[#E2E8E5] bg-white p-3.5 shadow-elevated transition-all duration-200 ease-out ${
+      className={`pointer-events-auto flex w-[calc(100vw-1.5rem)] sm:w-80 max-w-sm items-center gap-3 rounded-xl border border-[#E2E8E5] bg-white p-3.5 shadow-elevated transition-all duration-200 ease-out ${
         isShowing ? 'translate-x-0 opacity-100' : 'translate-x-6 opacity-0'
       }`}
       role="alert"

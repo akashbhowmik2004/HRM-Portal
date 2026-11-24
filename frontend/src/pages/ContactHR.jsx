@@ -37,22 +37,22 @@ const ContactHR = () => {
 
   return (
     <div className="min-h-screen bg-[#f5f6f8] flex flex-col font-sans">
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         <button
           onClick={() => navigate("/")}
-          className="flex items-center gap-2 text-gray-500 hover:text-gray-700 transition-colors"
+          className="flex items-center gap-2 text-xs sm:text-sm text-gray-500 hover:text-gray-700 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" /> Back to Login
         </button>
       </div>
 
-      <div className="flex-1 flex items-center justify-center p-6">
-        <div className="bg-white p-8 md:p-12 rounded-2xl shadow-soft w-full max-w-[500px] border border-gray-100/80">
-          <div className="mb-8">
-            <h2 className="text-3xl font-bold text-gray-800 mb-2 tracking-tight">
+      <div className="flex-1 flex items-center justify-center p-4 sm:p-6">
+        <div className="bg-white p-5 sm:p-8 md:p-12 rounded-2xl shadow-soft w-full max-w-[500px] border border-gray-100/80">
+          <div className="mb-6 sm:mb-8">
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2 tracking-tight">
               Contact HR
             </h2>
-            <p className="text-gray-500 text-sm">
+            <p className="text-gray-500 text-xs sm:text-sm">
               Please provide your details and describe the issue.
             </p>
           </div>

@@ -107,14 +107,14 @@ const TopHeader = ({
   };
 
   return (
-    <header className="mb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl bg-white p-2.5 sm:px-4 border border-[#E3E7EB] shadow-subtle transition-colors dark:bg-[#151d2e] dark:border-gray-800">
+    <header className="relative mb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl bg-white p-2.5 sm:px-4 border border-[#E3E7EB] shadow-subtle transition-colors dark:bg-[#151d2e] dark:border-gray-800">
       
       {/* Top Row for Mobile (Menu + Actions) / Left Section for Desktop */}
       <div className="flex items-center justify-between sm:w-auto w-full">
         <div className="flex items-center gap-2">
           <button
             onClick={onOpenMobileMenu}
-            className="rounded-lg p-2 text-[#667085] hover:bg-[#F0F2F4] hover:text-[#172033] lg:hidden transition"
+            className="rounded-lg p-2 text-[#667085] hover:bg-[#F0F2F4] hover:text-[#172033] lg:hidden transition dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
             aria-label="Open sidebar"
           >
             <Menu className="h-5 w-5" />
@@ -122,7 +122,12 @@ const TopHeader = ({
         </div>
 
         {/* Right Actions on Mobile */}
-        <div className="flex sm:hidden items-center justify-end gap-2.5 shrink-0 relative" data-notification-container>
+        <div className="flex sm:hidden items-center justify-end gap-2 shrink-0 relative" data-notification-container>
+          {actionButton && (
+            <div className="scale-90 origin-right">
+              {actionButton}
+            </div>
+          )}
           <button
             type="button"
             className="rounded-lg p-2 text-[#667085] hover:bg-[#F0F2F4] hover:text-[#172033] transition dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
@@ -132,8 +137,9 @@ const TopHeader = ({
             {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </button>
           <button
-            className="relative rounded-lg p-2 text-[#667085] hover:bg-[#F0F2F4] hover:text-[#172033] transition"
+            className="relative rounded-lg p-2 text-[#667085] hover:bg-[#F0F2F4] hover:text-[#172033] transition dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
             onClick={toggleNotifications}
+            aria-label="View notifications"
           >
             <Bell className="h-5 w-5" />
             {notifications.some(n => !n.isRead) && (
@@ -188,7 +194,7 @@ const TopHeader = ({
 
         {/* Notifications Icon Button */}
         <button
-          className="relative rounded-lg p-2 text-[#667085] hover:bg-[#F0F2F4] hover:text-[#172033] transition"
+          className="relative rounded-lg p-2 text-[#667085] hover:bg-[#F0F2F4] hover:text-[#172033] transition dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
           onClick={toggleNotifications}
           aria-label="View notifications"
         >
@@ -201,44 +207,13 @@ const TopHeader = ({
           )}
         </button>
 
-        {showNotifications && (
-          <div className="absolute top-12 right-28 w-80 bg-white rounded-xl shadow-elevated border border-[#E3E7EB] z-50 overflow-hidden dark:bg-[#151d2e] dark:border-gray-800">
-            <div className="p-3 border-b border-[#E3E7EB] font-semibold text-xs uppercase tracking-wider text-[#172033] flex justify-between items-center">
-              <span>Recent Notifications</span>
-              {notifications.length > 0 && (
-                <button onClick={markAsRead} className="text-[10px] text-[#2563EB] hover:underline normal-case font-medium">
-                  Mark all read
-                </button>
-              )}
-            </div>
-            <div className="max-h-72 overflow-y-auto divide-y divide-[#E3E7EB]/60">
-              {notifications.length === 0 ? (
-                <div className="p-4 text-xs text-[#667085] text-center">No new notifications</div>
-              ) : (
-                notifications.map(n => (
-                  <div key={n._id} className="p-3 hover:bg-[#F6F7FB] flex justify-between items-start gap-2 relative">
-                    {!n.isRead && <span style={{ backgroundColor: accentColor }} className="absolute top-4 left-1.5 h-1.5 w-1.5 rounded-full" />}
-                    <div className="pl-2">
-                      <p className="text-xs font-semibold text-[#172033]">{n.title}</p>
-                      <p className="text-[11px] text-[#667085] mt-0.5">{n.message}</p>
-                    </div>
-                    <button onClick={(e) => handleDismiss(e, n._id)} className="text-[#667085] hover:text-red-600 shrink-0">
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        )}
-
         {/* Profile Card */}
-        <div className="flex items-center gap-2.5 pl-3 border-l border-[#E3E7EB]">
+        <div className="flex items-center gap-2.5 pl-3 border-l border-[#E3E7EB] dark:border-gray-800">
           <div className="text-right">
-            <p className="text-xs font-semibold text-[#172033] leading-tight">
+            <p className="text-xs font-semibold text-[#172033] leading-tight dark:text-gray-100">
               {user.name}
             </p>
-            <p className="text-[10px] font-medium text-[#667085] capitalize">
+            <p className="text-[10px] font-medium text-[#667085] capitalize dark:text-gray-400">
               {user.role}
             </p>
           </div>
@@ -252,6 +227,41 @@ const TopHeader = ({
           </div>
         </div>
       </div>
+
+      {/* Shared Dropdown Notifications Popover (Works seamlessly on both mobile & desktop) */}
+      {showNotifications && (
+        <div
+          data-notification-container
+          className="absolute top-full right-2 sm:right-4 mt-2 w-[calc(100vw-2rem)] max-w-xs sm:w-80 bg-white rounded-xl shadow-elevated border border-[#E3E7EB] z-50 overflow-hidden dark:bg-[#151d2e] dark:border-gray-800"
+        >
+          <div className="p-3 border-b border-[#E3E7EB] font-semibold text-xs uppercase tracking-wider text-[#172033] flex justify-between items-center dark:border-gray-800 dark:text-gray-100">
+            <span>Recent Notifications</span>
+            {notifications.length > 0 && (
+              <button onClick={markAsRead} className="text-[10px] text-[#2563EB] hover:underline normal-case font-medium">
+                Mark all read
+              </button>
+            )}
+          </div>
+          <div className="max-h-72 overflow-y-auto divide-y divide-[#E3E7EB]/60 dark:divide-gray-800/60">
+            {notifications.length === 0 ? (
+              <div className="p-4 text-xs text-[#667085] text-center dark:text-gray-400">No new notifications</div>
+            ) : (
+              notifications.map(n => (
+                <div key={n._id} className="p-3 hover:bg-[#F6F7FB] dark:hover:bg-gray-800/40 flex justify-between items-start gap-2 relative">
+                  {!n.isRead && <span style={{ backgroundColor: accentColor }} className="absolute top-4 left-1.5 h-1.5 w-1.5 rounded-full" />}
+                  <div className="pl-2">
+                    <p className="text-xs font-semibold text-[#172033] dark:text-gray-100">{n.title}</p>
+                    <p className="text-[11px] text-[#667085] dark:text-gray-400 mt-0.5">{n.message}</p>
+                  </div>
+                  <button onClick={(e) => handleDismiss(e, n._id)} className="text-[#667085] hover:text-red-600 shrink-0">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
     </header>
   )
 }
