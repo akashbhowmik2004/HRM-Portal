@@ -22,14 +22,14 @@ jobs:
         with:
           context: ./backend
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/notestack:backend
+          tags: ${{ secrets.DOCKER_USERNAME }}/hrmportal:backend
       
       - name: Build and push frontend image
         uses: docker/build-push-action@v6
         with:
           context: ./frontend
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/notestack:frontend
+          tags: ${{ secrets.DOCKER_USERNAME }}/hrmportal:frontend
       
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1
