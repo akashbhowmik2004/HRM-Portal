@@ -4,12 +4,14 @@ import TopHeader from "../components/TopHeader";
 import EmployeeContent from "../components/EmployeeContent";
 import { useToast } from "../components/ToastProvider.jsx";
 import { employee } from "../apis/axios.js";
+import LoadingPage from "../components/LoadingPage";
 
 const EmployeeDashboard = () => {
   const {showToast} = useToast();
   const [activeSection, setActiveSection] = useState("Dashboard");
   const [userDetails, setUserDetails] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const fetchUserDetails = async () => {
     try {
@@ -24,14 +26,25 @@ const EmployeeDashboard = () => {
     } catch (error) {
       console.error("Error fetching user details:", error);
       showToast("Failed to fetch user details.", "error");
+    } finally {
+      setIsLoading(false);
     }
   }
   useEffect(() => {
     fetchUserDetails();
   }, []);
 
+  if (isLoading) {
+    return (
+      <LoadingPage
+        title="Loading Employee Dashboard"
+        subtitle="Preparing your profile, tasks, and documents..."
+      />
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-[#F6F7FB]">
+    <div className="min-h-screen bg-[#F6F7FB] dark:bg-[#0f172a]">
       <div className="flex min-h-screen">
         <EmployeeSidebar
           activeItem={activeSection}

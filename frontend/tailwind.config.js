@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
@@ -36,7 +37,11 @@ export default {
           sidebar: '#0A362C',
           text: '#172B2A',
           subtext: '#647572',
+          border: '#E2E8E5',
+          input: '#F8FAF9',
+          hover: '#EAF5F1',
           accent: '#10B981',
+          success: '#15803D',
           warning: '#D97706',
           error: '#DC2626',
         },

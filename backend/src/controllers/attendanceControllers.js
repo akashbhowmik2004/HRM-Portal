@@ -1,19 +1,79 @@
 import Attendance from "../models/Attendance.js";
 
+const getTodayRange = () => {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+  return { start, end };
+};
+
+const getCompletedBreakSeconds = (breaks = []) =>
+  breaks.reduce((total, item) => {
+    if (Number.isFinite(item.durationSeconds)) return total + item.durationSeconds;
+    return total + ((item.durationMinutes || 0) * 60);
+  }, 0);
+
+const formatDuration = (minutes) => {
+  const safeMinutes = Math.max(0, Math.round(minutes));
+  const hours = Math.floor(safeMinutes / 60);
+  const mins = safeMinutes % 60;
+  return `${hours}h ${mins}m`;
+};
+
+const findActiveBreak = (attendance) =>
+  attendance.breaks?.find((item) => !item.endTime);
+
+const getLiveBreakMinutes = (attendance, now = new Date()) => {
+  const completedSeconds = getCompletedBreakSeconds(attendance.breaks);
+  const activeBreak = findActiveBreak(attendance);
+  if (!activeBreak) return completedSeconds / 60;
+  return (completedSeconds + Math.max(0, Math.floor((now - new Date(activeBreak.startTime)) / 1000))) / 60;
+};
 
 
 export const getTodayAttendance = async (req, res) => {
   try {
     const userId = req.user.id;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const { start: today, end: todayEnd } = getTodayRange();
 
     const attendance = await Attendance.findOne({
       userId,
-      date: { $gte: today, $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000) }
+      date: { $gte: today, $lt: todayEnd }
     });
 
-    res.status(200).json({ success: true, attendance });
+    if (!attendance) {
+      return res.status(200).json({ success: true, attendance: null });
+    }
+
+    const now = new Date();
+    const liveBreakMinutes = getLiveBreakMinutes(attendance, now);
+    const liveWorkingMinutes = attendance.checkInTime && !attendance.checkOutTime
+      ? Math.max(0, (Math.floor((now - attendance.checkInTime) / 1000) - getCompletedBreakSeconds(attendance.breaks)) / 60)
+      : attendance.workingDurationMinutes || 0;
+    const liveBreakSeconds = attendance.checkInTime && !attendance.checkOutTime
+      ? getCompletedBreakSeconds(attendance.breaks) + (() => {
+          const activeBreak = findActiveBreak(attendance);
+          return activeBreak
+            ? Math.max(0, Math.floor((now - new Date(activeBreak.startTime)) / 1000))
+            : 0;
+        })()
+      : attendance.breakDurationSeconds || (attendance.breakDurationMinutes || 0) * 60;
+    const liveWorkingSeconds = attendance.checkInTime && !attendance.checkOutTime
+      ? Math.max(0, Math.floor((now - attendance.checkInTime) / 1000) - liveBreakSeconds)
+      : attendance.workingDurationSeconds || (attendance.workingDurationMinutes || 0) * 60;
+
+    res.status(200).json({
+      success: true,
+      attendance: {
+        ...attendance.toObject(),
+        breakDurationMinutes: liveBreakMinutes,
+        breakDurationSeconds: liveBreakSeconds,
+        liveWorkingDurationMinutes: liveWorkingMinutes,
+        liveWorkingDurationSeconds: liveWorkingSeconds,
+        isOnBreak: Boolean(findActiveBreak(attendance)),
+      },
+    });
   } catch (error) {
     console.error("Get Attendance Error:", error);
     res.status(500).json({ success: false, message: "Server Error" });
@@ -37,6 +97,73 @@ export const getAllAttendance = async (req, res) => {
     res.status(200).json({ success: true, attendance });
   } catch (error) {
     console.error("Get All Attendance Error:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+
+export const startBreak = async (req, res) => {
+  try {
+    const { start, end } = getTodayRange();
+    const attendance = await Attendance.findOne({
+      userId: req.user.id,
+      date: { $gte: start, $lt: end },
+    });
+
+    if (!attendance || !attendance.checkInTime || attendance.checkOutTime) {
+      return res.status(400).json({ success: false, message: "You must be punched in to take a break." });
+    }
+    if (findActiveBreak(attendance)) {
+      return res.status(400).json({ success: false, message: "You are already on a break." });
+    }
+
+    attendance.breaks.push({ startTime: new Date() });
+    await attendance.save();
+    return res.status(200).json({
+      success: true,
+      message: "Break started.",
+      attendance,
+    });
+  } catch (error) {
+    console.error("Start Break Error:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+
+export const endBreak = async (req, res) => {
+  try {
+    const { start, end } = getTodayRange();
+    const attendance = await Attendance.findOne({
+      userId: req.user.id,
+      date: { $gte: start, $lt: end },
+    });
+
+    if (!attendance || !attendance.checkInTime || attendance.checkOutTime) {
+      return res.status(400).json({ success: false, message: "No active attendance found." });
+    }
+    const activeBreak = findActiveBreak(attendance);
+    if (!activeBreak) {
+      return res.status(400).json({ success: false, message: "You are not currently on a break." });
+    }
+
+    const endTime = new Date();
+    activeBreak.endTime = endTime;
+    const durationSeconds = Math.max(
+      0,
+      Math.floor((endTime - new Date(activeBreak.startTime)) / 1000),
+    );
+    activeBreak.durationSeconds = durationSeconds;
+    activeBreak.durationMinutes = Math.floor(durationSeconds / 60);
+    attendance.breakDurationSeconds = getCompletedBreakSeconds(attendance.breaks);
+    attendance.breakDurationMinutes = Math.floor(attendance.breakDurationSeconds / 60);
+    await attendance.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Break ended.",
+      attendance,
+    });
+  } catch (error) {
+    console.error("End Break Error:", error);
     res.status(500).json({ success: false, message: "Server Error" });
   }
 };
@@ -208,14 +335,31 @@ export const checkInWebcam = async (req, res) => {
 
     if (existingAttendance && existingAttendance.checkInTime && !existingAttendance.checkOutTime) {
       // Perform Check-Out
-      existingAttendance.checkOutTime = new Date();
-      
-      // Calculate working duration in minutes
-      const diffMs = existingAttendance.checkOutTime - existingAttendance.checkInTime;
-      const diffMins = Math.round(diffMs / 60000);
-      const hours = Math.floor(diffMins / 60);
-      const mins = diffMins % 60;
-      existingAttendance.workingDuration = `${hours}h ${mins}m`;
+      const checkOutTime = new Date();
+      const activeBreak = findActiveBreak(existingAttendance);
+      if (activeBreak) {
+        activeBreak.endTime = checkOutTime;
+        const activeBreakSeconds = Math.max(
+          0,
+          Math.floor((checkOutTime - new Date(activeBreak.startTime)) / 1000),
+        );
+        activeBreak.durationSeconds = activeBreakSeconds;
+        activeBreak.durationMinutes = Math.floor(activeBreakSeconds / 60);
+      }
+
+      existingAttendance.checkOutTime = checkOutTime;
+      existingAttendance.breakDurationSeconds = getCompletedBreakSeconds(existingAttendance.breaks);
+      existingAttendance.breakDurationMinutes = Math.floor(existingAttendance.breakDurationSeconds / 60);
+      const elapsedSeconds = Math.max(
+        0,
+        Math.floor((checkOutTime - existingAttendance.checkInTime) / 1000),
+      );
+      existingAttendance.workingDurationSeconds = Math.max(
+        0,
+        elapsedSeconds - existingAttendance.breakDurationSeconds,
+      );
+      existingAttendance.workingDurationMinutes = Math.floor(existingAttendance.workingDurationSeconds / 60);
+      existingAttendance.workingDuration = formatDuration(existingAttendance.workingDurationMinutes);
 
       updatedAttendance = await existingAttendance.save();
       actionMessage = "Face verified and checked out successfully.";

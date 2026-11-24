@@ -19,7 +19,17 @@ const documentSchema = new mongoose.Schema(
     },
     fileUrl: {
       type: String,
+      default: null,
+    },
+    filePath: {
+      type: String,
       required: true,
+      trim: true,
+    },
+    fileName: {
+      type: String,
+      required: true,
+      trim: true,
     },
     uploadedBy: {
       type: mongoose.Schema.Types.ObjectId,

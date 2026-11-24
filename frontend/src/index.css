@@ -22,6 +22,193 @@ body {
   background-color: #F6F7FB;
 }
 
+.loading-logo {
+  position: relative;
+  display: grid;
+  width: 64px;
+  height: 64px;
+  place-items: center;
+  border-radius: 18px;
+  background: linear-gradient(145deg, #315C7D, #2563EB);
+  box-shadow: 0 16px 36px rgba(37, 99, 235, 0.22);
+  color: #ffffff;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1;
+  animation: loading-logo-pulse 1.8s ease-in-out infinite;
+}
+
+.loading-logo-ring {
+  position: absolute;
+  inset: -7px;
+  border: 2px solid rgba(37, 99, 235, 0.18);
+  border-top-color: #2563EB;
+  border-radius: 22px;
+  animation: loading-spin 1.1s linear infinite;
+}
+
+.loading-progress {
+  width: 38%;
+  animation: loading-progress 1.25s ease-in-out infinite;
+}
+
+@keyframes loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes loading-logo-pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+  }
+}
+
+@keyframes loading-progress {
+  0% {
+    transform: translateX(-130%);
+  }
+  50% {
+    width: 58%;
+  }
+  100% {
+    transform: translateX(290%);
+  }
+}
+
+html.dark,
+html.dark body {
+  background-color: #0f172a;
+  color: #e5e7eb;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #374151;
+}
+
+.dark select option {
+  background-color: #151d2e;
+  color: #e5e7eb;
+}
+
+/* ── Dashboard cards and inner surfaces ── */
+.dark main [class*="bg-white"],
+.dark main [class*="bg-[#F8FAFC]"],
+.dark main [class*="bg-[#F6F7FB]"],
+.dark main [class*="bg-[#F1F3FF]"] {
+  background-color: #151d2e;
+}
+
+.dark main [class*="text-[#172033]"],
+.dark main [class*="text-[#202A35]"],
+.dark header [class*="text-[#172033]"] {
+  color: #f1f5f9;
+}
+
+.dark main [class*="text-[#667085]"],
+.dark main [class*="text-[#647572]"],
+.dark header [class*="text-[#667085]"] {
+  color: #a3aab7;
+}
+
+.dark main [class*="border-[#E3E7EB]"],
+.dark main [class*="border-[#E4E7EC]"],
+.dark main [class*="border-[#E2E8E5]"] {
+  border-color: #374151;
+}
+
+.dark main [class*="hover:bg-[#F6F7FB]"]:hover,
+.dark main [class*="hover:bg-[#F1F3FF]"]:hover,
+.dark main [class*="hover:bg-[#E3E7EB]"]:hover {
+  background-color: #1e293b;
+}
+
+/* ── Icon tiles and status badges ── */
+.dark main .bg-blue-50,
+.dark main .bg-indigo-50,
+.dark main .bg-violet-50,
+.dark main .bg-emerald-50,
+.dark main .bg-amber-50,
+.dark main .bg-teal-50,
+.dark main .bg-slate-100,
+.dark main .bg-rose-50 {
+  background-color: #1e293b;
+}
+
+.dark main .text-blue-600,
+.dark main .text-\[\#2563EB\],
+.dark main .text-\[\#4F46E5\] {
+  color: #60a5fa;
+}
+
+.dark main .text-indigo-700,
+.dark main .text-violet-700,
+.dark main .text-violet-600 {
+  color: #c4b5fd;
+}
+
+.dark main .text-emerald-600,
+.dark main .text-emerald-700,
+.dark main .text-teal-700 {
+  color: #6ee7b7;
+}
+
+.dark main .text-amber-600,
+.dark main .text-amber-700 {
+  color: #fcd34d;
+}
+
+.dark main .text-rose-500,
+.dark main .text-rose-600,
+.dark main .text-red-600 {
+  color: #fda4af;
+}
+
+.dark main .text-slate-500,
+.dark main .text-slate-600,
+.dark main .text-slate-700 {
+  color: #a3aab7;
+}
+
+/* ── Modal forms and labels ── */
+.dark [role="dialog"] input,
+.dark [role="dialog"] textarea,
+.dark [role="dialog"] select {
+  background-color: #0f172a;
+  border-color: #374151;
+  color: #e5e7eb;
+  color-scheme: dark;
+}
+
+.dark [role="dialog"] [class*="border-[#E4E7EC]"],
+.dark [role="dialog"] [class*="border-[#E2E8E5]"],
+.dark [role="dialog"] [class*="border-[#E3E7EB]"] {
+  border-color: #374151;
+}
+
+.dark [role="dialog"] [class*="bg-[#F8FAFC]"],
+.dark [role="dialog"] [class*="bg-[#F8FAF9]"],
+.dark [role="dialog"] [class*="bg-gray-50"],
+.dark [role="dialog"] [class*="bg-gray-100"] {
+  background-color: #0f172a;
+}
+
+.dark [role="dialog"] [class*="text-[#172033]"],
+.dark [role="dialog"] [class*="text-[#172B2A]"],
+.dark [role="dialog"] [class*="text-[#202A35]"] {
+  color: #f1f5f9;
+}
+
+.dark [role="dialog"] [class*="text-[#667085]"],
+.dark [role="dialog"] [class*="text-[#647572]"],
+.dark [role="dialog"] [class*="text-gray-500"],
+.dark [role="dialog"] [class*="text-gray-600"] {
+  color: #a3aab7;
+}
+
 /* ── Form Elements ── */
 select option {
   background-color: #ffffff;

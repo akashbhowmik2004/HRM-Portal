@@ -23,6 +23,39 @@ const attendanceSchema = new mongoose.Schema({
   workingDuration: {
     type: String,
   },
+  workingDurationMinutes: {
+    type: Number,
+    default: 0,
+  },
+  workingDurationSeconds: {
+    type: Number,
+    default: 0,
+  },
+  breakDurationMinutes: {
+    type: Number,
+    default: 0,
+  },
+  breakDurationSeconds: {
+    type: Number,
+    default: 0,
+  },
+  breaks: [{
+    startTime: {
+      type: Date,
+      required: true,
+    },
+    endTime: {
+      type: Date,
+    },
+    durationMinutes: {
+      type: Number,
+      default: 0,
+    },
+    durationSeconds: {
+      type: Number,
+      default: 0,
+    },
+  }],
   checkInTime: {
     type: Date,
   },

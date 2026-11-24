@@ -10,7 +10,7 @@ import ContactHR from "./pages/ContactHR";
 const App = () => {
   return (
     <ToastProvider>
-      <div>
+      <div className="min-h-screen bg-[#F6F7FB] dark:bg-[#0f172a]">
         <Routes>
           <Route path="/" element={<Login />} />
           <Route path="/contact-hr" element={<ContactHR />} />

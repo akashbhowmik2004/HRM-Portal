@@ -57,6 +57,16 @@ import { useToast } from "../components/ToastProvider.jsx";
 
 const DocumentList = ({ employeeId }) => {
   const [docs, setDocs] = useState([]);
+  const openDocument = async (documentId) => {
+    try {
+      const res = await api.get(`/documents/download/${documentId}`);
+      if (res.data.success) {
+        window.open(res.data.downloadUrl, "_blank", "noopener,noreferrer");
+      }
+    } catch (err) {
+      console.error("Error opening document", err);
+    }
+  };
   useEffect(() => {
     if (!employeeId) return;
     const fetchDocs = async () => {
@@ -74,24 +84,23 @@ const DocumentList = ({ employeeId }) => {
   }, [employeeId]);
 
   return (
-    <div className="space-y-3">
+    <div className="mx-auto max-w-2xl space-y-3">
       {docs.length === 0 ? (
         <p className="text-sm text-gray-500">No documents found for this employee.</p>
       ) : (
         docs.map((doc) => (
-          <div key={doc._id} className="flex justify-between items-center p-4 bg-white dark:bg-[#151d2e] rounded-xl border border-[#E3E7EB] dark:border-gray-800 shadow-sm">
-            <div>
-              <p className="text-sm font-semibold text-[#202A35] dark:text-gray-100">{doc.title}</p>
+          <div key={doc._id} className="flex items-center justify-between gap-3 p-4 bg-white dark:bg-[#151d2e] rounded-xl border border-[#E3E7EB] dark:border-gray-800 shadow-sm">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-[#202A35] dark:text-gray-100">{doc.title}</p>
               <p className="text-[11px] text-gray-500">{doc.documentType}</p>
             </div>
-            <a
-              href={`http://localhost:3000${doc.fileUrl}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs font-semibold text-[#315C7D] dark:text-[#7EB0D5] hover:underline"
+            <button
+              type="button"
+              onClick={() => openDocument(doc._id)}
+              className="shrink-0 text-xs font-semibold text-[#315C7D] dark:text-[#7EB0D5] hover:underline"
             >
               View Document
-            </a>
+            </button>
           </div>
         ))
       )}
@@ -472,7 +481,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
           ? "Employee"
           : userForm.role === "hr"
             ? "hr"
-            : "Admin";
+            : "admin";
       const payload = { ...userForm, role: displayRole };
       const response = await admin.post("/create-user", payload);
 
@@ -639,22 +648,25 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
   const renderContent = () => {
     switch (activeSection) {
       case "Dashboard": {
-        const totalUsers = userList.length || (employees.length + 3);
-        const employeeUsers = userList.filter((u) => u.role?.toLowerCase() === "employee").length || employees.length || 18;
-        const internUsers = userList.filter((u) => u.employmentType === "intern" || u.role?.toLowerCase() === "intern").length || 4;
-        const hrUsers = userList.filter((u) => u.role?.toLowerCase() === "hr").length || 2;
-        const adminUsers = userList.filter((u) => u.role?.toLowerCase() === "admin").length || 1;
+        const totalUsers = userList.length;
+        const employeeUsers = userList.filter((u) => u.role?.toLowerCase() === "employee").length;
+        const internUsers = userList.filter((u) => u.employmentType === "intern" || u.role?.toLowerCase() === "intern").length;
+        const hrUsers = userList.filter((u) => u.role?.toLowerCase() === "hr").length;
+        const adminUsers = userList.filter((u) => u.role?.toLowerCase() === "admin").length;
 
-        // Registration Trend Chart data
-        const regLabels = ["May", "Jun", "Jul", "Aug", "Sep", "Oct"];
-        const regData = [
-          Math.max(1, Math.round(totalUsers * 0.2)),
-          Math.max(2, Math.round(totalUsers * 0.35)),
-          Math.max(3, Math.round(totalUsers * 0.5)),
-          Math.max(4, Math.round(totalUsers * 0.68)),
-          Math.max(5, Math.round(totalUsers * 0.85)),
-          totalUsers,
-        ];
+        const regLabels = [];
+        const regData = [];
+        const now = new Date();
+        for (let offset = 5; offset >= 0; offset -= 1) {
+          const monthEnd = new Date(now.getFullYear(), now.getMonth() - offset + 1, 0, 23, 59, 59);
+          regLabels.push(monthEnd.toLocaleDateString("en-US", { month: "short" }));
+          regData.push(
+            userList.filter((user) => {
+              if (!user.createdAt) return false;
+              return new Date(user.createdAt) <= monthEnd;
+            }).length,
+          );
+        }
 
         const barChartData = {
           labels: regLabels,
@@ -710,7 +722,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                   </span>
                 </div>
                 <p className="text-xs sm:text-sm font-medium text-slate-500">
-                  Welcome back, <span className="font-semibold text-slate-700">{userDetails?.name || "System Admin"}</span>. System telemetries, infrastructure health & user access governance.
+                  Welcome back, <span className="font-semibold text-slate-700">{userDetails?.name || "Admin"}</span>. Database overview and user access governance.
                 </p>
               </div>
 
@@ -878,10 +890,10 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                 <div>
                   <h3 className="text-sm font-semibold text-[#172033] mb-1 flex items-center gap-1.5">
                     <Server className="h-4 w-4 text-[#2563EB]" />
-                    Infrastructure Health
+                    Database Overview
                   </h3>
                   <p className="text-xs text-slate-500 mb-3">
-                    Core services telemetry
+                    Current database records
                   </p>
                 </div>
 
@@ -890,12 +902,9 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs text-slate-600 font-medium flex items-center gap-1.5">
                         <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                        Portal Uptime
+                        Database
                       </span>
-                      <span className="text-xs font-bold text-emerald-700">99.98%</span>
-                    </div>
-                    <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
-                      <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: "99.98%" }}></div>
+                      <span className="text-xs font-bold text-emerald-700">Connected</span>
                     </div>
                   </div>
 
@@ -903,12 +912,9 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs text-slate-600 font-medium flex items-center gap-1.5">
                         <Cpu className="h-3.5 w-3.5 text-slate-500" />
-                        CPU Allocation
+                        Registered Users
                       </span>
-                      <span className="text-xs font-bold text-slate-700">22%</span>
-                    </div>
-                    <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
-                      <div className="bg-[#2563EB] h-1.5 rounded-full" style={{ width: "22%" }}></div>
+                      <span className="text-xs font-bold text-slate-700">{totalUsers}</span>
                     </div>
                   </div>
 
@@ -916,12 +922,9 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs text-slate-600 font-medium flex items-center gap-1.5">
                         <HardDrive className="h-3.5 w-3.5 text-slate-500" />
-                        Memory (RAM)
+                        Departments
                       </span>
-                      <span className="text-xs font-bold text-slate-700">4.1 / 8 GB</span>
-                    </div>
-                    <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
-                      <div className="bg-indigo-500 h-1.5 rounded-full" style={{ width: "51%" }}></div>
+                      <span className="text-xs font-bold text-slate-700">{departments.length}</span>
                     </div>
                   </div>
                 </div>
@@ -1462,7 +1465,8 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                       <th className="p-4 text-xs font-semibold text-gray-500 dark:text-gray-400">Date</th>
                       <th className="p-4 text-xs font-semibold text-gray-500 dark:text-gray-400">Punch In</th>
                       <th className="p-4 text-xs font-semibold text-gray-500 dark:text-gray-400">Punch Out</th>
-                      <th className="p-4 text-xs font-semibold text-gray-500 dark:text-gray-400">Duration</th>
+                      <th className="p-4 text-xs font-semibold text-gray-500 dark:text-gray-400">Working Time</th>
+                      <th className="p-4 text-xs font-semibold text-gray-500 dark:text-gray-400">Break Time</th>
                       <th className="p-4 text-xs font-semibold text-gray-500 dark:text-gray-400">Status</th>
                     </tr>
                   </thead>
@@ -1473,11 +1477,15 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                       const punchOut = log.checkOutTime ? new Date(log.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "In Progress";
                       let duration = "0h 0m";
                       if (log.checkInTime && log.checkOutTime) {
-                        const diff = new Date(log.checkOutTime) - new Date(log.checkInTime);
-                        const hours = Math.floor(diff / (1000 * 60 * 60));
-                        const minutes = Math.floor((diff / (1000 * 60)) % 60);
-                        duration = `${hours}h ${minutes}m`;
+                        duration = log.workingDuration || "0h 0m";
                       }
+                      const breakSeconds = log.breakDurationSeconds ??
+                        (log.breakDurationMinutes || 0) * 60;
+                      const breakHours = Math.floor(breakSeconds / 3600);
+                      const breakMinutes = Math.floor((breakSeconds % 3600) / 60);
+                      const breakDuration = breakSeconds > 0
+                        ? `${breakHours}h ${breakMinutes}m`
+                        : "0h 0m";
 
                       let statusText = log.status || "Present";
                       let badgeClass = "bg-[#EEF3F7] text-[#315C7D] dark:bg-indigo-900/20 dark:text-indigo-400";
@@ -1503,6 +1511,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
                           <td className="p-4 text-xs text-gray-600 dark:text-gray-300 font-medium">{punchIn}</td>
                           <td className="p-4 text-xs text-gray-600 dark:text-gray-300 font-medium">{punchOut}</td>
                           <td className="p-4 text-xs font-semibold text-gray-700 dark:text-gray-200">{duration}</td>
+                          <td className="p-4 text-xs font-semibold text-amber-700 dark:text-amber-400">{breakDuration}</td>
                           <td className="p-4">
                             <span className={`inline-block rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${badgeClass}`}>
                               {statusText}
@@ -1876,22 +1885,26 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
               System Settings
             </h2>
             <div className="p-6 rounded-xl bg-white dark:bg-[#151d2e] border border-[#E3E7EB] dark:border-gray-800 shadow-subtle space-y-4 text-xs">
-              <div>
-                <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Company Name
-                </label>
-                <input
-                  type="text"
-                  defaultValue="Acme HRM Enterprise"
-                  className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 outline-none font-medium text-[#202A35] dark:text-gray-100 focus:border-[#315C7D] focus:ring-2 focus:ring-[#315C7D]/15 dark:focus:border-[#7EB0D5]"
-                />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border border-[#E3E7EB] p-4 dark:border-gray-700">
+                  <p className="text-gray-500 dark:text-gray-400">Registered Users</p>
+                  <p className="mt-1 text-lg font-bold text-[#202A35] dark:text-gray-100">{userList.length}</p>
+                </div>
+                <div className="rounded-xl border border-[#E3E7EB] p-4 dark:border-gray-700">
+                  <p className="text-gray-500 dark:text-gray-400">Employees</p>
+                  <p className="mt-1 text-lg font-bold text-[#202A35] dark:text-gray-100">{employees.length}</p>
+                </div>
+                <div className="rounded-xl border border-[#E3E7EB] p-4 dark:border-gray-700">
+                  <p className="text-gray-500 dark:text-gray-400">Departments</p>
+                  <p className="mt-1 text-lg font-bold text-[#202A35] dark:text-gray-100">{departments.length}</p>
+                </div>
+                <div className="rounded-xl border border-[#E3E7EB] p-4 dark:border-gray-700">
+                  <p className="text-gray-500 dark:text-gray-400">Pending Leave Requests</p>
+                  <p className="mt-1 text-lg font-bold text-[#202A35] dark:text-gray-100">
+                    {leaveRequests.filter((leave) => leave.status === "Pending").length}
+                  </p>
+                </div>
               </div>
-              <button
-                onClick={() => showToast("Settings saved!", "success")}
-                className="rounded-xl bg-[#315C7D] hover:bg-[#284B66] px-5 py-2 font-medium text-white"
-              >
-                Save
-              </button>
             </div>
           </div>
         );
@@ -1979,7 +1992,7 @@ const AdminContent = ({ activeSection, setActiveSection, userDetails }) => {
 
       case "Documents":
         return (
-          <div className="max-w-2xl space-y-6">
+          <div className="mx-auto max-w-xl space-y-6">
             <h2 className="text-2xl font-semibold text-[#202A35] dark:text-gray-100">
               Upload Employee Document
             </h2>

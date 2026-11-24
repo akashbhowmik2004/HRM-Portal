@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { auth, employee, api } from "../apis/axios";
 import WebcamCapture from "../components/WebcamCapture";
+import { useSocket } from "../context/SocketContext";
 
 // Brand Icons
 const GithubIcon = ({ className = "h-3.5 w-3.5" }) => (
@@ -66,6 +67,7 @@ ChartJS.register(ArcElement, Tooltip, Legend);
 
 const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
   const { showToast } = useToast();
+  const socket = useSocket();
 
   const [isApplyLeaveOpen, setIsApplyLeaveOpen] = useState(false);
   const [isEditLeaveOpen, setIsEditLeaveOpen] = useState(false);
@@ -197,6 +199,47 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
   const [tasks, setTasks] = useState([]);
   const [attendanceLogs, setAttendanceLogs] = useState([]);
   const [todayAttendance, setTodayAttendance] = useState(null);
+  const [clockNow, setClockNow] = useState(new Date());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setClockNow(new Date()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const formatRealtimeDuration = (milliseconds) => {
+    const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  };
+
+  const getLiveWorkingMilliseconds = () => {
+    if (!todayAttendance?.checkInTime || todayAttendance.checkOutTime) {
+      return (todayAttendance?.workingDurationSeconds ?? (todayAttendance?.workingDurationMinutes || 0) * 60) * 1000;
+    }
+    const elapsed = Math.max(0, clockNow - new Date(todayAttendance.checkInTime));
+    return Math.max(0, elapsed - getLiveBreakMilliseconds());
+  };
+
+  const getLiveBreakMilliseconds = () => {
+    if (!todayAttendance?.breaks) {
+      return (todayAttendance?.breakDurationSeconds ?? (todayAttendance?.breakDurationMinutes || 0) * 60) * 1000;
+    }
+    const completed = todayAttendance.breaks
+      .filter((item) => item.endTime)
+      .reduce((total, item) => {
+        const seconds = Number.isFinite(item.durationSeconds)
+          ? item.durationSeconds
+          : (item.durationMinutes || 0) * 60;
+        return total + seconds * 1000;
+      }, 0);
+    const active = todayAttendance.breaks.find((item) => !item.endTime);
+    const activeMilliseconds = active
+      ? Math.max(0, clockNow - new Date(active.startTime))
+      : 0;
+    return completed + activeMilliseconds;
+  };
 
   const fetchAttendanceLogs = async () => {
     try {
@@ -232,6 +275,30 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
   const handlePunch = async () => {
     // Open Webcam Check-in/out Modal
     setIsWebcamCheckInOpen(true);
+  };
+
+  const handleStartBreak = async () => {
+    try {
+      const response = await api.post("/attendance/break/start");
+      if (response.data.success) {
+        showToast(response.data.message, "success");
+        await fetchTodayAttendance();
+      }
+    } catch (error) {
+      showToast(error.response?.data?.message || "Could not start break.", "error");
+    }
+  };
+
+  const handleEndBreak = async () => {
+    try {
+      const response = await api.post("/attendance/break/end");
+      if (response.data.success) {
+        showToast(response.data.message, "success");
+        await fetchTodayAttendance();
+      }
+    } catch (error) {
+      showToast(error.response?.data?.message || "Could not end break.", "error");
+    }
   };
 
   const handleWebcamCapture = async (descriptor, setStatus) => {
@@ -287,10 +354,36 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
     }
   };
 
+  const openDocument = async (documentId) => {
+    try {
+      const response = await api.get(`/documents/download/${documentId}`);
+      if (response.data.success) {
+        window.open(response.data.downloadUrl, "_blank", "noopener,noreferrer");
+      }
+    } catch (error) {
+      console.error("Error opening document:", error);
+    }
+  };
+
   useEffect(() => {
     fetchTasks();
     fetchDocuments();
+    fetchNotifications();
   }, [userDetails]);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNewNotification = (notification) => {
+      setNotifications((current) => [notification, ...current].slice(0, 5));
+      showToast(notification.title || "New notification", "info");
+    };
+
+    socket.on("newNotification", handleNewNotification);
+    return () => {
+      socket.off("newNotification", handleNewNotification);
+    };
+  }, [socket, showToast]);
 
   const handleTaskStatusChange = async (task) => {
     const nextStatus =
@@ -314,6 +407,16 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
   };
 
   const [notifications, setNotifications] = useState([]);
+  const fetchNotifications = async () => {
+    try {
+      const response = await api.get("/notifications");
+      if (response.data.success) {
+        setNotifications(response.data.notifications || []);
+      }
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+    }
+  };
 
   const handleApplyLeave = async (e) => {
     e.preventDefault();
@@ -435,34 +538,34 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
   const statusBadge = (status) => {
     const map = {
       "In Progress":
-        "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400",
+        "bg-blue-50 text-blue-700 border border-blue-200/60",
       Pending:
-        "bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400",
+        "bg-amber-50 text-[#D97706] border border-amber-200/60",
       "Not Started":
-        "bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-gray-400",
+        "bg-slate-50 text-[#64748B] border border-slate-200/60",
       Completed:
-        "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400",
+        "bg-emerald-50 text-[#15803D] border border-emerald-200/60",
     };
     return (
       map[status] ||
-      "bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+      "bg-slate-50 text-[#64748B] border border-slate-200/60"
     );
   };
 
   const leaveBadge = (status) => {
     const map = {
       Approved:
-        "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400",
+        "bg-emerald-50 text-[#15803D] border border-emerald-200/60",
       Granted:
-        "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400",
+        "bg-emerald-50 text-[#15803D] border border-emerald-200/60",
       Rejected:
-        "bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400",
+        "bg-rose-50 text-[#DC2626] border border-rose-200/60",
       Pending:
-        "bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400",
+        "bg-amber-50 text-[#D97706] border border-amber-200/60",
     };
     return (
       map[status] ||
-      "bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+      "bg-slate-50 text-[#64748B] border border-slate-200/60"
     );
   };
 
@@ -543,9 +646,9 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
         {/* 4 Summary Stat Cards matching reference image */}
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           <MetricStatCard
-            label="Total Leave"
-            value="20"
-            subtext="days/year"
+            label="Leave Requests"
+            value={`${leaveRequests.length}`}
+            subtext="all requests"
             icon={CalendarDays}
             iconBg="bg-blue-50 text-blue-600"
           />
@@ -861,22 +964,22 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
       case "My Profile":
         return (
           <div className="max-w-4xl space-y-6">
-            <div className="rounded-xl bg-white dark:bg-[#151d2e] p-6 sm:p-8 border border-[#E3E7EB] dark:border-gray-800 shadow-subtle">
-              <div className="flex flex-col sm:flex-row items-center gap-6 pb-8 border-b border-[#E3E7EB] dark:border-gray-800">
-                <div className="relative flex h-24 w-24 items-center justify-center rounded-2xl bg-[#715D78] text-3xl font-bold text-white shadow-subtle">
+            <div className="rounded-xl bg-white p-6 sm:p-8 border border-[#E4E7EC] shadow-card">
+              <div className="flex flex-col sm:flex-row items-center gap-6 pb-8 border-b border-[#E4E7EC]">
+                <div className="relative flex h-24 w-24 items-center justify-center rounded-2xl bg-[#4F46E5] text-3xl font-bold text-white shadow-soft">
                   {profile.firstName.charAt(0)}
-                  <span className="absolute bottom-1 right-1 h-3.5 w-3.5 rounded-full bg-emerald-400 ring-2 ring-white dark:ring-[#151d2e]" />
+                  <span className="absolute bottom-1 right-1 h-3.5 w-3.5 rounded-full bg-emerald-500 ring-2 ring-white" />
                 </div>
                 <div className="text-center sm:text-left">
-                  <h2 className="text-2xl font-semibold text-[#202A35] dark:text-gray-100">
+                  <h2 className="text-2xl font-bold text-[#172033]">
                     {profile.firstName} {profile.lastName}
                   </h2>
-                  <p className="text-sm font-medium text-[#715D78] dark:text-[#B29EB8]">
+                  <p className="text-sm font-semibold text-[#4F46E5]">
                     {profile.role}
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  <p className="text-xs text-[#667085] mt-1 font-medium">
                     Employee ID:{" "}
-                    <span className="font-semibold text-gray-700 dark:text-gray-300">
+                    <span className="font-semibold text-[#172033]">
                       {profile.empId}
                     </span>{" "}
                     • Joined {profile.joinDate}
@@ -886,7 +989,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                   type="button"
                   onClick={() => setIsEditingProfile(true)}
                   disabled={isEditingProfile}
-                  className="sm:ml-auto rounded-xl border border-[#715D78]/30 bg-[#F2EFF3] px-4 py-2 text-xs font-semibold text-[#715D78] transition hover:bg-[#E7E2E9] disabled:cursor-not-allowed disabled:opacity-50 dark:border-indigo-900/40 dark:bg-indigo-900/20 dark:text-indigo-400 dark:hover:bg-[#715D78]/30"
+                  className="sm:ml-auto rounded-xl border border-[#4F46E5]/20 bg-[#F1F3FF] px-4 py-2 text-xs font-semibold text-[#4F46E5] transition hover:bg-[#E5E9FF] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Edit Profile
                 </button>
@@ -895,7 +998,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
               <form className="mt-6 space-y-5">
                 <div className="grid gap-5 sm:grid-cols-2">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                    <label className="block text-xs font-semibold text-[#172033] mb-1.5">
                       First Name
                     </label>
                     <input
@@ -905,11 +1008,11 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                       onChange={(e) =>
                         setProfile({ ...profile, firstName: e.target.value })
                       }
-                      className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#715D78] focus:ring-2 focus:ring-[#715D78]/15 dark:focus:border-[#B29EB8]"
+                      className="w-full rounded-xl border border-[#E4E7EC] bg-[#F8FAFC] p-2.5 text-xs text-[#172033] font-medium outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/15 disabled:bg-gray-100 disabled:text-[#667085]"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                    <label className="block text-xs font-semibold text-[#172033] mb-1.5">
                       Last Name
                     </label>
                     <input
@@ -919,13 +1022,13 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                       onChange={(e) =>
                         setProfile({ ...profile, lastName: e.target.value })
                       }
-                      className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#715D78] focus:ring-2 focus:ring-[#715D78]/15 dark:focus:border-[#B29EB8]"
+                      className="w-full rounded-xl border border-[#E4E7EC] bg-[#F8FAFC] p-2.5 text-xs text-[#172033] font-medium outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/15 disabled:bg-gray-100 disabled:text-[#667085]"
                     />
                   </div>
                 </div>
                 <div className="grid gap-5 sm:grid-cols-2">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                    <label className="block text-xs font-semibold text-[#172033] mb-1.5">
                       Phone Number
                     </label>
                     <input
@@ -935,11 +1038,11 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                       onChange={(e) =>
                         setProfile({ ...profile, phone: e.target.value })
                       }
-                      className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#715D78] focus:ring-2 focus:ring-[#715D78]/15 dark:focus:border-[#B29EB8]"
+                      className="w-full rounded-xl border border-[#E4E7EC] bg-[#F8FAFC] p-2.5 text-xs text-[#172033] font-medium outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/15 disabled:bg-gray-100 disabled:text-[#667085]"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                    <label className="block text-xs font-semibold text-[#172033] mb-1.5">
                       Date of Birth
                     </label>
                     <input
@@ -949,13 +1052,13 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                       onChange={(e) =>
                         setProfile({ ...profile, dateOfBirth: e.target.value })
                       }
-                      className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#715D78] focus:ring-2 focus:ring-[#715D78]/15 dark:focus:border-[#B29EB8]"
+                      className="w-full rounded-xl border border-[#E4E7EC] bg-[#F8FAFC] p-2.5 text-xs text-[#172033] font-medium outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/15 disabled:bg-gray-100 disabled:text-[#667085]"
                     />
                   </div>
                 </div>
                 <div className="grid gap-5 sm:grid-cols-2">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                    <label className="block text-xs font-semibold text-[#172033] mb-1.5">
                       Gender
                     </label>
                     <input
@@ -965,23 +1068,23 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                       onChange={(e) =>
                         setProfile({ ...profile, gender: e.target.value })
                       }
-                      className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#715D78] focus:ring-2 focus:ring-[#715D78]/15 dark:focus:border-[#B29EB8]"
+                      className="w-full rounded-xl border border-[#E4E7EC] bg-[#F8FAFC] p-2.5 text-xs text-[#172033] font-medium outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/15 disabled:bg-gray-100 disabled:text-[#667085]"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                    <label className="block text-xs font-semibold text-[#172033] mb-1.5">
                       Designation
                     </label>
                     <input
                       type="text"
                       disabled
                       value={profile.designation}
-                      className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-gray-100 dark:bg-gray-800 p-2.5 text-xs text-gray-500 cursor-not-allowed"
+                      className="w-full rounded-xl border border-[#E4E7EC] bg-gray-100 p-2.5 text-xs text-[#667085] cursor-not-allowed font-medium"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                  <label className="block text-xs font-semibold text-[#172033] mb-1.5">
                     Residential Address
                   </label>
                   <textarea
@@ -991,7 +1094,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                     onChange={(e) =>
                       setProfile({ ...profile, address: e.target.value })
                     }
-                    className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#715D78] focus:ring-2 focus:ring-[#715D78]/15 dark:focus:border-[#B29EB8]"
+                    className="w-full rounded-xl border border-[#E4E7EC] bg-[#F8FAFC] p-2.5 text-xs text-[#172033] font-medium outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/15 disabled:bg-gray-100 disabled:text-[#667085]"
                   />
                 </div>
                 <div className="pt-4 flex justify-end">
@@ -1004,7 +1107,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                         setIsEditingProfile(false);
                       })()
                     }
-                    className="rounded-xl bg-[#715D78] px-6 py-2.5 text-xs font-semibold text-white shadow-subtle transition hover:bg-[#5D4C63] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-xl bg-[#4F46E5] px-6 py-2.5 text-xs font-semibold text-white shadow-soft transition hover:bg-[#4338CA] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Save Changes
                   </button>
@@ -1017,40 +1120,69 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
       case "Attendance":
         return (
           <div className="space-y-6">
-            <div className="rounded-xl bg-white dark:bg-[#151d2e] p-6 border border-[#E3E7EB] dark:border-gray-800 shadow-subtle flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="rounded-xl bg-white p-6 border border-[#E4E7EC] shadow-card flex flex-col md:flex-row items-center justify-between gap-6">
               <div>
-                <span className="text-xs font-medium uppercase tracking-wider text-[#715D78] dark:text-[#B29EB8]">
+                <span className="text-xs font-semibold uppercase tracking-wider text-[#4F46E5]">
                   Monthly Performance Index
                 </span>
-                <h3 className="text-3xl sm:text-4xl font-bold mt-1 text-[#202A35] dark:text-gray-100">
+                <h3 className="text-3xl sm:text-4xl font-bold mt-1 text-[#172033]">
                   {profile.attendancePercentage}% Attendance Rate
                 </h3>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center justify-end gap-3">
                 {(!todayAttendance || !todayAttendance.checkInTime) ? (
                   <button
                     onClick={handlePunch}
-                    className="rounded-xl px-6 py-2.5 text-xs font-semibold text-white shadow-subtle transition bg-[#715D78] hover:bg-[#5D4C63]"
+                    className="rounded-xl px-6 py-2.5 text-xs font-semibold text-white shadow-soft transition bg-[#4F46E5] hover:bg-[#4338CA]"
                   >
                     Punch In
                   </button>
                 ) : (!todayAttendance.checkOutTime) ? (
-                  <button
-                    onClick={handlePunch}
-                    className="rounded-xl px-6 py-2.5 text-xs font-semibold text-white shadow-subtle transition bg-rose-600 hover:bg-rose-700"
-                  >
-                    Punch Out
-                  </button>
+                  <>
+                    {todayAttendance.isOnBreak ? (
+                      <button
+                        onClick={handleEndBreak}
+                        className="rounded-xl px-5 py-2.5 text-xs font-semibold text-white shadow-soft transition bg-[#15803D] hover:bg-[#166534]"
+                      >
+                        End Break
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleStartBreak}
+                        className="rounded-xl px-5 py-2.5 text-xs font-semibold text-[#92400E] shadow-soft transition bg-amber-100 hover:bg-amber-200"
+                      >
+                        Take Break
+                      </button>
+                    )}
+                    <button
+                      onClick={handlePunch}
+                      className="rounded-xl px-6 py-2.5 text-xs font-semibold text-white shadow-soft transition bg-[#DC2626] hover:bg-[#B91C1C]"
+                    >
+                      Punch Out
+                    </button>
+                  </>
                 ) : (
-                  <span className="text-gray-500 font-medium text-sm flex items-center bg-gray-100 dark:bg-gray-800 px-4 py-2 rounded-lg">
+                  <span className="text-[#15803D] font-semibold text-xs flex items-center bg-emerald-50 border border-emerald-200/60 px-4 py-2 rounded-xl">
                     Attendance Completed
                   </span>
                 )}
               </div>
             </div>
+            {todayAttendance?.checkInTime && !todayAttendance.checkOutTime && (
+              <div className="grid grid-cols-2 gap-3 mb-2">
+                <div className="rounded-xl border border-[#E4E7EC] bg-[#F8FAFC] px-4 py-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-[#667085]">Working Time</p>
+                  <p className="mt-1 text-lg font-bold tabular-nums text-[#172033]">{formatRealtimeDuration(getLiveWorkingMilliseconds())}</p>
+                </div>
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-700">Break Time</p>
+                  <p className="mt-1 text-lg font-bold tabular-nums text-amber-800">{formatRealtimeDuration(getLiveBreakMilliseconds())}</p>
+                </div>
+              </div>
+            )}
             <div className="grid gap-6 lg:grid-cols-3">
-              <div className="rounded-xl bg-white dark:bg-[#151d2e] p-6 border border-[#E3E7EB] dark:border-gray-800 shadow-subtle flex flex-col items-center justify-center">
-                <h3 className="text-base font-semibold mb-4 self-start text-[#202A35] dark:text-gray-100">
+              <div className="rounded-xl bg-white p-6 border border-[#E4E7EC] shadow-card flex flex-col items-center justify-center">
+                <h3 className="text-base font-bold mb-4 self-start text-[#172033]">
                   Attendance Ratio
                 </h3>
                 <div className="h-44 w-44 relative">
@@ -1060,7 +1192,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                       datasets: [
                         {
                           data: [profile.attendancePercentage, 100 - (profile.attendancePercentage || 0)],
-                          backgroundColor: ["#715D78", "#f43f5e"],
+                          backgroundColor: ["#4F46E5", "#F43F5E"],
                           borderWidth: 0,
                         },
                       ],
@@ -1072,17 +1204,17 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                     }}
                   />
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span className="text-2xl font-bold text-[#202A35] dark:text-gray-100">
+                    <span className="text-2xl font-bold text-[#172033]">
                       {profile.attendancePercentage}%
                     </span>
-                    <span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase">
+                    <span className="text-[10px] font-semibold text-[#667085] uppercase">
                       Score
                     </span>
                   </div>
                 </div>
               </div>
-              <div className="lg:col-span-2 rounded-xl bg-white dark:bg-[#151d2e] p-6 border border-[#E3E7EB] dark:border-gray-800 shadow-subtle">
-                <h3 className="text-base font-semibold mb-4 text-[#202A35] dark:text-gray-100">
+              <div className="lg:col-span-2 rounded-xl bg-white p-6 border border-[#E4E7EC] shadow-card">
+                <h3 className="text-base font-bold mb-4 text-[#172033]">
                   Detailed Check-In Logs
                 </h3>
                 <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-2">
@@ -1092,20 +1224,24 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                     const punchOut = log.checkOutTime ? new Date(log.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "In Progress";
                     let duration = "0h 0m";
                     if (log.checkInTime && log.checkOutTime) {
-                      const diff = new Date(log.checkOutTime) - new Date(log.checkInTime);
-                      const hours = Math.floor(diff / (1000 * 60 * 60));
-                      const minutes = Math.floor((diff / (1000 * 60)) % 60);
-                      duration = `${hours}h ${minutes}m`;
+                      duration = log.workingDuration || "0h 0m";
                     }
+                    const breakSeconds = log.breakDurationSeconds ??
+                      (log.breakDurationMinutes || 0) * 60;
+                    const breakHours = Math.floor(breakSeconds / 3600);
+                    const breakMinutes = Math.floor((breakSeconds % 3600) / 60);
+                    const breakDuration = breakSeconds > 0
+                      ? `${breakHours}h ${breakMinutes}m`
+                      : "0h 0m";
                     
                     let statusText = log.status || "Present";
-                    let badgeClass = "bg-[#F2EFF3] text-[#715D78] dark:bg-indigo-900/20 dark:text-indigo-400";
+                    let badgeClass = "bg-[#F1F3FF] text-[#4F46E5] border border-indigo-200/60";
                     if (log.checkInTime && log.checkOutTime) {
                       statusText += " (100%)";
-                      badgeClass = "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400";
+                      badgeClass = "bg-emerald-50 text-[#15803D] border border-emerald-200/60";
                     } else if (!log.checkInTime && !log.checkOutTime && log.status === "Absent") {
                       statusText += " (0%)";
-                      badgeClass = "bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400";
+                      badgeClass = "bg-rose-50 text-[#DC2626] border border-rose-200/60";
                     } else {
                       statusText += " (Incomplete)";
                     }
@@ -1113,16 +1249,19 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                     return (
                       <div
                         key={idx}
-                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl bg-gray-50 dark:bg-gray-800/50 p-3 text-xs border border-[#E3E7EB] dark:border-gray-800"
+                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl bg-[#F8FAFC] p-3 text-xs border border-[#E4E7EC]"
                       >
-                        <span className="font-semibold text-[#202A35] dark:text-gray-100">
+                        <span className="font-semibold text-[#172033]">
                           {date}
                         </span>
-                        <div className="flex items-center gap-4 text-gray-600 dark:text-gray-300 font-medium">
-                          <span>In: {punchIn}</span>
-                          <span>Out: {punchOut}</span>
-                          <span className="font-semibold text-[#202A35] dark:text-gray-100">
-                            {duration}
+                        <div className="flex items-center gap-4 text-[#667085] font-medium">
+                          <span>In: <strong className="text-[#172033] font-semibold">{punchIn}</strong></span>
+                          <span>Out: <strong className="text-[#172033] font-semibold">{punchOut}</strong></span>
+                          <span className="font-semibold text-[#172033]">
+                            Working: {duration}
+                          </span>
+                          <span className="font-semibold text-amber-700">
+                            Break: {breakDuration}
                           </span>
                         </div>
                         <span
@@ -1134,7 +1273,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                     );
                   })}
                   {attendanceLogs.length === 0 && (
-                     <div className="text-sm text-gray-500 text-center py-4">No attendance logs found.</div>
+                     <div className="text-sm text-[#667085] text-center py-4">No attendance logs found.</div>
                   )}
                 </div>
               </div>
@@ -1147,106 +1286,117 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-2xl font-bold text-[#202A35] dark:text-gray-100">
+                <h2 className="text-2xl font-bold text-[#172033]">
                   Leave Tracker & Applications
                 </h2>
-                <p className="text-xs font-medium text-gray-600 dark:text-gray-300 mt-0.5">
+                <p className="text-xs font-medium text-[#667085] mt-0.5">
                   Apply for leaves and review granted requests
                 </p>
               </div>
               <button
                 onClick={() => setIsApplyLeaveOpen(true)}
-                className="flex items-center gap-2 rounded-xl bg-[#715D78] px-5 py-2.5 text-xs font-semibold text-white shadow-subtle hover:bg-[#5D4C63] transition"
+                className="flex items-center gap-2 rounded-xl bg-[#4F46E5] px-5 py-2.5 text-xs font-semibold text-white shadow-soft hover:bg-[#4338CA] transition"
               >
                 <Plus className="h-4 w-4" /> Apply Leave
               </button>
             </div>
+            
+            {/* 3 Leave Summary Cards */}
             <div className="grid gap-4 sm:grid-cols-3">
               {[
-                ["Casual Leave", "06 / 12", "6 days available"],
-                ["Sick Leave", "05 / 08", "5 days available"],
-                ["Earned Leave", "10 / 15", "10 days available"],
-              ].map(([type, count, avail]) => (
-                <div
-                  key={type}
-                  className="rounded-xl bg-white dark:bg-[#151d2e] p-5 border border-[#E3E7EB] dark:border-gray-800 shadow-subtle"
-                >
-                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">
-                    {type}
-                  </p>
-                  <p className="mt-2 text-2xl font-bold text-[#202A35] dark:text-gray-100">
-                    {count}
-                  </p>
-                  <p className="mt-1 text-[11px] text-[#715D78] dark:text-[#B29EB8] font-semibold">
-                    {avail}
-                  </p>
-                </div>
-              ))}
+                { type: "Casual Leave", count: "06 / 12", avail: "6 days available", icon: Coffee, iconColor: "text-blue-600 bg-blue-50" },
+                { type: "Sick Leave", count: "05 / 08", avail: "5 days available", icon: Thermometer, iconColor: "text-amber-600 bg-amber-50" },
+                { type: "Earned Leave", count: "10 / 15", avail: "10 days available", icon: Palmtree, iconColor: "text-emerald-600 bg-emerald-50" },
+              ].map((card) => {
+                const IconComponent = card.icon;
+                return (
+                  <div
+                    key={card.type}
+                    className="rounded-xl bg-white p-5 border border-[#E4E7EC] shadow-card hover:shadow-elevated transition"
+                  >
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-semibold text-[#667085]">
+                        {card.type}
+                      </p>
+                      <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${card.iconColor}`}>
+                        <IconComponent className="h-4 w-4" />
+                      </div>
+                    </div>
+                    <p className="mt-2 text-2xl font-bold text-[#172033]">
+                      {card.count}
+                    </p>
+                    <p className="mt-1 text-[11px] text-[#4F46E5] font-semibold">
+                      {card.avail}
+                    </p>
+                  </div>
+                );
+              })}
             </div>
-            <div className="rounded-xl bg-white dark:bg-[#151d2e] p-6 border border-[#E3E7EB] dark:border-gray-800 shadow-subtle">
-              <h3 className="text-base font-semibold mb-4 text-[#202A35] dark:text-gray-100">
+
+            {/* My Leave History Section */}
+            <div className="rounded-xl bg-white p-6 border border-[#E4E7EC] shadow-card">
+              <h3 className="text-base font-bold mb-4 text-[#172033]">
                 My Leave History
               </h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm min-w-[600px]">
-                  <thead className="border-b border-[#E3E7EB] dark:border-gray-800 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                  <thead className="border-b border-[#E4E7EC] text-xs font-semibold uppercase tracking-wider text-[#667085] bg-[#F8FAFC]">
                     <tr>
-                      <th className="pb-3">Type</th>
-                      <th className="pb-3">Dates</th>
-                      <th className="pb-3">Reason</th>
-                      <th className="pb-3">Document</th>
-                      <th className="pb-3 text-right">Status</th>
-                      <th className="pb-3 text-right">Actions</th>
+                      <th className="py-3 px-4">Type</th>
+                      <th className="py-3 px-4">Dates</th>
+                      <th className="py-3 px-4">Reason</th>
+                      <th className="py-3 px-4">Document</th>
+                      <th className="py-3 px-4 text-right">Status</th>
+                      <th className="py-3 px-4 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800/50">
+                  <tbody className="divide-y divide-[#E4E7EC]">
                     {leaveRequests.map((req) => (
                       <tr
                         key={req._id || req.id}
-                        className="hover:bg-[#F0F2F4] dark:hover:bg-gray-800/30"
+                        className="hover:bg-[#F1F3FF] transition"
                       >
-                        <td className="py-3.5 font-medium text-gray-700 dark:text-gray-300">
+                        <td className="py-3.5 px-4 font-semibold text-[#172033]">
                           {req.type}
                         </td>
-                        <td className="py-3.5 text-gray-600 dark:text-gray-300 font-medium">
+                        <td className="py-3.5 px-4 text-[#667085] font-medium text-xs">
                           {req.fromDate} - {req.toDate}
                         </td>
-                        <td className="py-3.5 text-gray-500 dark:text-gray-400">
+                        <td className="py-3.5 px-4 text-[#64748B] text-xs">
                           <div>{req.reason}</div>
                           {req.status === "Rejected" && req.rejectionReason && (
-                            <div className="mt-1 text-xs text-rose-600 dark:text-rose-400">
+                            <div className="mt-1 text-xs text-[#DC2626] font-medium">
                               Rejection reason: {req.rejectionReason}
                             </div>
                           )}
                         </td>
                         {req.documentLink ? (
-                          <td className="py-3.5">
-                            <button className="rounded-lg bg-[#F2EFF3] dark:bg-[#715D78]/20 px-3 py-1.5 text-xs font-semibold text-[#715D78] dark:text-[#B29EB8] hover:bg-[#E7E2E9] dark:hover:bg-indigo-800/30 transition">
-                              <a
-                                href={req.documentLink}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-[#715D78] dark:text-[#B29EB8] hover:underline"
-                              >
-                                View Document
-                              </a>
-                            </button>
+                          <td className="py-3.5 px-4">
+                            <a
+                              href={req.documentLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-[#F1F3FF] px-2.5 py-1 text-xs font-semibold text-[#4F46E5] hover:bg-[#E5E9FF] transition"
+                            >
+                              <FileText className="h-3.5 w-3.5" />
+                              View Document
+                            </a>
                           </td>
                         ) : (
-                          <td className="py-3.5 text-gray-500 dark:text-gray-400">
+                          <td className="py-3.5 px-4 text-[#667085] text-xs">
                             No document
                           </td>
                         )}
-                        <td className="py-3.5 text-right">
+                        <td className="py-3.5 px-4 text-right">
                           <span
                             className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${leaveBadge(req.status)}`}
                           >
                             {req.status}
                           </span>
                         </td>
-                        <td className="py-3.5 text-right">
+                        <td className="py-3.5 px-4 text-right">
                           {req.status === "Pending" ? (
-                            <>
+                            <div className="inline-flex items-center gap-1">
                               <button
                                 type="button"
                                 onClick={() =>
@@ -1254,7 +1404,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                                 }
                                 aria-label={`Delete ${req.type} leave request`}
                                 title="Delete leave request"
-                                className="inline-flex rounded-lg p-2 text-red-500 transition hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-900/20"
+                                className="inline-flex rounded-lg p-1.5 text-rose-600 transition hover:bg-rose-50"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </button>
@@ -1263,13 +1413,13 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                                 onClick={() => handleEditLeave(req)}
                                 aria-label={`Edit ${req.type} leave request`}
                                 title="Edit leave request"
-                                className="inline-flex rounded-lg p-2 text-blue-500 transition hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-900/20"
+                                className="inline-flex rounded-lg p-1.5 text-[#4F46E5] transition hover:bg-indigo-50"
                               >
                                 <FilePenIcon className="h-4 w-4" />
                               </button>
-                            </>
+                            </div>
                           ) : (
-                            <span className="text-gray-400 dark:text-gray-500">
+                            <span className="text-gray-400">
                               -
                             </span>
                           )}
@@ -1287,10 +1437,10 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
         return (
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-bold text-[#202A35] dark:text-gray-100">
+              <h2 className="text-xl font-bold text-[#172033]">
                 Assigned Deliverables
               </h2>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+              <p className="text-xs text-[#667085]">
                 Track and update sprint tasks
               </p>
             </div>
@@ -1298,33 +1448,33 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
               {tasks.map((task) => (
                 <div
                   key={task._id}
-                  className="rounded-xl bg-white dark:bg-[#151d2e] p-5 border border-[#E3E7EB] dark:border-gray-800 shadow-subtle flex flex-col justify-between"
+                  className="rounded-xl bg-white p-5 border border-[#E4E7EC] shadow-card flex flex-col justify-between"
                 >
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-medium uppercase tracking-wider text-[#715D78] dark:text-[#B29EB8]">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-[#4F46E5]">
                         Assigned Task
                       </span>
-                      <span className="rounded-full bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400 px-2 py-0.5 text-[10px] font-semibold">
+                      <span className="rounded-full bg-amber-50 text-[#D97706] border border-amber-200/60 px-2 py-0.5 text-[10px] font-semibold">
                         {task.priority} Priority
                       </span>
                     </div>
-                    <h3 className="text-base font-semibold text-[#202A35] dark:text-gray-100">
+                    <h3 className="text-base font-bold text-[#172033]">
                       {task.title}
                     </h3>
                     {task.description && (
-                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      <p className="mt-1 text-xs text-[#64748B]">
                         {task.description}
                       </p>
                     )}
                   </div>
-                  <div className="mt-6 pt-4 border-t border-[#E3E7EB] dark:border-gray-800 flex items-center justify-between">
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                  <div className="mt-6 pt-4 border-t border-[#E4E7EC] flex items-center justify-between">
+                    <span className="text-xs text-[#667085] font-medium">
                       Deadline: {task.deadline || "Not set"}
                     </span>
                     <button
                       onClick={() => handleTaskStatusChange(task)}
-                      className={`rounded-xl px-3 py-1.5 text-xs font-semibold shadow-subtle transition ${task.status === "Completed" ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400" : "bg-[#715D78] hover:bg-[#5D4C63] text-white"}`}
+                      className={`rounded-xl px-3 py-1.5 text-xs font-semibold shadow-soft transition ${task.status === "Completed" ? "bg-emerald-50 text-[#15803D] border border-emerald-200/60" : "bg-[#4F46E5] hover:bg-[#4338CA] text-white"}`}
                     >
                       {task.status === "Completed"
                         ? "Completed"
@@ -1341,19 +1491,19 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
         return (
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-bold text-[#202A35] dark:text-gray-100">
+              <h2 className="text-xl font-bold text-[#172033]">
                 Payroll & Payslips
               </h2>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+              <p className="text-xs text-[#667085]">
                 Download your salary statements and tax reports
               </p>
             </div>
-            <div className="rounded-xl bg-white dark:bg-[#151d2e] p-6 border border-[#E3E7EB] dark:border-gray-800 shadow-subtle">
+            <div className="rounded-xl bg-white p-6 border border-[#E4E7EC] shadow-card">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-base font-semibold text-[#202A35] dark:text-gray-100">
+                <h3 className="text-base font-bold text-[#172033]">
                   Recent Payslips
                 </h3>
-                <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                <span className="text-xs text-[#667085] font-semibold">
                   Year 2025 ▾
                 </span>
               </div>
@@ -1362,22 +1512,22 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                   (month, i) => (
                     <div
                       key={i}
-                      className="flex items-center justify-between p-3 rounded-xl border border-[#E3E7EB] dark:border-gray-800 bg-[#F0F2F4] dark:bg-[#0c1222] hover:bg-gray-100 dark:hover:bg-gray-800/80 transition cursor-pointer"
+                      className="flex items-center justify-between p-3.5 rounded-xl border border-[#E4E7EC] bg-[#F8FAFC] hover:bg-[#F1F3FF] transition cursor-pointer"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#F2EFF3] dark:bg-[#715D78]/20 text-[#715D78] dark:text-[#B29EB8]">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#F1F3FF] text-[#4F46E5]">
                           <FileText className="h-5 w-5" />
                         </div>
                         <div>
-                          <p className="text-sm font-semibold text-[#202A35] dark:text-gray-100">
+                          <p className="text-sm font-semibold text-[#172033]">
                             Payslip - {month}
                           </p>
-                          <p className="text-[10px] text-gray-400 dark:text-gray-500">
+                          <p className="text-[10px] text-[#667085]">
                             Generated on 1st {month}
                           </p>
                         </div>
                       </div>
-                      <button className="flex items-center justify-center h-8 w-8 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700">
+                      <button className="flex items-center justify-center h-8 w-8 rounded-lg bg-white border border-[#E4E7EC] text-[#64748B] hover:text-[#4F46E5] hover:bg-[#F1F3FF] transition">
                         <Download className="h-4 w-4" />
                       </button>
                     </div>
@@ -1385,32 +1535,32 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                 )}
               </div>
             </div>
-            <div className="rounded-xl bg-white dark:bg-[#151d2e] p-6 border border-[#E3E7EB] dark:border-gray-800 shadow-subtle">
-              <h3 className="text-base font-semibold text-[#202A35] dark:text-gray-100 mb-6">
+            <div className="rounded-xl bg-white p-6 border border-[#E4E7EC] shadow-card">
+              <h3 className="text-base font-bold text-[#172033] mb-6">
                 CTC Structure Overview
               </h3>
               <div className="grid gap-4 sm:grid-cols-3">
-                <div className="p-4 rounded-xl bg-[#F0F2F4] dark:bg-[#0c1222] border border-[#E3E7EB] dark:border-gray-800">
-                  <p className="text-gray-500 dark:text-gray-400 text-xs font-medium">
+                <div className="p-4 rounded-xl bg-[#F8FAFC] border border-[#E4E7EC]">
+                  <p className="text-[#667085] text-xs font-semibold">
                     Gross Earnings
                   </p>
-                  <p className="text-xl font-bold text-[#202A35] dark:text-gray-100 mt-1">
+                  <p className="text-xl font-bold text-[#172033] mt-1">
                     ₹1,20,833
                   </p>
                 </div>
-                <div className="p-4 rounded-xl bg-[#F0F2F4] dark:bg-[#0c1222] border border-[#E3E7EB] dark:border-gray-800">
-                  <p className="text-gray-500 dark:text-gray-400 text-xs font-medium">
+                <div className="p-4 rounded-xl bg-[#F8FAFC] border border-[#E4E7EC]">
+                  <p className="text-[#667085] text-xs font-semibold">
                     Deductions (PF + Tax)
                   </p>
-                  <p className="text-xl font-bold text-rose-500 dark:text-rose-400 mt-1">
+                  <p className="text-xl font-bold text-[#DC2626] mt-1">
                     - ₹18,400
                   </p>
                 </div>
-                <div className="p-4 rounded-xl bg-[#F0F2F4] dark:bg-[#0c1222] border border-[#E3E7EB] dark:border-gray-800">
-                  <p className="text-gray-500 dark:text-gray-400 text-xs font-medium">
+                <div className="p-4 rounded-xl bg-[#F8FAFC] border border-[#E4E7EC]">
+                  <p className="text-[#667085] text-xs font-semibold">
                     Net Take Home
                   </p>
-                  <p className="text-xl font-bold text-emerald-500 dark:text-emerald-400 mt-1">
+                  <p className="text-xl font-bold text-[#15803D] mt-1">
                     ₹1,02,433
                   </p>
                 </div>
@@ -1421,41 +1571,42 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
 
       case "Documents":
         return (
-          <div className="space-y-6">
+          <div className="mx-auto max-w-3xl space-y-6">
             <div>
-              <h2 className="text-xl font-bold text-[#202A35] dark:text-gray-100">
+              <h2 className="text-xl font-bold text-[#172033]">
                 Employee Documents
               </h2>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+              <p className="text-xs text-[#667085]">
                 Official letters and credentials
               </p>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               {documents.length === 0 ? (
-                <div className="col-span-2 text-sm text-gray-500">No documents uploaded yet.</div>
+                <div className="col-span-2 text-sm text-[#667085] p-6 bg-white rounded-xl border border-[#E4E7EC] text-center">No documents uploaded yet.</div>
               ) : (
                 documents.map((doc) => (
                   <div
                     key={doc._id}
-                    className="p-4 rounded-xl bg-white dark:bg-[#151d2e] border border-[#E3E7EB] dark:border-gray-800 shadow-subtle flex justify-between items-center"
+                    className="p-4 rounded-xl bg-white border border-[#E4E7EC] shadow-card flex justify-between items-center"
                   >
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-3">
-                        <FileText className="h-5 w-5 text-[#715D78] dark:text-[#B29EB8]" />
-                        <span className="text-xs font-semibold text-[#202A35] dark:text-gray-100">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#F1F3FF] text-[#4F46E5]">
+                          <FileText className="h-4 w-4" />
+                        </div>
+                        <span className="truncate text-xs font-bold text-[#172033]">
                           {doc.title}
                         </span>
                       </div>
-                      <span className="text-[10px] text-gray-500 ml-8">{doc.documentType}</span>
+                      <span className="text-[10px] text-[#667085] ml-12 font-medium">{doc.documentType}</span>
                     </div>
-                    <a
-                      href={`http://localhost:3000${doc.fileUrl}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs font-semibold text-[#715D78] dark:text-[#B29EB8] hover:underline"
+                    <button
+                      type="button"
+                      onClick={() => openDocument(doc._id)}
+                      className="text-xs font-semibold text-[#4F46E5] hover:underline bg-[#F1F3FF] px-3 py-1.5 rounded-lg transition"
                     >
                       View / Download
-                    </a>
+                    </button>
                   </div>
                 ))
               )}
@@ -1466,51 +1617,59 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
       case "Notifications":
         return (
           <div className="max-w-2xl space-y-4">
-            <h2 className="text-xl font-bold text-[#202A35] dark:text-gray-100">
+            <h2 className="text-xl font-bold text-[#172033]">
               Alerts & Notifications
             </h2>
-            {notifications.map((n) => (
-              <div
-                key={n.id}
-                className="p-4 rounded-xl bg-white dark:bg-[#151d2e] border border-[#E3E7EB] dark:border-gray-800 shadow-subtle flex items-start gap-3"
-              >
-                <Bell className="h-4 w-4 text-[#715D78] dark:text-[#B29EB8] mt-0.5" />
-                <div>
-                  <h4 className="font-semibold text-xs text-[#202A35] dark:text-gray-100">
-                    {n.title}
-                  </h4>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    {n.desc}
-                  </p>
-                </div>
+            {notifications.length === 0 ? (
+              <div className="p-6 rounded-xl bg-white border border-[#E4E7EC] text-sm text-[#667085] text-center">
+                No notifications yet.
               </div>
-            ))}
+            ) : (
+              notifications.map((n) => (
+                <div
+                  key={n._id}
+                  className="p-4 rounded-xl bg-white border border-[#E4E7EC] shadow-card flex items-start gap-3"
+                >
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#F1F3FF] text-[#4F46E5] mt-0.5">
+                    <Bell className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-xs text-[#172033]">
+                      {n.title}
+                    </h4>
+                    <p className="text-xs text-[#667085] mt-0.5">
+                      {n.message}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         );
 
       case "Announcements":
         return (
           <div className="space-y-4 max-w-2xl">
-            <h2 className="text-xl font-bold text-[#202A35] dark:text-gray-100">
+            <h2 className="text-xl font-bold text-[#172033]">
               Announcements
             </h2>
             {announcements.length === 0 ? (
-              <div className="p-5 rounded-xl bg-white dark:bg-[#151d2e] border border-[#E3E7EB] dark:border-gray-800 shadow-subtle text-sm text-gray-500 dark:text-gray-400">
+              <div className="p-6 rounded-xl bg-white border border-[#E4E7EC] shadow-card text-sm text-[#667085] text-center">
                 No announcements yet.
               </div>
             ) : (
               announcements.map((announcement) => (
                 <div
                   key={announcement._id}
-                  className="p-5 rounded-xl bg-white dark:bg-[#151d2e] border border-[#E3E7EB] dark:border-gray-800 shadow-subtle"
+                  className="p-5 rounded-xl bg-white border border-[#E4E7EC] shadow-card"
                 >
-                  <span className="text-[10px] font-semibold text-[#715D78] uppercase">
+                  <span className="text-[10px] font-bold text-[#4F46E5] uppercase tracking-wider bg-[#F1F3FF] px-2 py-0.5 rounded-md">
                     Notice
                   </span>
-                  <h4 className="text-base font-semibold mt-1 text-[#202A35] dark:text-gray-100">
+                  <h4 className="text-base font-bold mt-2 text-[#172033]">
                     {announcement.headline}
                   </h4>
-                  <p className="text-xs text-gray-600 dark:text-gray-300 mt-2 font-medium">
+                  <p className="text-xs text-[#64748B] mt-1.5 font-medium leading-relaxed">
                     {announcement.body}
                   </p>
                 </div>
@@ -1524,24 +1683,24 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-xl font-bold text-[#202A35] dark:text-gray-100">
+                <h2 className="text-xl font-bold text-[#172033]">
                   My Projects
                 </h2>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-xs text-[#667085]">
                   Showcase your work and uploaded projects
                 </p>
               </div>
               <button
                 onClick={() => setIsAddProjectOpen(true)}
-                className="flex items-center gap-2 rounded-xl bg-[#715D78] px-5 py-2.5 text-xs font-semibold text-white shadow-subtle hover:bg-[#5D4C63] transition"
+                className="flex items-center gap-2 rounded-xl bg-[#4F46E5] px-5 py-2.5 text-xs font-semibold text-white shadow-soft hover:bg-[#4338CA] transition"
               >
                 <Plus className="h-4 w-4" /> Upload Project
               </button>
             </div>
 
             {projects.length === 0 ? (
-              <div className="p-8 text-center rounded-xl bg-white dark:bg-[#151d2e] border border-[#E3E7EB] dark:border-gray-800">
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+              <div className="p-8 text-center rounded-xl bg-white border border-[#E4E7EC] shadow-card">
+                <p className="text-sm text-[#667085]">
                   No projects uploaded yet. Click on "Upload Project" to add
                   one!
                 </p>
@@ -1551,21 +1710,21 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                 {projects.map((project) => (
                   <div
                     key={project._id}
-                    className="flex flex-col rounded-xl bg-white dark:bg-[#151d2e] p-5 border border-[#E3E7EB] dark:border-gray-800 shadow-subtle"
+                    className="flex flex-col rounded-xl bg-white p-5 border border-[#E4E7EC] shadow-card hover:shadow-elevated transition"
                   >
-                    <h3 className="text-base font-bold text-[#202A35] dark:text-gray-100">
+                    <h3 className="text-base font-bold text-[#172033]">
                       {project.title}
                     </h3>
-                    <p className="mt-2 text-xs text-gray-600 dark:text-gray-400 line-clamp-3">
+                    <p className="mt-2 text-xs text-[#64748B] line-clamp-3">
                       {project.content}
                     </p>
-                    <div className="mt-4 pt-4 border-t border-[#E3E7EB] dark:border-gray-800 flex flex-wrap gap-3">
+                    <div className="mt-4 pt-4 border-t border-[#E4E7EC] flex flex-wrap gap-3">
                       {project.githubLink && (
                         <a
                           href={project.githubLink}
                           target="_blank"
                           rel="noreferrer"
-                          className="flex items-center gap-1 text-[11px] font-semibold text-gray-600 hover:text-[#715D78] dark:text-gray-400 dark:hover:text-indigo-400"
+                          className="flex items-center gap-1.5 text-[11px] font-semibold text-[#172033] hover:text-[#4F46E5] bg-[#F8FAFC] px-2.5 py-1 rounded-lg border border-[#E4E7EC] transition"
                         >
                           <GithubIcon className="h-3.5 w-3.5" />
                           GitHub
@@ -1576,7 +1735,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                           href={project.linkedinLink}
                           target="_blank"
                           rel="noreferrer"
-                          className="flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                          className="flex items-center gap-1.5 text-[11px] font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200/60 transition"
                         >
                           <LinkedinIcon className="h-3.5 w-3.5" />
                           LinkedIn
@@ -1587,7 +1746,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                           href={project.liveLink}
                           target="_blank"
                           rel="noreferrer"
-                          className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
+                          className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600 hover:text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200/60 transition"
                         >
                           <svg
                             className="h-3.5 w-3.5"
@@ -1607,15 +1766,15 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                       )}
                     </div>
                     {project.score && (
-                      <div className="mt-4 pt-4 border-t border-[#E3E7EB] dark:border-gray-800 bg-[#F0F2F4] dark:bg-gray-800/20 p-3 rounded-lg">
-                        <p className="text-xs font-semibold text-[#202A35] dark:text-gray-100">
+                      <div className="mt-4 pt-4 border-t border-[#E4E7EC] bg-[#F8FAFC] p-3 rounded-lg">
+                        <p className="text-xs font-semibold text-[#172033]">
                           Review Score:{" "}
-                          <span className="text-[#715D78] dark:text-[#B29EB8]">
+                          <span className="text-[#4F46E5] font-bold">
                             {project.score}/5
                           </span>
                         </p>
                         {project.feedback && (
-                          <p className="text-[11px] text-gray-600 dark:text-gray-400 mt-1.5 italic">
+                          <p className="text-[11px] text-[#64748B] mt-1.5 italic">
                             "{project.feedback}"
                           </p>
                         )}
@@ -1645,13 +1804,13 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
           <>
             <button
               onClick={() => setIsApplyLeaveOpen(false)}
-              className="rounded-xl px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+              className="rounded-xl px-4 py-2 text-xs font-semibold text-[#667085] hover:bg-[#F1F3FF] transition"
             >
               Cancel
             </button>
             <button
               onClick={handleApplyLeave}
-              className="rounded-xl bg-[#715D78] hover:bg-[#5D4C63] px-5 py-2 text-xs font-semibold text-white shadow-subtle"
+              className="rounded-xl bg-[#4F46E5] hover:bg-[#4338CA] px-5 py-2 text-xs font-semibold text-white shadow-soft transition"
             >
               Submit Application
             </button>
@@ -1660,7 +1819,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
       >
         <form onSubmit={handleApplyLeave} className="space-y-4 text-xs">
           <div>
-            <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+            <label className="block font-semibold text-[#172033] mb-1.5">
               Leave Type
             </label>
             <select
@@ -1668,7 +1827,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
               onChange={(e) =>
                 setNewLeave({ ...newLeave, type: e.target.value })
               }
-              className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#715D78] focus:ring-2 focus:ring-[#715D78]/15 dark:focus:border-[#B29EB8] cursor-pointer"
+              className="w-full rounded-xl border border-[#E4E7EC] bg-[#F8FAFC] p-2.5 text-xs text-[#172033] font-medium outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/15 cursor-pointer"
             >
               <option value="">Select Leave Type</option>
               <option>Sick Leave</option>
@@ -1678,7 +1837,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+              <label className="block font-semibold text-[#172033] mb-1.5">
                 From Date
               </label>
               <input
@@ -1687,11 +1846,11 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                 onChange={(e) =>
                   setNewLeave({ ...newLeave, fromDate: e.target.value })
                 }
-                className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#715D78] focus:ring-2 focus:ring-[#715D78]/15 dark:focus:border-[#B29EB8]"
+                className="w-full rounded-xl border border-[#E4E7EC] bg-[#F8FAFC] p-2.5 text-xs text-[#172033] font-medium outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/15"
               />
             </div>
             <div>
-              <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+              <label className="block font-semibold text-[#172033] mb-1.5">
                 To Date
               </label>
               <input
@@ -1700,12 +1859,12 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                 onChange={(e) =>
                   setNewLeave({ ...newLeave, toDate: e.target.value })
                 }
-                className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#715D78] focus:ring-2 focus:ring-[#715D78]/15 dark:focus:border-[#B29EB8]"
+                className="w-full rounded-xl border border-[#E4E7EC] bg-[#F8FAFC] p-2.5 text-xs text-[#172033] font-medium outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/15"
               />
             </div>
           </div>
           <div>
-            <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+            <label className="block font-semibold text-[#172033] mb-1.5">
               Reason for Leave
             </label>
             <textarea
@@ -1715,12 +1874,12 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                 setNewLeave({ ...newLeave, reason: e.target.value })
               }
               placeholder="Provide reason for time off..."
-              className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#715D78] focus:ring-2 focus:ring-[#715D78]/15 dark:focus:border-[#B29EB8]"
+              className="w-full rounded-xl border border-[#E4E7EC] bg-[#F8FAFC] p-2.5 text-xs text-[#172033] font-medium outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/15"
             />
           </div>
           {newLeave.type === "Sick Leave" && (
             <div>
-              <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+              <label className="block font-semibold text-[#172033] mb-1.5">
                 Google Drive link for medical certificate (if any)
               </label>
               <input
@@ -1730,7 +1889,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                   setNewLeave({ ...newLeave, documentLink: e.target.value })
                 }
                 placeholder="Paste the link to your medical certificate..."
-                className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#715D78] focus:ring-2 focus:ring-[#715D78]/15 dark:focus:border-[#B29EB8]"
+                className="w-full rounded-xl border border-[#E4E7EC] bg-[#F8FAFC] p-2.5 text-xs text-[#172033] font-medium outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/15"
               />
             </div>
           )}
@@ -1745,13 +1904,13 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
           <>
             <button
               onClick={() => setIsEditLeaveOpen(false)}
-              className="rounded-xl px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+              className="rounded-xl px-4 py-2 text-xs font-semibold text-[#667085] hover:bg-[#F1F3FF] transition"
             >
               Cancel
             </button>
             <button
               onClick={handleUpdateLeave}
-              className="rounded-xl bg-[#715D78] hover:bg-[#5D4C63] px-5 py-2 text-xs font-semibold text-white shadow-subtle"
+              className="rounded-xl bg-[#4F46E5] hover:bg-[#4338CA] px-5 py-2 text-xs font-semibold text-white shadow-soft transition"
             >
               Save Changes
             </button>
@@ -1760,7 +1919,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
       >
         <form onSubmit={handleUpdateLeave} className="space-y-4 text-xs">
           <div>
-            <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+            <label className="block font-semibold text-[#172033] mb-1.5">
               Leave Type
             </label>
             <select
@@ -1768,7 +1927,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
               onChange={(e) =>
                 setNewLeave({ ...newLeave, type: e.target.value })
               }
-              className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#715D78] focus:ring-2 focus:ring-[#715D78]/15 dark:focus:border-[#B29EB8] cursor-pointer"
+              className="w-full rounded-xl border border-[#E4E7EC] bg-[#F8FAFC] p-2.5 text-xs text-[#172033] font-medium outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/15 cursor-pointer"
             >
               <option value="">Select Leave Type</option>
               <option>Sick Leave</option>
@@ -1778,7 +1937,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+              <label className="block font-semibold text-[#172033] mb-1.5">
                 From Date
               </label>
               <input
@@ -1787,11 +1946,11 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                 onChange={(e) =>
                   setNewLeave({ ...newLeave, fromDate: e.target.value })
                 }
-                className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#715D78] focus:ring-2 focus:ring-[#715D78]/15 dark:focus:border-[#B29EB8]"
+                className="w-full rounded-xl border border-[#E4E7EC] bg-[#F8FAFC] p-2.5 text-xs text-[#172033] font-medium outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/15"
               />
             </div>
             <div>
-              <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+              <label className="block font-semibold text-[#172033] mb-1.5">
                 To Date
               </label>
               <input
@@ -1800,12 +1959,12 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                 onChange={(e) =>
                   setNewLeave({ ...newLeave, toDate: e.target.value })
                 }
-                className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#715D78] focus:ring-2 focus:ring-[#715D78]/15 dark:focus:border-[#B29EB8]"
+                className="w-full rounded-xl border border-[#E4E7EC] bg-[#F8FAFC] p-2.5 text-xs text-[#172033] font-medium outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/15"
               />
             </div>
           </div>
           <div>
-            <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+            <label className="block font-semibold text-[#172033] mb-1.5">
               Reason for Leave
             </label>
             <textarea
@@ -1815,12 +1974,12 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                 setNewLeave({ ...newLeave, reason: e.target.value })
               }
               placeholder="Provide reason for time off..."
-              className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#715D78] focus:ring-2 focus:ring-[#715D78]/15 dark:focus:border-[#B29EB8]"
+              className="w-full rounded-xl border border-[#E4E7EC] bg-[#F8FAFC] p-2.5 text-xs text-[#172033] font-medium outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/15"
             />
           </div>
           {newLeave.type === "Sick Leave" && (
             <div>
-              <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+              <label className="block font-semibold text-[#172033] mb-1.5">
                 Google Drive link for medical certificate (if any)
               </label>
               <input
@@ -1830,7 +1989,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                   setNewLeave({ ...newLeave, documentLink: e.target.value })
                 }
                 placeholder="Paste the link to your medical certificate..."
-                className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#715D78] focus:ring-2 focus:ring-[#715D78]/15 dark:focus:border-[#B29EB8]"
+                className="w-full rounded-xl border border-[#E4E7EC] bg-[#F8FAFC] p-2.5 text-xs text-[#172033] font-medium outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/15"
               />
             </div>
           )}
@@ -1846,13 +2005,13 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
           <>
             <button
               onClick={() => setIsAddProjectOpen(false)}
-              className="rounded-xl px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+              className="rounded-xl px-4 py-2 text-xs font-semibold text-[#667085] hover:bg-[#F1F3FF] transition"
             >
               Cancel
             </button>
             <button
               onClick={handleAddProject}
-              className="rounded-xl bg-[#715D78] hover:bg-[#5D4C63] px-5 py-2 text-xs font-semibold text-white shadow-subtle"
+              className="rounded-xl bg-[#4F46E5] hover:bg-[#4338CA] px-5 py-2 text-xs font-semibold text-white shadow-soft transition"
             >
               Upload Project
             </button>
@@ -1861,7 +2020,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
       >
         <form onSubmit={handleAddProject} className="space-y-4 text-xs">
           <div>
-            <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+            <label className="block font-semibold text-[#172033] mb-1.5">
               Project Title
             </label>
             <input
@@ -1871,11 +2030,11 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                 setProjectForm({ ...projectForm, title: e.target.value })
               }
               placeholder="e.g. AI-Powered Resume Screener"
-              className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#715D78] focus:ring-2 focus:ring-[#715D78]/15 dark:focus:border-[#B29EB8]"
+              className="w-full rounded-xl border border-[#E4E7EC] bg-[#F8FAFC] p-2.5 text-xs text-[#172033] font-medium outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/15"
             />
           </div>
           <div>
-            <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+            <label className="block font-semibold text-[#172033] mb-1.5">
               Project Content / Overview
             </label>
             <textarea
@@ -1885,12 +2044,12 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                 setProjectForm({ ...projectForm, content: e.target.value })
               }
               placeholder="Describe the project architecture, features, and technologies used..."
-              className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#715D78] focus:ring-2 focus:ring-[#715D78]/15 dark:focus:border-[#B29EB8]"
+              className="w-full rounded-xl border border-[#E4E7EC] bg-[#F8FAFC] p-2.5 text-xs text-[#172033] font-medium outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/15"
             />
           </div>
-          <div className="space-y-3 pt-2 border-t border-[#E3E7EB] dark:border-gray-800">
+          <div className="space-y-3 pt-2 border-t border-[#E4E7EC]">
             <div>
-              <label className="flex items-center gap-1.5 font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+              <label className="flex items-center gap-1.5 font-semibold text-[#172033] mb-1.5">
                 <GithubIcon className="h-3.5 w-3.5" /> GitHub Repository Link
               </label>
               <input
@@ -1900,13 +2059,13 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                   setProjectForm({ ...projectForm, githubLink: e.target.value })
                 }
                 placeholder="https://github.com/username/project"
-                className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#715D78] focus:ring-2 focus:ring-[#715D78]/15 dark:focus:border-[#B29EB8]"
+                className="w-full rounded-xl border border-[#E4E7EC] bg-[#F8FAFC] p-2.5 text-xs text-[#172033] font-medium outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/15"
               />
             </div>
             <div>
-              <label className="flex items-center gap-1.5 font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+              <label className="flex items-center gap-1.5 font-semibold text-[#172033] mb-1.5">
                 <svg
-                  className="h-3.5 w-3.5 text-emerald-500 dark:text-emerald-400"
+                  className="h-3.5 w-3.5 text-emerald-600"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -1930,12 +2089,12 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                   })
                 }
                 placeholder="https://example.com"
-                className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#715D78] focus:ring-2 focus:ring-[#715D78]/15 dark:focus:border-[#B29EB8]"
+                className="w-full rounded-xl border border-[#E4E7EC] bg-[#F8FAFC] p-2.5 text-xs text-[#172033] font-medium outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/15"
               />
             </div>
             <div>
-              <label className="flex items-center gap-1.5 font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
-                <LinkedinIcon className="h-3.5 w-3.5 text-blue-500 dark:text-blue-400" />{" "}
+              <label className="flex items-center gap-1.5 font-semibold text-[#172033] mb-1.5">
+                <LinkedinIcon className="h-3.5 w-3.5 text-blue-600" />{" "}
                 LinkedIn Post Link
               </label>
               <input
@@ -1948,7 +2107,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
                   })
                 }
                 placeholder="https://linkedin.com/posts/..."
-                className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#715D78] focus:ring-2 focus:ring-[#715D78]/15 dark:focus:border-[#B29EB8]"
+                className="w-full rounded-xl border border-[#E4E7EC] bg-[#F8FAFC] p-2.5 text-xs text-[#172033] font-medium outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/15"
               />
             </div>
           </div>
@@ -1967,7 +2126,7 @@ const EmployeeContent = ({ activeSection, setActiveSection, userDetails }) => {
         }}
       >
         <div className="flex flex-col items-center p-4">
-          <p className="text-sm text-gray-500 mb-6 text-center">
+          <p className="text-sm text-[#667085] mb-6 text-center">
             Look at the camera to mark your attendance.
           </p>
           {isWebcamCheckInOpen && (

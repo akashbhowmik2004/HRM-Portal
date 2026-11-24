@@ -4,11 +4,13 @@ import TopHeader from "../components/TopHeader";
 import AdminContent from "../components/AdminContent";
 import { useToast } from "../components/ToastProvider.jsx";
 import { auth } from "../apis/axios.js";
+import LoadingPage from "../components/LoadingPage";
 
 const AdminDashboard = () => {
   const [activeSection, setActiveSection] = useState("Dashboard");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [userDetails, setUserDetails] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const { showToast } = useToast();
 
@@ -20,6 +22,8 @@ const AdminDashboard = () => {
       }
     } catch (error) {
       console.error("Error fetching user details:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -27,8 +31,17 @@ const AdminDashboard = () => {
     fetchUserDetails();
   }, []);
 
+  if (isLoading) {
+    return (
+      <LoadingPage
+        title="Loading Admin Dashboard"
+        subtitle="Preparing employees, reports, and settings..."
+      />
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-[#F3F5F8]">
+    <div className="min-h-screen bg-[#F3F5F8] dark:bg-[#0f172a]">
       <div className="flex min-h-screen">
         <AdminSidebar
           activeItem={activeSection}

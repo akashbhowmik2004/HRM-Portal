@@ -59,6 +59,16 @@ ChartJS.register(
 )
 const DocumentList = ({ employeeId }) => {
   const [docs, setDocs] = useState([]);
+  const openDocument = async (documentId) => {
+    try {
+      const res = await api.get(`/documents/download/${documentId}`);
+      if (res.data.success) {
+        window.open(res.data.downloadUrl, "_blank", "noopener,noreferrer");
+      }
+    } catch (err) {
+      console.error("Error opening document", err);
+    }
+  };
   useEffect(() => {
     if (!employeeId) return;
     const fetchDocs = async () => {
@@ -76,24 +86,23 @@ const DocumentList = ({ employeeId }) => {
   }, [employeeId]);
 
   return (
-    <div className="space-y-3">
+    <div className="mx-auto max-w-2xl space-y-3">
       {docs.length === 0 ? (
-        <p className="text-sm text-gray-500">No documents found for this employee.</p>
+        <p className="text-sm text-[#647572]">No documents found for this employee.</p>
       ) : (
         docs.map((doc) => (
-          <div key={doc._id} className="flex justify-between items-center p-4 bg-white dark:bg-[#151d2e] rounded-xl border border-[#E3E7EB] dark:border-gray-800 shadow-sm">
-            <div>
-              <p className="text-sm font-semibold text-[#202A35] dark:text-gray-100">{doc.title}</p>
-              <p className="text-[11px] text-gray-500">{doc.documentType}</p>
+          <div key={doc._id} className="flex items-center justify-between gap-3 p-4 bg-white rounded-xl border border-[#E2E8E5] shadow-xs">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-[#172B2A]">{doc.title}</p>
+              <p className="text-[11px] text-[#647572]">{doc.documentType}</p>
             </div>
-            <a
-              href={`http://localhost:3000${doc.fileUrl}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs font-semibold text-[#34766F] dark:text-[#6EA8A1] hover:underline"
+            <button
+              type="button"
+              onClick={() => openDocument(doc._id)}
+              className="shrink-0 text-xs font-semibold text-[#0F766E] hover:underline"
             >
               View Document
-            </a>
+            </button>
           </div>
         ))
       )}
@@ -361,9 +370,9 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
     email: '',
     phone: '',
     dateOfBirth: '',
-    gender: 'Male',
+    gender: '',
     address: '',
-    department: 'Software Engineering',
+    department: '',
     designation: '',
     joiningDate: '',
     salary: ''
@@ -483,9 +492,9 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
         email: '',
         phone: '',
         dateOfBirth: '',
-        gender: 'Male',
+        gender: '',
         address: '',
-        department: 'Software Engineering',
+        department: '',
         designation: '',
         joiningDate: '',
         salary: ''
@@ -573,21 +582,24 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
   const renderContent = () => {
     switch (activeSection) {
       case 'Dashboard': {
-        const internCount = users.filter(u => u.employmentType === 'intern' || u.role === 'intern').length || employees.filter(e => e.designation?.toLowerCase().includes('intern')).length || 4;
+        const internCount = users.filter(u => u.employmentType === 'intern' || u.role === 'intern').length;
         const pendingLeaves = leaveRequests.filter(l => l.status === 'Pending').length;
-        const deptCount = departments.length || 8;
-        const empCount = employees.length || 24;
+        const deptCount = departments.length;
+        const empCount = employees.length;
 
-        // Headcount Growth Chart data
-        const growthLabels = ['May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'];
-        const growthData = [
-          Math.max(1, Math.round(empCount * 0.65)),
-          Math.max(2, Math.round(empCount * 0.72)),
-          Math.max(3, Math.round(empCount * 0.81)),
-          Math.max(4, Math.round(empCount * 0.88)),
-          Math.max(5, Math.round(empCount * 0.94)),
-          empCount
-        ];
+        const growthLabels = [];
+        const growthData = [];
+        const now = new Date();
+        for (let offset = 5; offset >= 0; offset -= 1) {
+          const monthEnd = new Date(now.getFullYear(), now.getMonth() - offset + 1, 0, 23, 59, 59);
+          growthLabels.push(monthEnd.toLocaleDateString('en-US', { month: 'short' }));
+          growthData.push(
+            employees.filter((employee) => {
+              if (!employee.createdAt) return false;
+              return new Date(employee.createdAt) <= monthEnd;
+            }).length,
+          );
+        }
 
         const lineChartData = {
           labels: growthLabels,
@@ -639,12 +651,7 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
           count: employees.filter(e => e.department === d.name).length
         })).filter(d => d.count > 0);
 
-        const chartDeptItems = deptCounts.length >= 2 ? deptCounts : [
-          { name: 'Engineering', count: Math.ceil(empCount * 0.42) || 10 },
-          { name: 'Product & Design', count: Math.ceil(empCount * 0.22) || 5 },
-          { name: 'Operations', count: Math.ceil(empCount * 0.18) || 4 },
-          { name: 'HR & People', count: Math.ceil(empCount * 0.18) || 3 }
-        ];
+        const chartDeptItems = deptCounts;
 
         const doughnutData = {
           labels: chartDeptItems.map(d => d.name),
@@ -1000,51 +1007,58 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-2xl font-semibold text-[#202A35] dark:text-gray-100">
+                <h2 className="text-2xl font-bold tracking-tight text-[#172B2A]">
                   Organization Employee Directory
                 </h2>
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Complete records with phone, DOB, gender, address, salary</p>
+                <p className="text-xs font-medium text-[#647572] mt-0.5">
+                  Complete personnel records with phone, department, designation, attendance and verified credentials
+                </p>
               </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => setIsAddUserOpen(true)}
-                  className="flex items-center gap-2 rounded-xl bg-[#34766F] hover:bg-[#2B615B] px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition"
+                  className="flex items-center gap-1.5 rounded-xl bg-[#0F766E] hover:bg-[#115E59] px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition active:scale-[0.98]"
                 >
                   <UserPlus className="h-4 w-4" />
-                  Add User
+                  + Add User
                 </button>
                 <button
                   onClick={() => setIsAddEmployeeOpen(true)}
-                  className="flex items-center gap-2 rounded-xl bg-[#34766F] hover:bg-[#2B615B] px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition"
+                  className="flex items-center gap-1.5 rounded-xl bg-[#0F766E] hover:bg-[#115E59] px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition active:scale-[0.98]"
                 >
                   <Plus className="h-4 w-4" />
-                  Add Employee Details
+                  + Add Employee Details
                 </button>
               </div>
             </div>
 
-            {/* Search Filter */}
-            <div className="rounded-xl bg-white dark:bg-[#151d2e] border border-[#E3E7EB] dark:border-gray-800 shadow-subtle p-4 flex flex-col sm:flex-row gap-3 items-center justify-between">
+            {/* Search Filter Panel */}
+            <div className="rounded-xl bg-white border border-[#E2E8E5] shadow-card p-4 flex flex-col sm:flex-row gap-3 items-center justify-between">
               <div className="relative w-full sm:w-80">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#647572]" />
                 <input
                   type="text"
                   placeholder="Search by name, role or dept..."
                   value={employeeSearch}
                   onChange={(e) => setEmployeeSearch(e.target.value)}
-                  className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] py-2.5 pl-9 pr-4 text-sm text-[#202A35] dark:text-gray-100 outline-none focus:border-[#34766F] focus:ring-2 focus:ring-[#34766F]/15 dark:focus:border-[#6EA8A1]"
+                  className="w-full rounded-xl border border-[#E2E8E5] bg-[#F8FAF9] py-2.5 pl-9 pr-4 text-xs font-medium text-[#172B2A] placeholder-[#647572]/70 outline-none focus:border-[#0F766E] focus:ring-2 focus:ring-[#0F766E]/15 transition"
                 />
               </div>
-              <span className="text-xs text-gray-500 font-medium">Total: {employees.length} personnel</span>
+              <div className="flex items-center gap-2 self-start sm:self-auto">
+                <span className="text-xs font-semibold text-[#647572]">Total:</span>
+                <span className="px-2.5 py-1 rounded-md bg-[#EAF5F1] text-[#0F766E] font-bold text-xs">
+                  {employees.length} personnel
+                </span>
+              </div>
             </div>
 
-            {/* Directory Table */}
-            <div className="rounded-xl bg-white dark:bg-[#151d2e] border border-[#E3E7EB] dark:border-gray-800 shadow-subtle p-6 overflow-x-auto">
-              <table className="w-full text-left text-xs min-w-[750px]">
-                <thead className="border-b border-[#E3E7EB] dark:border-gray-800 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+            {/* Employee Directory Table */}
+            <div className="rounded-xl bg-white border border-[#E2E8E5] shadow-card p-6 overflow-x-auto">
+              <table className="w-full text-left text-xs min-w-[850px]">
+                <thead className="border-b border-[#E2E8E5] text-[11px] font-semibold uppercase tracking-wider text-[#647572]">
                   <tr>
                     <th className="pb-3">Employee</th>
-                    <th className="pb-3">Phone</th>
+                    <th className="pb-3">Contact Phone</th>
                     <th className="pb-3">Department</th>
                     <th className="pb-3">Designation</th>
                     <th className="pb-3">Attendance %</th>
@@ -1052,43 +1066,49 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
                     <th className="pb-3 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100/80 dark:divide-gray-800/50">
+                <tbody className="divide-y divide-[#E2E8E5]">
                   {employees
                     .filter(e => e.name.toLowerCase().includes(employeeSearch.toLowerCase()) || e.department.toLowerCase().includes(employeeSearch.toLowerCase()))
                     .map((emp) => (
-                      <tr key={emp._id} className="hover:bg-[#F0F2F4] dark:hover:bg-gray-800/30 transition">
+                      <tr key={emp._id} className="hover:bg-[#EAF5F1]/50 transition-colors">
                         <td className="py-3.5">
                           <div className="flex items-center gap-3">
-                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#EEF4F1] dark:bg-[#34766F]/30 text-[#34766F] dark:text-[#6EA8A1] font-semibold text-xs">
-                              {emp.name.charAt(0)}
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#EAF5F1] text-[#0F766E] font-bold text-xs">
+                              {emp.name.charAt(0).toUpperCase()}
                             </div>
                             <div>
-                              <p className="font-semibold text-[#202A35] dark:text-gray-100">
+                              <p className="font-semibold text-xs text-[#172B2A]">
                                 {emp.name}
                               </p>
-                              <p className="text-[10px] text-gray-400 dark:text-gray-500">{emp.email}</p>
+                              <p className="text-[11px] text-[#647572] truncate max-w-[200px]">{emp.email}</p>
                             </div>
                           </div>
                         </td>
-                        <td className="py-3.5 text-sm text-gray-700 dark:text-gray-300 font-medium">{emp.phone}</td>
-                        <td className="py-3.5 text-sm text-gray-700 dark:text-gray-300 font-medium">{emp.department}</td>
-                        <td className="py-3.5 text-sm text-gray-700 dark:text-gray-300 font-medium">{emp.designation}</td>
+                        <td className="py-3.5 text-xs text-[#172B2A] font-medium">{emp.phone || "—"}</td>
+                        <td className="py-3.5 text-xs text-[#172B2A] font-medium">{emp.department}</td>
+                        <td className="py-3.5 text-xs text-[#647572] font-medium">{emp.designation}</td>
                         <td className="py-3.5">
-                          <span className="rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-medium">
-                            {emp.attendancePercentage}%
+                          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${
+                            (emp.attendancePercentage || 0) >= 80
+                              ? 'bg-emerald-50 text-[#15803D]'
+                              : (emp.attendancePercentage || 0) >= 50
+                              ? 'bg-amber-50 text-[#D97706]'
+                              : 'bg-rose-50 text-[#DC2626]'
+                          }`}>
+                            {emp.attendancePercentage || 0}%
                           </span>
                         </td>
-                        <td className="py-3.5 text-sm text-gray-500 dark:text-gray-400 font-medium">{emp.joiningDate}</td>
+                        <td className="py-3.5 text-xs text-[#647572] font-medium">{emp.joiningDate || "—"}</td>
                         <td className="py-3.5 text-right">
-                          <div className="flex justify-end gap-2">
+                          <div className="flex justify-end items-center gap-1.5">
                             <button
                               onClick={() => {
                                 setDocEmployeeId(emp._id);
                                 setActiveSection("Documents");
                               }}
-                              className="flex items-center gap-1 rounded-lg bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:hover:bg-emerald-900/30"
+                              className="flex items-center gap-1 rounded-lg border border-[#E2E8E5] bg-white hover:bg-[#EAF5F1] text-[#0F766E] px-2.5 py-1 text-[11px] font-semibold shadow-xs transition"
                             >
-                              <FileText className="h-3.5 w-3.5" />
+                              <FileText className="h-3 w-3" />
                               Upload Doc
                             </button>
                             <button
@@ -1096,14 +1116,14 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
                                 setEnrollFaceEmployeeId(emp._id);
                                 setIsEnrollFaceOpen(true);
                               }}
-                              className="flex items-center gap-1 rounded-lg bg-blue-50 px-3 py-1 text-xs font-medium text-blue-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/30"
+                              className="flex items-center gap-1 rounded-lg border border-[#E2E8E5] bg-white hover:bg-[#EAF5F1] text-[#0F766E] px-2.5 py-1 text-[11px] font-semibold shadow-xs transition"
                             >
-                              <Camera className="h-3.5 w-3.5" />
+                              <Camera className="h-3 w-3" />
                               Enroll Face
                             </button>
                             <button
                               onClick={() => setSelectedEmployeeDetails(emp)}
-                              className="rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 px-3 py-1 text-xs font-semibold"
+                              className="rounded-lg border border-[#E2E8E5] bg-[#F8FAF9] hover:bg-[#EAF5F1] text-[#172B2A] px-2.5 py-1 text-[11px] font-semibold shadow-xs transition"
                             >
                               View Full Details
                             </button>
@@ -1111,47 +1131,75 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
                         </td>
                       </tr>
                     ))}
+                  {employees.length === 0 && (
+                    <tr>
+                      <td colSpan="7" className="py-8 text-center text-xs text-[#647572]">
+                        No employees found matching your search.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
             
-            <div className="mt-8 rounded-xl bg-white dark:bg-[#151d2e] border border-[#E3E7EB] dark:border-gray-800 shadow-subtle p-6 overflow-x-auto">
-              <h3 className="text-xl font-semibold text-[#202A35] dark:text-gray-100 mb-4">
-                System Users
-              </h3>
+            {/* System Users Section */}
+            <div className="mt-8 rounded-xl bg-white border border-[#E2E8E5] shadow-card p-6 overflow-x-auto">
+              <div className="mb-4">
+                <h3 className="text-base font-semibold text-[#172B2A]">
+                  Portal System Accounts
+                </h3>
+                <p className="text-xs text-[#647572] mt-0.5">
+                  Authenticated users with role-based dashboard access
+                </p>
+              </div>
               <table className="w-full text-left text-xs min-w-[750px]">
-                <thead className="border-b border-[#E3E7EB] dark:border-gray-800 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                <thead className="border-b border-[#E2E8E5] text-[11px] font-semibold uppercase tracking-wider text-[#647572]">
                   <tr>
                     <th className="pb-3">User Name</th>
-                    <th className="pb-3">Email</th>
-                    <th className="pb-3">Role</th>
-                    <th className="pb-3">Status</th>
+                    <th className="pb-3">Email Address</th>
+                    <th className="pb-3">Role Tier</th>
+                    <th className="pb-3">Account Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100/80 dark:divide-gray-800/50">
+                <tbody className="divide-y divide-[#E2E8E5]">
                   {users.map((u) => (
-                      <tr key={u._id} className="hover:bg-[#F0F2F4] dark:hover:bg-gray-800/30 transition">
-                        <td className="py-3.5">
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#EEF4F1] dark:bg-[#34766F]/30 text-[#34766F] dark:text-[#6EA8A1] font-semibold text-xs">
-                              {u.name.charAt(0)}
-                            </div>
-                            <div>
-                              <p className="font-semibold text-[#202A35] dark:text-gray-100">
-                                {u.name}
-                              </p>
-                            </div>
+                    <tr key={u._id} className="hover:bg-[#EAF5F1]/50 transition-colors">
+                      <td className="py-3.5">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#EAF5F1] text-[#0F766E] font-bold text-xs">
+                            {u.name.charAt(0).toUpperCase()}
                           </div>
-                        </td>
-                        <td className="py-3.5 text-sm text-gray-700 dark:text-gray-300 font-medium">{u.email}</td>
-                        <td className="py-3.5 text-sm text-gray-700 dark:text-gray-300 font-medium capitalize">{u.role}</td>
-                        <td className="py-3.5">
-                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${u.status === 'Active' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400' : 'bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400'}`}>
-                            {u.status === 'Active' ? 'Active' : 'Inactive'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
+                          <div>
+                            <p className="font-semibold text-xs text-[#172B2A]">
+                              {u.name}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3.5 text-xs text-[#647572] font-medium">{u.email}</td>
+                      <td className="py-3.5">
+                        <span className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-semibold capitalize bg-[#EAF5F1] text-[#0F766E]">
+                          {u.role}
+                        </span>
+                      </td>
+                      <td className="py-3.5">
+                        <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${
+                          u.status === 'Active'
+                            ? 'bg-emerald-50 text-[#15803D]'
+                            : 'bg-rose-50 text-[#DC2626]'
+                        }`}>
+                          {u.status === 'Active' ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                  {users.length === 0 && (
+                    <tr>
+                      <td colSpan="4" className="py-8 text-center text-xs text-[#647572]">
+                        No system users registered.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -1163,16 +1211,16 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
         return (
           <div className="space-y-6">
             <div>
-              <h2 className="text-2xl font-semibold text-[#202A35] dark:text-gray-100">
+              <h2 className="text-2xl font-bold tracking-tight text-[#172B2A]">
                 Leave Requests & Approvals
               </h2>
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mt-0.5">
+              <p className="text-xs font-medium text-[#647572] mt-0.5">
                 Review, grant or reject all employee leave requests
               </p>
             </div>
 
-            <div className="rounded-xl bg-white dark:bg-[#151d2e] border border-[#E3E7EB] dark:border-gray-800 shadow-subtle p-6">
-              <h3 className="text-base font-semibold mb-4 text-[#202A35] dark:text-gray-100">
+            <div className="rounded-xl bg-white border border-[#E2E8E5] shadow-card p-6">
+              <h3 className="text-base font-semibold mb-4 text-[#172B2A]">
                 All Leave Requests ({leaveRequests.length})
               </h3>
 
@@ -1180,41 +1228,41 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
                 {leaveRequests.map((req) => (
                   <div
                     key={req._id || req.id}
-                    className="flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-xl border border-[#E3E7EB] dark:border-gray-800 p-4 bg-[#F0F2F4] dark:bg-gray-900/40"
+                    className="flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-xl border border-[#E2E8E5] p-4 bg-[#F8FAF9] hover:bg-[#EAF5F1]/30 transition"
                   >
                     <div>
                       <div className="flex items-center gap-2">
-                        <h4 className="font-semibold text-sm text-[#202A35] dark:text-gray-100">
+                        <h4 className="font-semibold text-sm text-[#172B2A]">
                           {req.employeeName}
                         </h4>
-                        <span className="text-xs text-gray-400 dark:text-gray-500">({req.department})</span>
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                        <span className="text-xs text-[#647572]">({req.department})</span>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                           req.status === 'Granted' || req.status === 'Approved'
-                            ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400'
+                            ? 'bg-emerald-50 text-[#15803D]'
                             : req.status === 'Rejected'
-                            ? 'bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400'
-                            : 'bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400'
+                            ? 'bg-rose-50 text-[#DC2626]'
+                            : 'bg-amber-50 text-[#D97706]'
                         }`}>
                           {req.status}
                         </span>
                       </div>
-                      <p className="text-sm font-medium text-gray-600 dark:text-gray-300 mt-1">
+                      <p className="text-sm font-medium text-[#172B2A] mt-1">
                         <strong>{req.type}</strong>: {req.dates} ({req.days} days)
                       </p>
-                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-0.5">Reason: "{req.reason}"</p>
+                      <p className="text-xs font-medium text-[#647572] mt-0.5">Reason: "{req.reason}"</p>
                     </div>
 
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleRejectLeave(req._id || req.id)}
-                        className="flex items-center gap-1.5 rounded-xl border border-rose-200 dark:border-rose-900 bg-rose-50 hover:bg-rose-100 dark:bg-rose-900/20 px-4 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 transition dark:hover:bg-rose-900/30"
+                        className="flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 px-3.5 py-1.5 text-xs font-semibold text-[#DC2626] transition shadow-xs"
                       >
                         <XCircle className="h-4 w-4" />
                         Reject
                       </button>
                       <button
                         onClick={() => handleGrantLeave(req._id || req.id)}
-                        className="flex items-center gap-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-900/20 px-4 py-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400 shadow-sm transition dark:hover:bg-emerald-900/30"
+                        className="flex items-center gap-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 px-3.5 py-1.5 text-xs font-semibold text-[#15803D] border border-emerald-200 shadow-xs transition"
                       >
                         <CheckCircle2 className="h-4 w-4" />
                         Grant Leave
@@ -1222,6 +1270,11 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
                     </div>
                   </div>
                 ))}
+                {leaveRequests.length === 0 && (
+                  <p className="py-8 text-center text-xs text-[#647572]">
+                    No leave requests found.
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -1231,25 +1284,30 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
         return (
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <h2 className="text-2xl font-semibold text-[#202A35] dark:text-gray-100">
-                Attendance Analytics & Logs
-              </h2>
+              <div>
+                <h2 className="text-2xl font-bold tracking-tight text-[#172B2A]">
+                  Attendance Analytics & Logs
+                </h2>
+                <p className="text-xs font-medium text-[#647572] mt-0.5">
+                  Daily presence verification, facial recognition punch, and historical time logs
+                </p>
+              </div>
               {(!todayAttendance || !todayAttendance.checkInTime) ? (
                 <button
                   onClick={() => setIsWebcamCheckInOpen(true)}
-                  className="rounded-xl px-6 py-2.5 text-xs font-semibold text-white shadow-subtle transition bg-[#34766F] hover:bg-[#2B615B]"
+                  className="rounded-xl px-6 py-2.5 text-xs font-semibold text-white shadow-sm transition bg-[#0F766E] hover:bg-[#115E59] active:scale-[0.98]"
                 >
                   Punch In
                 </button>
               ) : (!todayAttendance.checkOutTime) ? (
                 <button
                   onClick={() => setIsWebcamCheckInOpen(true)}
-                  className="rounded-xl px-6 py-2.5 text-xs font-semibold text-white shadow-subtle transition bg-rose-600 hover:bg-rose-700"
+                  className="rounded-xl px-6 py-2.5 text-xs font-semibold text-white shadow-sm transition bg-[#DC2626] hover:bg-rose-700 active:scale-[0.98]"
                 >
                   Punch Out
                 </button>
               ) : (
-                <span className="text-gray-500 font-medium text-sm flex items-center bg-gray-100 dark:bg-gray-800 px-4 py-2 rounded-lg">
+                <span className="text-[#647572] font-semibold text-xs flex items-center bg-[#F8FAF9] border border-[#E2E8E5] px-4 py-2 rounded-xl">
                   Attendance Completed
                 </span>
               )}
@@ -1258,60 +1316,62 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
             {todayStatus && (
               <>
                 <div className="grid gap-4 sm:grid-cols-4">
-                  <div className="p-5 rounded-xl bg-white dark:bg-[#151d2e] border border-[#E3E7EB] dark:border-gray-800 shadow-subtle">
-                    <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">Present Today</p>
-                    <p className="mt-2 text-3xl font-semibold text-emerald-500 dark:text-emerald-400">
+                  <div className="p-5 rounded-xl bg-white border border-[#E2E8E5] shadow-card">
+                    <p className="text-xs text-[#647572] font-medium">Present Today</p>
+                    <p className="mt-2 text-3xl font-bold text-[#15803D]">
                       {Math.round((todayStatus.stats.presentCount / todayStatus.stats.totalEmployees) * 100) || 0}%
                     </p>
-                    <p className="mt-1 text-[11px] font-medium text-gray-500 dark:text-gray-400">
+                    <p className="mt-1 text-[11px] font-medium text-[#647572]">
                       {todayStatus.stats.presentCount} / {todayStatus.stats.totalEmployees} employees
                     </p>
                   </div>
-                  <div className="p-5 rounded-xl bg-white dark:bg-[#151d2e] border border-[#E3E7EB] dark:border-gray-800 shadow-subtle">
-                    <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">Late Arrivals</p>
-                    <p className="mt-2 text-3xl font-semibold text-amber-500 dark:text-amber-400">
+                  <div className="p-5 rounded-xl bg-white border border-[#E2E8E5] shadow-card">
+                    <p className="text-xs text-[#647572] font-medium">Late Arrivals</p>
+                    <p className="mt-2 text-3xl font-bold text-[#D97706]">
                       {Math.round((todayStatus.stats.lateCount / todayStatus.stats.totalEmployees) * 100) || 0}%
                     </p>
-                    <p className="mt-1 text-[11px] font-medium text-gray-500 dark:text-gray-400">
+                    <p className="mt-1 text-[11px] font-medium text-[#647572]">
                       {todayStatus.stats.lateCount} employees late
                     </p>
                   </div>
-                  <div className="p-5 rounded-xl bg-white dark:bg-[#151d2e] border border-[#E3E7EB] dark:border-gray-800 shadow-subtle">
-                    <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">On Leave</p>
-                    <p className="mt-2 text-3xl font-semibold text-blue-500 dark:text-blue-400">
+                  <div className="p-5 rounded-xl bg-white border border-[#E2E8E5] shadow-card">
+                    <p className="text-xs text-[#647572] font-medium">On Leave</p>
+                    <p className="mt-2 text-3xl font-bold text-[#2563EB]">
                       {Math.round((todayStatus.stats.onLeaveCount / todayStatus.stats.totalEmployees) * 100) || 0}%
                     </p>
-                    <p className="mt-1 text-[11px] font-medium text-gray-500 dark:text-gray-400">
+                    <p className="mt-1 text-[11px] font-medium text-[#647572]">
                       {todayStatus.stats.onLeaveCount} employees on leave
                     </p>
                   </div>
-                  <div className="p-5 rounded-xl bg-white dark:bg-[#151d2e] border border-[#E3E7EB] dark:border-gray-800 shadow-subtle">
-                    <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">Absent</p>
-                    <p className="mt-2 text-3xl font-semibold text-rose-500 dark:text-rose-400">
+                  <div className="p-5 rounded-xl bg-white border border-[#E2E8E5] shadow-card">
+                    <p className="text-xs text-[#647572] font-medium">Absent</p>
+                    <p className="mt-2 text-3xl font-bold text-[#DC2626]">
                       {Math.round((todayStatus.stats.absentCount / todayStatus.stats.totalEmployees) * 100) || 0}%
                     </p>
-                    <p className="mt-1 text-[11px] font-medium text-gray-500 dark:text-gray-400">
+                    <p className="mt-1 text-[11px] font-medium text-[#647572]">
                       {todayStatus.stats.absentCount} employees absent
                     </p>
                   </div>
                 </div>
 
                 <div className="grid gap-6 sm:grid-cols-2">
-                  <div className="bg-white dark:bg-[#151d2e] rounded-xl border border-[#E3E7EB] dark:border-gray-800 shadow-subtle p-5">
-                    <h3 className="font-semibold text-[#202A35] dark:text-gray-100 mb-4">Who is Present / Late</h3>
-                    <div className="space-y-3 max-h-48 overflow-y-auto pr-2">
+                  <div className="bg-white rounded-xl border border-[#E2E8E5] shadow-card p-5">
+                    <h3 className="font-semibold text-sm text-[#172B2A] mb-4">Who is Present / Late</h3>
+                    <div className="space-y-2.5 max-h-48 overflow-y-auto pr-1">
                       {[...todayStatus.lists.present, ...todayStatus.lists.late].length === 0 && (
-                        <p className="text-xs text-gray-500 text-center py-4">No employees present yet.</p>
+                        <p className="text-xs text-[#647572] text-center py-4">No employees present yet.</p>
                       )}
                       {[...todayStatus.lists.present, ...todayStatus.lists.late].map(emp => {
                         const isLate = todayStatus.lists.late.some(l => l._id === emp._id);
                         return (
-                          <div key={emp._id} className="flex justify-between items-center p-2 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+                          <div key={emp._id} className="flex justify-between items-center p-2.5 rounded-lg bg-[#F8FAF9] border border-[#E2E8E5]">
                             <div>
-                              <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{emp.name}</p>
-                              <p className="text-[10px] text-gray-500">In: {new Date(emp.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                              <p className="text-xs font-semibold text-[#172B2A]">{emp.name}</p>
+                              <p className="text-[10px] text-[#647572]">In: {new Date(emp.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                             </div>
-                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${isLate ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'}`}>
+                            <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-semibold ${
+                              isLate ? 'bg-amber-50 text-[#D97706]' : 'bg-emerald-50 text-[#15803D]'
+                            }`}>
                               {isLate ? 'Late' : 'On Time'}
                             </span>
                           </div>
@@ -1320,30 +1380,30 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
                     </div>
                   </div>
 
-                  <div className="bg-white dark:bg-[#151d2e] rounded-xl border border-[#E3E7EB] dark:border-gray-800 shadow-subtle p-5">
-                    <h3 className="font-semibold text-[#202A35] dark:text-gray-100 mb-4">Who is On Leave / Absent</h3>
-                    <div className="space-y-3 max-h-48 overflow-y-auto pr-2">
+                  <div className="bg-white rounded-xl border border-[#E2E8E5] shadow-card p-5">
+                    <h3 className="font-semibold text-sm text-[#172B2A] mb-4">Who is On Leave / Absent</h3>
+                    <div className="space-y-2.5 max-h-48 overflow-y-auto pr-1">
                       {[...todayStatus.lists.onLeave, ...todayStatus.lists.absent].length === 0 && (
-                        <p className="text-xs text-gray-500 text-center py-4">Everyone is present.</p>
+                        <p className="text-xs text-[#647572] text-center py-4">Everyone is present.</p>
                       )}
                       {todayStatus.lists.onLeave.map(emp => (
-                        <div key={emp._id} className="flex justify-between items-center p-2 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+                        <div key={emp._id} className="flex justify-between items-center p-2.5 rounded-lg bg-[#F8FAF9] border border-[#E2E8E5]">
                           <div>
-                            <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{emp.name}</p>
-                            <p className="text-[10px] text-gray-500">{emp.leaveType}</p>
+                            <p className="text-xs font-semibold text-[#172B2A]">{emp.name}</p>
+                            <p className="text-[10px] text-[#647572]">{emp.leaveType}</p>
                           </div>
-                          <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                          <span className="text-[10px] px-2.5 py-0.5 rounded-full font-semibold bg-blue-50 text-[#2563EB]">
                             On Leave
                           </span>
                         </div>
                       ))}
                       {todayStatus.lists.absent.map(emp => (
-                        <div key={emp._id} className="flex justify-between items-center p-2 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+                        <div key={emp._id} className="flex justify-between items-center p-2.5 rounded-lg bg-[#F8FAF9] border border-[#E2E8E5]">
                           <div>
-                            <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{emp.name}</p>
-                            <p className="text-[10px] text-gray-500">Not checked in</p>
+                            <p className="text-xs font-semibold text-[#172B2A]">{emp.name}</p>
+                            <p className="text-[10px] text-[#647572]">Not checked in</p>
                           </div>
-                          <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400">
+                          <span className="text-[10px] px-2.5 py-0.5 rounded-full font-semibold bg-rose-50 text-[#DC2626]">
                             Absent
                           </span>
                         </div>
@@ -1354,60 +1414,66 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
               </>
             )}
 
-            <div className="bg-white dark:bg-[#151d2e] rounded-xl border border-[#E3E7EB] dark:border-gray-800 shadow-subtle overflow-hidden">
-              <div className="p-4 border-b border-[#E3E7EB] dark:border-gray-800">
-                <h3 className="font-semibold text-[#202A35] dark:text-gray-100">Historical Check-In Logs</h3>
+            <div className="bg-white rounded-xl border border-[#E2E8E5] shadow-card overflow-hidden">
+              <div className="p-4 border-b border-[#E2E8E5] bg-white">
+                <h3 className="font-semibold text-sm text-[#172B2A]">Historical Check-In Logs</h3>
               </div>
               <div className="max-h-[500px] overflow-y-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead className="bg-gray-50 dark:bg-gray-800/50 sticky top-0">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead className="bg-[#F8FAF9] border-b border-[#E2E8E5] sticky top-0 text-[11px] font-semibold uppercase tracking-wider text-[#647572]">
                     <tr>
-                      <th className="p-4 text-xs font-semibold text-gray-500 dark:text-gray-400">Employee</th>
-                      <th className="p-4 text-xs font-semibold text-gray-500 dark:text-gray-400">Date</th>
-                      <th className="p-4 text-xs font-semibold text-gray-500 dark:text-gray-400">Punch In</th>
-                      <th className="p-4 text-xs font-semibold text-gray-500 dark:text-gray-400">Punch Out</th>
-                      <th className="p-4 text-xs font-semibold text-gray-500 dark:text-gray-400">Duration</th>
-                      <th className="p-4 text-xs font-semibold text-gray-500 dark:text-gray-400">Status</th>
+                      <th className="p-3.5">Employee</th>
+                      <th className="p-3.5">Date</th>
+                      <th className="p-3.5">Punch In</th>
+                      <th className="p-3.5">Punch Out</th>
+                      <th className="p-3.5">Working Time</th>
+                      <th className="p-3.5">Break Time</th>
+                      <th className="p-3.5">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800/50">
+                  <tbody className="divide-y divide-[#E2E8E5]">
                     {attendanceLogs.map((log) => {
                       const date = new Date(log.date).toLocaleDateString('en-US', { weekday: 'short', day: '2-digit', month: 'short' });
                       const punchIn = log.checkInTime ? new Date(log.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A";
                       const punchOut = log.checkOutTime ? new Date(log.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "In Progress";
                       let duration = "0h 0m";
                       if (log.checkInTime && log.checkOutTime) {
-                        const diff = new Date(log.checkOutTime) - new Date(log.checkInTime);
-                        const hours = Math.floor(diff / (1000 * 60 * 60));
-                        const minutes = Math.floor((diff / (1000 * 60)) % 60);
-                        duration = `${hours}h ${minutes}m`;
+                        duration = log.workingDuration || "0h 0m";
                       }
+                      const breakSeconds = log.breakDurationSeconds ??
+                        (log.breakDurationMinutes || 0) * 60;
+                      const breakHours = Math.floor(breakSeconds / 3600);
+                      const breakMinutes = Math.floor((breakSeconds % 3600) / 60);
+                      const breakDuration = breakSeconds > 0
+                        ? `${breakHours}h ${breakMinutes}m`
+                        : "0h 0m";
 
                       let statusText = log.status || "Present";
-                      let badgeClass = "bg-[#EEF4F1] text-[#34766F] dark:bg-indigo-900/20 dark:text-indigo-400";
+                      let badgeClass = "bg-[#EAF5F1] text-[#0F766E]";
                       if (log.checkInTime && log.checkOutTime) {
                         statusText += " (100%)";
-                        badgeClass = "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400";
+                        badgeClass = "bg-emerald-50 text-[#15803D]";
                       } else if (!log.checkInTime && !log.checkOutTime && log.status === "Absent") {
                         statusText += " (0%)";
-                        badgeClass = "bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400";
+                        badgeClass = "bg-rose-50 text-[#DC2626]";
                       } else {
                         statusText += " (Incomplete)";
                       }
                       
                       return (
-                        <tr key={log._id} className="hover:bg-[#F0F2F4] dark:hover:bg-gray-800/30 transition-colors">
-                          <td className="p-4">
+                        <tr key={log._id} className="hover:bg-[#EAF5F1]/50 transition-colors">
+                          <td className="p-3.5">
                             <div className="flex flex-col">
-                              <span className="font-semibold text-sm text-[#202A35] dark:text-gray-100">{log.userId?.name || "Unknown"}</span>
-                              <span className="text-[10px] text-gray-500">{log.userId?.email || ""}</span>
+                              <span className="font-semibold text-xs text-[#172B2A]">{log.userId?.name || "Unknown"}</span>
+                              <span className="text-[10px] text-[#647572]">{log.userId?.email || ""}</span>
                             </div>
                           </td>
-                          <td className="p-4 text-xs text-gray-600 dark:text-gray-300 font-medium">{date}</td>
-                          <td className="p-4 text-xs text-gray-600 dark:text-gray-300 font-medium">{punchIn}</td>
-                          <td className="p-4 text-xs text-gray-600 dark:text-gray-300 font-medium">{punchOut}</td>
-                          <td className="p-4 text-xs font-semibold text-gray-700 dark:text-gray-200">{duration}</td>
-                          <td className="p-4">
+                          <td className="p-3.5 text-xs text-[#647572] font-medium">{date}</td>
+                          <td className="p-3.5 text-xs text-[#647572] font-medium">{punchIn}</td>
+                          <td className="p-3.5 text-xs text-[#647572] font-medium">{punchOut}</td>
+                          <td className="p-3.5 text-xs font-semibold text-[#172B2A]">{duration}</td>
+                          <td className="p-3.5 text-xs font-semibold text-amber-700">{breakDuration}</td>
+                          <td className="p-3.5">
                             <span className={`inline-block rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${badgeClass}`}>
                               {statusText}
                             </span>
@@ -1417,7 +1483,7 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
                     })}
                     {attendanceLogs.length === 0 && (
                       <tr>
-                        <td colSpan="6" className="p-4 text-sm text-gray-500 text-center">No attendance logs found.</td>
+                        <td colSpan="6" className="p-4 text-xs text-[#647572] text-center">No attendance logs found.</td>
                       </tr>
                     )}
                   </tbody>
@@ -1430,18 +1496,23 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
       case 'Departments':
         return (
           <div className="space-y-6">
-            <h2 className="text-2xl font-semibold text-[#202A35] dark:text-gray-100">
-              Departments
-            </h2>
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight text-[#172B2A]">
+                Departments
+              </h2>
+              <p className="text-xs font-medium text-[#647572] mt-0.5">
+                Organizational business units and team leads
+              </p>
+            </div>
             <div className="grid gap-4 sm:grid-cols-3">
               {departments.map((d, i) => (
-                <div key={i} className="p-5 rounded-xl bg-white dark:bg-[#151d2e] border border-[#E3E7EB] dark:border-gray-800 shadow-subtle">
-                  <Building2 className="h-6 w-6 text-[#34766F] dark:text-[#6EA8A1] mb-2" />
-                  <h4 className="font-semibold text-base text-[#202A35] dark:text-gray-100">
+                <div key={i} className="p-5 rounded-xl bg-white border border-[#E2E8E5] shadow-card">
+                  <Building2 className="h-6 w-6 text-[#0F766E] mb-2" />
+                  <h4 className="font-semibold text-base text-[#172B2A]">
                     {d.name}
                   </h4>
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mt-1">Lead: {d.head}</p>
-                  <p className="text-xs font-semibold text-[#34766F] dark:text-[#6EA8A1] mt-3">{d.count} Members • {d.budget}</p>
+                  <p className="text-xs font-medium text-[#647572] mt-1">Lead: {d.head}</p>
+                  <p className="text-xs font-semibold text-[#0F766E] mt-3">{d.count} Members • {d.budget}</p>
                 </div>
               ))}
             </div>
@@ -1452,66 +1523,71 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
         return (
           <div className="space-y-6">
             <div className="flex items-center justify-between gap-4">
-              <h2 className="text-2xl font-semibold text-[#202A35] dark:text-gray-100">
-                Organization Tasks Matrix
-              </h2>
+              <div>
+                <h2 className="text-2xl font-bold tracking-tight text-[#172B2A]">
+                  Organization Tasks Matrix
+                </h2>
+                <p className="text-xs font-medium text-[#647572] mt-0.5">
+                  Track employee deliverables and deadlines
+                </p>
+              </div>
               <button
                 onClick={() => setIsAssignTaskOpen(true)}
-                className="flex items-center gap-1.5 rounded-xl bg-[#34766F] px-4 py-2 text-xs font-medium text-white transition hover:bg-[#2B615B]"
+                className="flex items-center gap-1.5 rounded-xl bg-[#0F766E] hover:bg-[#115E59] px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition active:scale-[0.98]"
               >
                 <Plus className="h-4 w-4" />
                 Assign Task
               </button>
             </div>
             <TaskStatisticsCard totalTask={245} overdueTask={17} />
-            <div className="rounded-xl border border-gray-100/80 bg-white p-6 shadow-subtle dark:border-gray-800/50 dark:bg-[#151d2e]">
-              <h3 className="mb-4 text-base font-semibold text-[#202A35] dark:text-gray-100">
+            <div className="rounded-xl border border-[#E2E8E5] bg-white p-6 shadow-card">
+              <h3 className="mb-4 text-base font-semibold text-[#172B2A]">
                 Assigned Tasks ({tasks.length})
               </h3>
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[680px] text-left text-xs">
-                  <thead className="border-b border-gray-100 text-gray-500 dark:border-gray-800 dark:text-gray-400">
+                  <thead className="border-b border-[#E2E8E5] text-[11px] font-semibold uppercase tracking-wider text-[#647572]">
                     <tr>
-                      <th className="pb-3 font-medium">Task</th>
-                      <th className="pb-3 font-medium">Assigned Employee</th>
-                      <th className="pb-3 font-medium">Priority</th>
-                      <th className="pb-3 font-medium">Deadline</th>
-                      <th className="pb-3 text-right font-medium">Status</th>
+                      <th className="pb-3">Task</th>
+                      <th className="pb-3">Assigned Employee</th>
+                      <th className="pb-3">Priority</th>
+                      <th className="pb-3">Deadline</th>
+                      <th className="pb-3 text-right">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800/50">
+                  <tbody className="divide-y divide-[#E2E8E5]">
                     {tasks.map((task) => (
-                      <tr key={task._id}>
+                      <tr key={task._id} className="hover:bg-[#EAF5F1]/50 transition-colors">
                         <td className="py-3 pr-4">
-                          <p className="font-semibold text-[#202A35] dark:text-gray-100">
+                          <p className="font-semibold text-xs text-[#172B2A]">
                             {task.title}
                           </p>
                           {task.description && (
-                            <p className="mt-0.5 text-gray-500 dark:text-gray-400">
+                            <p className="mt-0.5 text-[11px] text-[#647572]">
                               {task.description}
                             </p>
                           )}
                         </td>
-                        <td className="py-3 pr-4 text-gray-600 dark:text-gray-300">
+                        <td className="py-3 pr-4 text-xs text-[#172B2A]">
                           <p className="font-medium">
                             {task.assignee?.name || "Unknown"}
                           </p>
-                          <p className="text-[11px] text-gray-400 dark:text-gray-500">
+                          <p className="text-[10px] text-[#647572]">
                             {task.assignee?.email || "No email"}
                           </p>
                         </td>
-                        <td className="py-3 text-gray-600 dark:text-gray-300">
+                        <td className="py-3 text-xs text-[#647572] font-medium">
                           {task.priority}
                         </td>
-                        <td className="py-3 text-gray-600 dark:text-gray-300">
+                        <td className="py-3 text-xs text-[#647572] font-medium">
                           {task.deadline || "Not set"}
                         </td>
                         <td className="py-3 text-right">
                           <span
-                            className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${
+                            className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${
                               task.status === "Completed"
-                                ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400"
-                                : "bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400"
+                                ? "bg-emerald-50 text-[#15803D]"
+                                : "bg-amber-50 text-[#D97706]"
                             }`}
                           >
                             {task.status === "Completed"
@@ -1525,7 +1601,7 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
                 </table>
               </div>
               {tasks.length === 0 && (
-                <p className="py-6 text-center text-xs text-gray-500 dark:text-gray-400">
+                <p className="py-6 text-center text-xs text-[#647572]">
                   No tasks have been assigned yet.
                 </p>
               )}
@@ -1536,9 +1612,14 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
       case 'Performance':
         return (
           <div className="space-y-6">
-            <h2 className="text-2xl font-semibold text-[#202A35] dark:text-gray-100">
-              Performance Appraisals
-            </h2>
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight text-[#172B2A]">
+                Performance Appraisals
+              </h2>
+              <p className="text-xs font-medium text-[#647572] mt-0.5">
+                Workforce efficiency and evaluation metrics
+              </p>
+            </div>
             <PerformanceCard />
           </div>
         )
@@ -1546,16 +1627,21 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
       case 'Documents':
         return (
           <div className="space-y-6">
-            <h2 className="text-2xl font-semibold text-[#202A35] dark:text-gray-100">
-              HR Documents
-            </h2>
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight text-[#172B2A]">
+                HR Documents
+              </h2>
+              <p className="text-xs font-medium text-[#647572] mt-0.5">
+                Organizational policies and compliance handbooks
+              </p>
+            </div>
             <div className="grid gap-3 sm:grid-cols-2">
               {['HR Compliance Handbook', 'Leave Guidelines', 'Workplace Policy'].map((doc, idx) => (
-                <div key={idx} className="p-4 rounded-xl bg-white dark:bg-[#151d2e] border border-[#E3E7EB] dark:border-gray-800 shadow-subtle flex justify-between items-center">
-                  <span className="text-xs font-semibold text-[#202A35] dark:text-gray-100">
+                <div key={idx} className="p-4 rounded-xl bg-white border border-[#E2E8E5] shadow-card flex justify-between items-center">
+                  <span className="text-xs font-semibold text-[#172B2A]">
                     {doc}
                   </span>
-                  <button className="text-xs font-semibold text-[#34766F] hover:underline">Download</button>
+                  <button className="text-xs font-semibold text-[#0F766E] hover:underline">Download</button>
                 </div>
               ))}
             </div>
@@ -1566,23 +1652,33 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
         return (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-semibold text-[#202A35] dark:text-gray-100">
-                Announcements
-              </h2>
-              <button onClick={() => setIsNewAnnouncementOpen(true)} className="rounded-xl bg-[#34766F] hover:bg-[#2B615B] px-4 py-2 text-xs font-semibold text-white">New Notice</button>
+              <div>
+                <h2 className="text-2xl font-bold tracking-tight text-[#172B2A]">
+                  Announcements
+                </h2>
+                <p className="text-xs font-medium text-[#647572] mt-0.5">
+                  Publish notices across company channels
+                </p>
+              </div>
+              <button
+                onClick={() => setIsNewAnnouncementOpen(true)}
+                className="rounded-xl bg-[#0F766E] hover:bg-[#115E59] px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition active:scale-[0.98]"
+              >
+                + New Notice
+              </button>
             </div>
             <div className="space-y-4">
               {announcements.length === 0 ? (
-                <div className="p-5 rounded-xl bg-white dark:bg-[#151d2e] border border-[#E3E7EB] dark:border-gray-800 shadow-subtle text-sm text-gray-500 dark:text-gray-400">
+                <div className="p-5 rounded-xl bg-white border border-[#E2E8E5] shadow-card text-xs text-[#647572]">
                   No announcements yet.
                 </div>
               ) : announcements.map((announcement) => (
-                <div key={announcement._id} className="p-5 rounded-xl bg-white dark:bg-[#151d2e] border border-[#E3E7EB] dark:border-gray-800 shadow-subtle">
-                  <span className="text-[10px] font-semibold text-[#34766F] uppercase">Notice</span>
-                  <h4 className="font-semibold text-[#202A35] dark:text-gray-100 mt-1">
+                <div key={announcement._id} className="p-5 rounded-xl bg-white border border-[#E2E8E5] shadow-card">
+                  <span className="text-[10px] font-bold text-[#0F766E] uppercase tracking-wider bg-[#EAF5F1] px-2 py-0.5 rounded-md">Notice</span>
+                  <h4 className="font-semibold text-sm text-[#172B2A] mt-2">
                     {announcement.headline}
                   </h4>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-1">
+                  <p className="text-xs font-medium text-[#647572] mt-1">
                     {announcement.body}
                   </p>
                 </div>
@@ -1594,16 +1690,21 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
       case 'Notifications':
         return (
           <div className="space-y-4 max-w-2xl">
-            <h2 className="text-2xl font-semibold text-[#202A35] dark:text-gray-100">
-              HR Notifications
-            </h2>
-            <div className="p-4 rounded-xl bg-white dark:bg-[#151d2e] border border-[#E3E7EB] dark:border-gray-800 shadow-subtle flex gap-3">
-              <Bell className="h-4 w-4 text-[#34766F] dark:text-[#6EA8A1] mt-0.5" />
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight text-[#172B2A]">
+                HR Notifications
+              </h2>
+              <p className="text-xs font-medium text-[#647572] mt-0.5">
+                System events and incoming actions
+              </p>
+            </div>
+            <div className="p-4 rounded-xl bg-white border border-[#E2E8E5] shadow-card flex gap-3">
+              <Bell className="h-4 w-4 text-[#0F766E] mt-0.5 shrink-0" />
               <div>
-                <p className="font-semibold text-sm text-[#202A35] dark:text-gray-100">
+                <p className="font-semibold text-xs text-[#172B2A]">
                   New Leave Applications Received
                 </p>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-0.5">Review pending employee requests in Leave Management.</p>
+                <p className="text-xs font-medium text-[#647572] mt-0.5">Review pending employee requests in Leave Management.</p>
               </div>
             </div>
           </div>
@@ -1612,40 +1713,47 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
       case 'Issues':
         return (
           <div className="space-y-6">
-            <h2 className="text-2xl font-semibold text-[#202A35] dark:text-gray-100">
-              Submitted Issues
-            </h2>
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight text-[#172B2A]">
+                Submitted Issues
+              </h2>
+              <p className="text-xs font-medium text-[#647572] mt-0.5">
+                Workplace inquiries and grievance tickets
+              </p>
+            </div>
             <div className="space-y-4">
               {issues.length === 0 ? (
-                <div className="p-5 rounded-xl bg-white dark:bg-[#151d2e] border border-[#E3E7EB] dark:border-gray-800 shadow-subtle text-sm text-gray-500 dark:text-gray-400">
+                <div className="p-5 rounded-xl bg-white border border-[#E2E8E5] shadow-card text-xs text-[#647572]">
                   No issues reported yet.
                 </div>
               ) : issues.map((issue) => (
-                <div key={issue._id} className="p-5 rounded-xl bg-white dark:bg-[#151d2e] border border-[#E3E7EB] dark:border-gray-800 shadow-subtle">
+                <div key={issue._id} className="p-5 rounded-xl bg-white border border-[#E2E8E5] shadow-card">
                   <div className="flex justify-between items-start mb-2">
                     <div>
-                      <h4 className="font-semibold text-[#202A35] dark:text-gray-100">
+                      <h4 className="font-semibold text-xs text-[#172B2A]">
                         {issue.name}
                       </h4>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400">{issue.email}</p>
+                      <p className="text-[10px] text-[#647572]">{issue.email}</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${issue.status === 'Resolved' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400' : 'bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400'}`}>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                        issue.status === 'Resolved' ? 'bg-emerald-50 text-[#15803D]' : 'bg-amber-50 text-[#D97706]'
+                      }`}>
                         {issue.status}
                       </span>
                       <button
                         onClick={() => handleUpdateIssueStatus(issue._id, issue.status)}
-                        className={`text-[10px] font-semibold px-2 py-1 rounded-lg transition-colors ${
+                        className={`text-[10px] font-semibold px-2.5 py-1 rounded-lg transition-colors ${
                           issue.status === 'Resolved' 
-                            ? 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700' 
-                            : 'bg-[#EEF4F1] text-[#34766F] hover:bg-[#DEEBE5] dark:bg-indigo-900/20 dark:text-indigo-400 dark:hover:bg-[#34766F]/40'
+                            ? 'bg-gray-100 text-[#647572] hover:bg-gray-200' 
+                            : 'bg-[#EAF5F1] text-[#0F766E] hover:bg-[#D5EBE3]'
                         }`}
                       >
                         {issue.status === 'Resolved' ? 'Reopen' : 'Mark Complete'}
                       </button>
                     </div>
                   </div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-300 mt-2 p-3 bg-[#F0F2F4] dark:bg-gray-800/30 rounded-lg">
+                  <p className="text-xs font-medium text-[#172B2A] mt-2 p-3 bg-[#F8FAF9] border border-[#E2E8E5] rounded-lg">
                     {issue.issue}
                   </p>
                 </div>
@@ -1658,16 +1766,16 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
         return (
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-bold text-[#202A35] dark:text-gray-100">
+              <h2 className="text-2xl font-bold tracking-tight text-[#172B2A]">
                 Project Reviews
               </h2>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Review and score employee projects
+              <p className="text-xs font-medium text-[#647572] mt-0.5">
+                Review and score employee project submissions
               </p>
             </div>
             {projects.length === 0 ? (
-              <div className="p-8 text-center rounded-xl bg-white dark:bg-[#151d2e] border border-[#E3E7EB] dark:border-gray-800">
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+              <div className="p-8 text-center rounded-xl bg-white border border-[#E2E8E5] shadow-card">
+                <p className="text-xs text-[#647572]">
                   No projects available to review.
                 </p>
               </div>
@@ -1676,24 +1784,24 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
                 {projects.map((project) => (
                   <div
                     key={project._id}
-                    className="flex flex-col rounded-xl bg-white dark:bg-[#151d2e] p-5 border border-[#E3E7EB] dark:border-gray-800 shadow-subtle"
+                    className="flex flex-col rounded-xl bg-white p-5 border border-[#E2E8E5] shadow-card"
                   >
-                    <h3 className="text-base font-bold text-[#202A35] dark:text-gray-100">
+                    <h3 className="text-sm font-bold text-[#172B2A]">
                       {project.title}
                     </h3>
-                    <p className="mt-1 text-[11px] font-semibold text-[#34766F] uppercase">
+                    <p className="mt-1 text-[11px] font-semibold text-[#0F766E] uppercase">
                       By {project.employeeId?.userId?.name || "Unknown Employee"}
                     </p>
-                    <p className="mt-2 text-xs text-gray-600 dark:text-gray-400 line-clamp-3">
+                    <p className="mt-2 text-xs text-[#647572] line-clamp-3">
                       {project.content}
                     </p>
-                    <div className="mt-4 pt-4 border-t border-[#E3E7EB] dark:border-gray-800 flex flex-wrap gap-3">
+                    <div className="mt-4 pt-4 border-t border-[#E2E8E5] flex flex-wrap gap-3">
                       {project.githubLink && (
                         <a
                           href={project.githubLink}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-[11px] font-semibold text-[#34766F] hover:underline"
+                          className="text-[11px] font-semibold text-[#0F766E] hover:underline"
                         >
                           GitHub
                         </a>
@@ -1703,17 +1811,17 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
                           href={project.liveLink}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-[11px] font-semibold text-emerald-600 hover:underline"
+                          className="text-[11px] font-semibold text-[#15803D] hover:underline"
                         >
                           Live Link
                         </a>
                       )}
                     </div>
-                    <div className="mt-4 pt-4 border-t border-[#E3E7EB] dark:border-gray-800">
+                    <div className="mt-4 pt-4 border-t border-[#E2E8E5]">
                       {project.score ? (
                         <div>
-                          <p className="text-xs font-semibold text-[#202A35] dark:text-gray-100">Score: {project.score}/5</p>
-                          <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">"{project.feedback}"</p>
+                          <p className="text-xs font-semibold text-[#172B2A]">Score: {project.score}/5</p>
+                          <p className="text-xs text-[#647572] mt-1">"{project.feedback}"</p>
                         </div>
                       ) : (
                         <button
@@ -1722,7 +1830,7 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
                             setProjectReviewForm({ score: "", feedback: "" });
                             setIsReviewProjectOpen(true);
                           }}
-                          className="w-full rounded-lg bg-[#EEF4F1] dark:bg-[#34766F]/20 py-2 text-xs font-semibold text-[#34766F] dark:text-[#6EA8A1] hover:bg-[#DEEBE5] dark:hover:bg-[#34766F]/40 transition"
+                          className="w-full rounded-lg bg-[#EAF5F1] py-2 text-xs font-semibold text-[#0F766E] hover:bg-[#D5EBE3] transition"
                         >
                           Review Project
                         </button>
@@ -1737,18 +1845,21 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
 
       case "Documents":
         return (
-          <div className="max-w-2xl space-y-6">
-            <h2 className="text-2xl font-semibold text-[#202A35] dark:text-gray-100">
-              Upload Employee Document
-            </h2>
-            <div className="p-6 rounded-xl bg-white dark:bg-[#151d2e] border border-[#E3E7EB] dark:border-gray-800 shadow-subtle">
+          <div className="mx-auto max-w-xl space-y-6">
+            <div>
+              <h2 className="text-xl font-bold text-[#172B2A]">
+                Upload Employee Document
+              </h2>
+              <p className="text-xs text-[#647572] mt-0.5">Attach contracts, payment slips, and verification files</p>
+            </div>
+            <div className="p-6 rounded-xl bg-white border border-[#E2E8E5] shadow-xs">
               <form onSubmit={handleUploadDocument} className="space-y-4 text-xs">
                 <div>
-                  <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                  <label className="block font-medium text-[#172B2A] mb-1.5">
                     Select Employee
                   </label>
                   <select
-                    className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 outline-none font-medium text-[#202A35] dark:text-gray-100"
+                    className="w-full rounded-xl border border-[#E2E8E5] bg-[#F8FAF9] p-2.5 outline-none font-medium text-[#172B2A] focus:border-[#0F766E]"
                     onChange={(e) => setDocEmployeeId(e.target.value)}
                     value={docEmployeeId}
                   >
@@ -1759,7 +1870,7 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
                   </select>
                 </div>
                 <div>
-                  <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                  <label className="block font-medium text-[#172B2A] mb-1.5">
                     Document Title
                   </label>
                   <input
@@ -1767,17 +1878,17 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
                     placeholder="e.g. 2024 Offer Letter"
                     value={docTitle}
                     onChange={(e) => setDocTitle(e.target.value)}
-                    className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 outline-none font-medium text-[#202A35] dark:text-gray-100"
+                    className="w-full rounded-xl border border-[#E2E8E5] bg-[#F8FAF9] p-2.5 outline-none font-medium text-[#172B2A] focus:border-[#0F766E]"
                   />
                 </div>
                 <div>
-                  <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                  <label className="block font-medium text-[#172B2A] mb-1.5">
                     Document Type
                   </label>
                   <select
                     value={docType}
                     onChange={(e) => setDocType(e.target.value)}
-                    className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 outline-none font-medium text-[#202A35] dark:text-gray-100"
+                    className="w-full rounded-xl border border-[#E2E8E5] bg-[#F8FAF9] p-2.5 outline-none font-medium text-[#172B2A] focus:border-[#0F766E]"
                   >
                     <option value="Offer Letter">Offer Letter</option>
                     <option value="Payment Slip">Payment Slip</option>
@@ -1785,18 +1896,18 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
                   </select>
                 </div>
                 <div>
-                  <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                  <label className="block font-medium text-[#172B2A] mb-1.5">
                     File (PDF, Image, etc.)
                   </label>
                   <input
                     type="file"
                     onChange={(e) => setDocFile(e.target.files[0])}
-                    className="w-full text-[#202A35] dark:text-gray-100 font-medium"
+                    className="w-full text-[#172B2A] font-medium"
                   />
                 </div>
                 <button
                   type="submit"
-                  className="rounded-xl bg-[#34766F] hover:bg-[#2B615B] px-5 py-2.5 font-medium text-white shadow-sm mt-2"
+                  className="rounded-xl bg-[#0F766E] hover:bg-[#115E59] px-5 py-2.5 font-medium text-white shadow-xs mt-2 transition"
                 >
                   Upload Document
                 </button>
@@ -1805,7 +1916,7 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
 
             {docEmployeeId && (
               <div className="mt-8">
-                <h3 className="text-lg font-semibold text-[#202A35] dark:text-gray-100 mb-4">
+                <h3 className="text-base font-bold text-[#172B2A] mb-4">
                   Existing Documents
                 </h3>
                 <DocumentList key={uploadCount} employeeId={docEmployeeId} />
@@ -1832,13 +1943,13 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
           <>
             <button
               onClick={() => setIsAddUserOpen(false)}
-              className="rounded-xl px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+              className="rounded-xl px-4 py-2 text-xs font-semibold text-[#647572] hover:bg-[#F8FAF9] transition"
             >
               Cancel
             </button>
             <button
               onClick={handleAddUser}
-              className="rounded-xl bg-[#34766F] hover:bg-[#2B615B] px-5 py-2 text-xs font-semibold text-white shadow-sm"
+              className="rounded-xl bg-[#0F766E] hover:bg-[#115E59] px-5 py-2 text-xs font-semibold text-white shadow-xs transition"
             >
               Continue to Employee Details →
             </button>
@@ -1847,28 +1958,28 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
       >
         <form onSubmit={handleAddUser} className="space-y-4 text-xs">
           <div>
-            <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1.5">User Full Name</label>
+            <label className="block font-semibold text-[#172B2A] mb-1.5">User Full Name</label>
             <input
               type="text"
               value={userForm.name}
               onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
               placeholder="e.g. Alex Morgan"
-              className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 px-3 text-sm text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#34766F] focus:ring-2 focus:ring-[#34766F]/15 dark:focus:border-[#6EA8A1]"
+              className="w-full rounded-xl border border-[#E2E8E5] bg-[#F8FAF9] p-2.5 px-3 text-sm text-[#172B2A] font-medium outline-none focus:border-[#0F766E] focus:ring-2 focus:ring-[#0F766E]/15"
             />
           </div>
           <div>
-            <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Email Address</label>
+            <label className="block font-semibold text-[#172B2A] mb-1.5">Email Address</label>
             <input
               type="email"
               value={userForm.email}
               onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
               placeholder="alex@company.com"
-              className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 px-3 text-sm text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#34766F] focus:ring-2 focus:ring-[#34766F]/15 dark:focus:border-[#6EA8A1]"
+              className="w-full rounded-xl border border-[#E2E8E5] bg-[#F8FAF9] p-2.5 px-3 text-sm text-[#172B2A] font-medium outline-none focus:border-[#0F766E] focus:ring-2 focus:ring-[#0F766E]/15"
             />
           </div>
 
           <div>
-            <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+            <label className="block font-medium text-[#172B2A] mb-1.5">
               Role Tier
             </label>
             <select
@@ -1876,12 +1987,9 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
               onChange={(e) =>
                 setUserForm({ ...userForm, role: e.target.value })
               }
-              className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-xs text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#34766F] focus:ring-2 focus:ring-[#34766F]/15 dark:focus:border-[#6EA8A1] cursor-pointer"
+              className="w-full rounded-xl border border-[#E2E8E5] bg-[#F8FAF9] p-2.5 text-xs text-[#172B2A] font-medium outline-none focus:border-[#0F766E] focus:ring-2 focus:ring-[#0F766E]/15 cursor-pointer"
             >
-              <option
-                className="bg-white dark:bg-[#151d2e] text-[#202A35] dark:text-gray-100"
-                value="employee"
-              >
+              <option className="bg-white text-[#172B2A]" value="employee">
                 Employee
               </option>
             </select>
@@ -1899,13 +2007,13 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
           <>
             <button
               onClick={() => setIsAddEmployeeOpen(false)}
-              className="rounded-xl px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+              className="rounded-xl px-4 py-2 text-xs font-semibold text-[#647572] hover:bg-[#F8FAF9] transition"
             >
               Cancel
             </button>
             <button
               onClick={handleAddEmployee}
-              className="rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-900/20 px-5 py-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400 shadow-sm"
+              className="rounded-xl bg-[#0F766E] hover:bg-[#115E59] px-5 py-2 text-xs font-semibold text-white shadow-xs transition"
             >
               Save Employee Profile
             </button>
@@ -1915,118 +2023,119 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
         <form onSubmit={handleAddEmployee} className="space-y-4 text-xs">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Full Name</label>
+              <label className="block font-semibold text-[#172B2A] mb-1.5">Full Name</label>
               <input
                 type="text"
                 value={employeeForm.name}
                 onChange={(e) => setEmployeeForm({ ...employeeForm, name: e.target.value })}
                 placeholder="Full Name"
-                className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 px-3 text-sm text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#34766F] focus:ring-2 focus:ring-[#34766F]/15 dark:focus:border-[#6EA8A1]"
+                className="w-full rounded-xl border border-[#E2E8E5] bg-[#F8FAF9] p-2.5 px-3 text-sm text-[#172B2A] font-medium outline-none focus:border-[#0F766E] focus:ring-2 focus:ring-[#0F766E]/15"
               />
             </div>
             <div>
-              <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Email Address</label>
+              <label className="block font-semibold text-[#172B2A] mb-1.5">Email Address</label>
               <input
                 type="email"
                 value={employeeForm.email}
                 onChange={(e) => setEmployeeForm({ ...employeeForm, email: e.target.value })}
                 placeholder="name@company.com"
-                className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 px-3 text-sm text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#34766F] focus:ring-2 focus:ring-[#34766F]/15 dark:focus:border-[#6EA8A1]"
+                className="w-full rounded-xl border border-[#E2E8E5] bg-[#F8FAF9] p-2.5 px-3 text-sm text-[#172B2A] font-medium outline-none focus:border-[#0F766E] focus:ring-2 focus:ring-[#0F766E]/15"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Phone Number</label>
+              <label className="block font-semibold text-[#172B2A] mb-1.5">Phone Number</label>
               <input
                 type="text"
                 value={employeeForm.phone}
                 onChange={(e) => setEmployeeForm({ ...employeeForm, phone: e.target.value })}
                 placeholder="+91 98765 43210"
-                className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 px-3 text-sm text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#34766F] focus:ring-2 focus:ring-[#34766F]/15 dark:focus:border-[#6EA8A1]"
+                className="w-full rounded-xl border border-[#E2E8E5] bg-[#F8FAF9] p-2.5 px-3 text-sm text-[#172B2A] font-medium outline-none focus:border-[#0F766E] focus:ring-2 focus:ring-[#0F766E]/15"
               />
             </div>
             <div>
-              <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Date of Birth</label>
+              <label className="block font-semibold text-[#172B2A] mb-1.5">Date of Birth</label>
               <input
                 type="date"
                 value={employeeForm.dateOfBirth}
                 onChange={(e) => setEmployeeForm({ ...employeeForm, dateOfBirth: e.target.value })}
-                className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 px-3 text-sm text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#34766F] focus:ring-2 focus:ring-[#34766F]/15 dark:focus:border-[#6EA8A1]"
+                className="w-full rounded-xl border border-[#E2E8E5] bg-[#F8FAF9] p-2.5 px-3 text-sm text-[#172B2A] font-medium outline-none focus:border-[#0F766E] focus:ring-2 focus:ring-[#0F766E]/15"
               />
             </div>
             <div>
-              <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Gender</label>
+              <label className="block font-semibold text-[#172B2A] mb-1.5">Gender</label>
               <select
                 value={employeeForm.gender}
                 onChange={(e) => setEmployeeForm({ ...employeeForm, gender: e.target.value })}
-                className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 px-3 text-sm text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#34766F] focus:ring-2 focus:ring-[#34766F]/15 dark:focus:border-[#6EA8A1] cursor-pointer"
+                className="w-full rounded-xl border border-[#E2E8E5] bg-[#F8FAF9] p-2.5 px-3 text-sm text-[#172B2A] font-medium outline-none focus:border-[#0F766E] focus:ring-2 focus:ring-[#0F766E]/15 cursor-pointer"
               >
-                <option className="bg-white dark:bg-[#0c1222] text-[#202A35] dark:text-gray-100">Male</option>
-                <option className="bg-white dark:bg-[#0c1222] text-[#202A35] dark:text-gray-100">Female</option>
-                <option className="bg-white dark:bg-[#0c1222] text-[#202A35] dark:text-gray-100">Non-Binary / Other</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Non-Binary / Other">Non-Binary / Other</option>
               </select>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Department</label>
+              <label className="block font-semibold text-[#172B2A] mb-1.5">Department</label>
               <select
                 value={employeeForm.department}
                 onChange={(e) => setEmployeeForm({ ...employeeForm, department: e.target.value })}
-                className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 px-3 text-sm text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#34766F] focus:ring-2 focus:ring-[#34766F]/15 dark:focus:border-[#6EA8A1] cursor-pointer"
+                className="w-full rounded-xl border border-[#E2E8E5] bg-[#F8FAF9] p-2.5 px-3 text-sm text-[#172B2A] font-medium outline-none focus:border-[#0F766E] focus:ring-2 focus:ring-[#0F766E]/15 cursor-pointer"
               >
-                <option className="bg-white dark:bg-[#0c1222] text-[#202A35] dark:text-gray-100">Software Engineering</option>
-                <option className="bg-white dark:bg-[#0c1222] text-[#202A35] dark:text-gray-100">Product Design</option>
-                <option className="bg-white dark:bg-[#0c1222] text-[#202A35] dark:text-gray-100">Marketing</option>
-                <option className="bg-white dark:bg-[#0c1222] text-[#202A35] dark:text-gray-100">Human Resources</option>
-                <option className="bg-white dark:bg-[#0c1222] text-[#202A35] dark:text-gray-100">Business Development</option>
+                <option value="">-- Select Department --</option>
+                {departments.map((department) => (
+                  <option key={department._id} value={department.name}>
+                    {department.name}
+                  </option>
+                ))}
               </select>
             </div>
             <div>
-              <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Designation</label>
+              <label className="block font-semibold text-[#172B2A] mb-1.5">Designation</label>
               <input
                 type="text"
                 value={employeeForm.designation}
                 onChange={(e) => setEmployeeForm({ ...employeeForm, designation: e.target.value })}
                 placeholder="e.g. Senior Frontend Engineer"
-                className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 px-3 text-sm text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#34766F] focus:ring-2 focus:ring-[#34766F]/15 dark:focus:border-[#6EA8A1]"
+                className="w-full rounded-xl border border-[#E2E8E5] bg-[#F8FAF9] p-2.5 px-3 text-sm text-[#172B2A] font-medium outline-none focus:border-[#0F766E] focus:ring-2 focus:ring-[#0F766E]/15"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Joining Date</label>
+              <label className="block font-semibold text-[#172B2A] mb-1.5">Joining Date</label>
               <input
                 type="date"
                 value={employeeForm.joiningDate}
                 onChange={(e) => setEmployeeForm({ ...employeeForm, joiningDate: e.target.value })}
-                className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 px-3 text-sm text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#34766F] focus:ring-2 focus:ring-[#34766F]/15 dark:focus:border-[#6EA8A1]"
+                className="w-full rounded-xl border border-[#E2E8E5] bg-[#F8FAF9] p-2.5 px-3 text-sm text-[#172B2A] font-medium outline-none focus:border-[#0F766E] focus:ring-2 focus:ring-[#0F766E]/15"
               />
             </div>
             <div>
-              <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Salary (Annual)</label>
+              <label className="block font-semibold text-[#172B2A] mb-1.5">Salary (Annual)</label>
               <input
                 type="text"
                 value={employeeForm.salary}
                 onChange={(e) => setEmployeeForm({ ...employeeForm, salary: e.target.value })}
                 placeholder="e.g. ₹12,00,000 / yr"
-                className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 px-3 text-sm text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#34766F] focus:ring-2 focus:ring-[#34766F]/15 dark:focus:border-[#6EA8A1]"
+                className="w-full rounded-xl border border-[#E2E8E5] bg-[#F8FAF9] p-2.5 px-3 text-sm text-[#172B2A] font-medium outline-none focus:border-[#0F766E] focus:ring-2 focus:ring-[#0F766E]/15"
               />
             </div>
           </div>
 
           <div>
-            <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Permanent Address</label>
+            <label className="block font-semibold text-[#172B2A] mb-1.5">Permanent Address</label>
             <textarea
               rows={2}
               value={employeeForm.address}
               onChange={(e) => setEmployeeForm({ ...employeeForm, address: e.target.value })}
               placeholder="Street address, City, State, PIN"
-              className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 px-3 text-sm text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#34766F] focus:ring-2 focus:ring-[#34766F]/15 dark:focus:border-[#6EA8A1]"
+              className="w-full rounded-xl border border-[#E2E8E5] bg-[#F8FAF9] p-2.5 px-3 text-sm text-[#172B2A] font-medium outline-none focus:border-[#0F766E] focus:ring-2 focus:ring-[#0F766E]/15"
             />
           </div>
         </form>
@@ -2042,68 +2151,68 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
           footer={
             <button
               onClick={() => setSelectedEmployeeDetails(null)}
-              className="rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 px-5 py-2 text-xs font-semibold text-gray-700 dark:text-gray-300"
+              className="rounded-xl bg-[#F8FAF9] hover:bg-[#EAF5F1] border border-[#E2E8E5] px-5 py-2 text-xs font-semibold text-[#172B2A] transition"
             >
               Close
             </button>
           }
         >
           <div className="space-y-4 text-xs">
-            <div className="p-4 rounded-xl bg-[#F0F2F4] dark:bg-[#151d2e] border border-[#E3E7EB] dark:border-gray-800 flex items-center justify-between">
+            <div className="p-4 rounded-xl bg-[#F8FAF9] border border-[#E2E8E5] flex items-center justify-between">
               <div>
-                <p className="font-semibold text-base text-[#202A35] dark:text-gray-100">
+                <p className="font-bold text-base text-[#172B2A]">
                   {selectedEmployeeDetails.name}
                 </p>
-                <p className="text-[#34766F] dark:text-[#6EA8A1] font-semibold">{selectedEmployeeDetails.designation}</p>
-                <p className="text-[10px] font-medium text-gray-500 dark:text-gray-400">{selectedEmployeeDetails.email}</p>
+                <p className="text-[#0F766E] font-semibold">{selectedEmployeeDetails.designation}</p>
+                <p className="text-[11px] font-medium text-[#647572]">{selectedEmployeeDetails.email}</p>
               </div>
               <div className="text-right">
-                <span className="rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400 px-2.5 py-1 text-xs font-semibold">
+                <span className="rounded-full bg-[#EAF5F1] text-[#15803D] border border-[#C5E5D8] px-3 py-1 text-xs font-semibold">
                   {selectedEmployeeDetails.attendancePercentage}% Attendance
                 </span>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="p-3 rounded-xl border border-[#E3E7EB] dark:border-gray-800">
-                <p className="text-gray-500 dark:text-gray-400 font-medium">Phone Number</p>
-                <p className="font-semibold mt-0.5 text-[#202A35] dark:text-gray-100">
+              <div className="p-3 rounded-xl border border-[#E2E8E5] bg-white">
+                <p className="text-[#647572] font-medium">Phone Number</p>
+                <p className="font-semibold mt-0.5 text-[#172B2A]">
                   {selectedEmployeeDetails.phone || 'N/A'}
                 </p>
               </div>
-              <div className="p-3 rounded-xl border border-[#E3E7EB] dark:border-gray-800">
-                <p className="text-gray-500 dark:text-gray-400 font-medium">Date of Birth</p>
-                <p className="font-semibold mt-0.5 text-[#202A35] dark:text-gray-100">
+              <div className="p-3 rounded-xl border border-[#E2E8E5] bg-white">
+                <p className="text-[#647572] font-medium">Date of Birth</p>
+                <p className="font-semibold mt-0.5 text-[#172B2A]">
                   {selectedEmployeeDetails.dateOfBirth || 'N/A'}
                 </p>
               </div>
-              <div className="p-3 rounded-xl border border-[#E3E7EB] dark:border-gray-800">
-                <p className="text-gray-500 dark:text-gray-400 font-medium">Gender</p>
-                <p className="font-semibold mt-0.5 text-[#202A35] dark:text-gray-100">
+              <div className="p-3 rounded-xl border border-[#E2E8E5] bg-white">
+                <p className="text-[#647572] font-medium">Gender</p>
+                <p className="font-semibold mt-0.5 text-[#172B2A]">
                   {selectedEmployeeDetails.gender || 'N/A'}
                 </p>
               </div>
-              <div className="p-3 rounded-xl border border-[#E3E7EB] dark:border-gray-800">
-                <p className="text-gray-500 dark:text-gray-400 font-medium">Joining Date</p>
-                <p className="font-semibold mt-0.5 text-[#202A35] dark:text-gray-100">
+              <div className="p-3 rounded-xl border border-[#E2E8E5] bg-white">
+                <p className="text-[#647572] font-medium">Joining Date</p>
+                <p className="font-semibold mt-0.5 text-[#172B2A]">
                   {selectedEmployeeDetails.joiningDate || 'N/A'}
                 </p>
               </div>
-              <div className="p-3 rounded-xl border border-[#E3E7EB] dark:border-gray-800">
-                <p className="text-gray-500 dark:text-gray-400 font-medium">Department</p>
-                <p className="font-semibold mt-0.5 text-[#202A35] dark:text-gray-100">
+              <div className="p-3 rounded-xl border border-[#E2E8E5] bg-white">
+                <p className="text-[#647572] font-medium">Department</p>
+                <p className="font-semibold mt-0.5 text-[#172B2A]">
                   {selectedEmployeeDetails.department || 'N/A'}
                 </p>
               </div>
-              <div className="p-3 rounded-xl border border-[#E3E7EB] dark:border-gray-800">
-                <p className="text-gray-500 dark:text-gray-400 font-medium">Salary</p>
-                <p className="font-semibold text-emerald-600 mt-0.5">{selectedEmployeeDetails.salary || 'N/A'}</p>
+              <div className="p-3 rounded-xl border border-[#E2E8E5] bg-white">
+                <p className="text-[#647572] font-medium">Salary</p>
+                <p className="font-semibold text-[#15803D] mt-0.5">{selectedEmployeeDetails.salary || 'N/A'}</p>
               </div>
             </div>
 
-            <div className="p-3 rounded-xl border border-[#E3E7EB] dark:border-gray-800">
-              <p className="text-gray-500 dark:text-gray-400 font-medium">Address</p>
-              <p className="font-medium mt-0.5 text-[#202A35] dark:text-gray-100">
+            <div className="p-3 rounded-xl border border-[#E2E8E5] bg-white">
+              <p className="text-[#647572] font-medium">Address</p>
+              <p className="font-medium mt-0.5 text-[#172B2A]">
                 {selectedEmployeeDetails.address || 'N/A'}
               </p>
             </div>
@@ -2118,20 +2227,20 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
         title="Assign New Task"
         footer={
           <>
-            <button onClick={() => setIsAssignTaskOpen(false)} className="rounded-xl px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800">Cancel</button>
-            <button onClick={() => { showToast('Task assigned!', 'success'); setIsAssignTaskOpen(false); }} className="rounded-xl bg-[#34766F] hover:bg-[#2B615B] px-5 py-2 text-xs font-semibold text-white">Assign</button>
+            <button onClick={() => setIsAssignTaskOpen(false)} className="rounded-xl px-4 py-2 text-xs font-semibold text-[#647572] hover:bg-[#F8FAF9] transition">Cancel</button>
+            <button onClick={() => { showToast('Task assigned!', 'success'); setIsAssignTaskOpen(false); }} className="rounded-xl bg-[#0F766E] hover:bg-[#115E59] px-5 py-2 text-xs font-semibold text-white shadow-xs transition">Assign</button>
           </>
         }
       >
         <div className="space-y-4 text-xs">
           <div>
-            <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1">Task Title</label>
-            <input type="text" placeholder="Task title..." className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 px-3 text-sm text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#34766F] focus:ring-2 focus:ring-[#34766F]/15 dark:focus:border-[#6EA8A1]" />
+            <label className="block font-semibold text-[#172B2A] mb-1">Task Title</label>
+            <input type="text" placeholder="Task title..." className="w-full rounded-xl border border-[#E2E8E5] bg-[#F8FAF9] p-2.5 px-3 text-sm text-[#172B2A] font-medium outline-none focus:border-[#0F766E] focus:ring-2 focus:ring-[#0F766E]/15" />
           </div>
           <div>
-            <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1">Assignee</label>
-            <select className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 px-3 text-sm text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#34766F] focus:ring-2 focus:ring-[#34766F]/15 dark:focus:border-[#6EA8A1] cursor-pointer">
-              {employees.map(e => <option key={e._id} className="bg-white dark:bg-[#0c1222] text-[#202A35] dark:text-gray-100">{e.name} ({e.department})</option>)}
+            <label className="block font-semibold text-[#172B2A] mb-1">Assignee</label>
+            <select className="w-full rounded-xl border border-[#E2E8E5] bg-[#F8FAF9] p-2.5 px-3 text-sm text-[#172B2A] font-medium outline-none focus:border-[#0F766E] focus:ring-2 focus:ring-[#0F766E]/15 cursor-pointer">
+              {employees.map(e => <option key={e._id} value={e._id}>{e.name} ({e.department})</option>)}
             </select>
           </div>
         </div>
@@ -2144,22 +2253,24 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
         title="Publish Announcement"
         footer={
           <>
-            <button onClick={() => setIsNewAnnouncementOpen(false)} className="rounded-xl px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800">Cancel</button>
-            <button onClick={() => { showToast('Announcement published!', 'success'); setIsNewAnnouncementOpen(false); }} className="rounded-xl bg-[#34766F] hover:bg-[#2B615B] px-5 py-2 text-xs font-semibold text-white">Publish</button>
+            <button onClick={() => setIsNewAnnouncementOpen(false)} className="rounded-xl px-4 py-2 text-xs font-semibold text-[#647572] hover:bg-[#F8FAF9] transition">Cancel</button>
+            <button onClick={() => { showToast('Announcement published!', 'success'); setIsNewAnnouncementOpen(false); }} className="rounded-xl bg-[#0F766E] hover:bg-[#115E59] px-5 py-2 text-xs font-semibold text-white shadow-xs transition">Publish</button>
           </>
         }
       >
         <div className="space-y-4 text-xs">
           <div>
-            <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1">Title</label>
-            <input type="text" placeholder="Headline..." className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 px-3 text-sm text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#34766F] focus:ring-2 focus:ring-[#34766F]/15 dark:focus:border-[#6EA8A1]" />
+            <label className="block font-semibold text-[#172B2A] mb-1">Title</label>
+            <input type="text" placeholder="Headline..." className="w-full rounded-xl border border-[#E2E8E5] bg-[#F8FAF9] p-2.5 px-3 text-sm text-[#172B2A] font-medium outline-none focus:border-[#0F766E] focus:ring-2 focus:ring-[#0F766E]/15" />
           </div>
           <div>
-            <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1">Message</label>
-            <textarea rows={4} placeholder="Content..." className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 px-3 text-sm text-[#202A35] dark:text-gray-100 font-medium outline-none focus:border-[#34766F] focus:ring-2 focus:ring-[#34766F]/15 dark:focus:border-[#6EA8A1]" />
+            <label className="block font-semibold text-[#172B2A] mb-1">Message</label>
+            <textarea rows={4} placeholder="Content..." className="w-full rounded-xl border border-[#E2E8E5] bg-[#F8FAF9] p-2.5 px-3 text-sm text-[#172B2A] font-medium outline-none focus:border-[#0F766E] focus:ring-2 focus:ring-[#0F766E]/15" />
           </div>
         </div>
       </Modal>
+
+      {/* Review Project Modal */}
       <Modal
         isOpen={isReviewProjectOpen}
         onClose={() => setIsReviewProjectOpen(false)}
@@ -2168,13 +2279,13 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
           <>
             <button
               onClick={() => setIsReviewProjectOpen(false)}
-              className="rounded-xl px-4 py-2 text-xs font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+              className="rounded-xl px-4 py-2 text-xs font-medium text-[#647572] hover:bg-[#F8FAF9] transition"
             >
               Cancel
             </button>
             <button
               onClick={handleProjectReview}
-              className="rounded-xl bg-[#34766F] hover:bg-[#2B615B] px-5 py-2 text-xs font-medium text-white transition"
+              className="rounded-xl bg-[#0F766E] hover:bg-[#115E59] px-5 py-2 text-xs font-medium text-white shadow-xs transition"
             >
               Save Review
             </button>
@@ -2183,7 +2294,7 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
       >
         <form onSubmit={handleProjectReview} className="space-y-4 text-xs">
           <div>
-            <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+            <label className="block font-medium text-[#172B2A] mb-1.5">
               Score (out of 5)
             </label>
             <input
@@ -2195,12 +2306,12 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
               onChange={(e) =>
                 setProjectReviewForm({ ...projectReviewForm, score: e.target.value })
               }
-              placeholder="e.g. 8"
-              className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-[#202A35] dark:text-gray-100 outline-none focus:border-[#34766F] focus:ring-2 focus:ring-[#34766F]/15"
+              placeholder="e.g. 5"
+              className="w-full rounded-xl border border-[#E2E8E5] bg-[#F8FAF9] p-2.5 text-[#172B2A] outline-none focus:border-[#0F766E] focus:ring-2 focus:ring-[#0F766E]/15"
             />
           </div>
           <div>
-            <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+            <label className="block font-medium text-[#172B2A] mb-1.5">
               Feedback / Comments
             </label>
             <textarea
@@ -2210,7 +2321,7 @@ const HRContent = ({ activeSection, setActiveSection, userDetails }) => {
                 setProjectReviewForm({ ...projectReviewForm, feedback: e.target.value })
               }
               placeholder="Provide comments on the project..."
-              className="w-full rounded-xl border border-[#E3E7EB] dark:border-gray-700 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-[#202A35] dark:text-gray-100 outline-none focus:border-[#34766F] focus:ring-2 focus:ring-[#34766F]/15"
+              className="w-full rounded-xl border border-[#E2E8E5] bg-[#F8FAF9] p-2.5 text-[#172B2A] outline-none focus:border-[#0F766E] focus:ring-2 focus:ring-[#0F766E]/15"
             />
           </div>
         </form>

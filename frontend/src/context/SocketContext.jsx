@@ -10,40 +10,46 @@ export const useSocket = () => {
 
 export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
-  const [userId, setUserId] = useState(null);
 
   useEffect(() => {
-    // Fetch user details to get ID
+    let newSocket = null;
+    let cancelled = false;
+
     const verifyUser = async () => {
       try {
         const res = await auth.get("/verify");
-        if (res.data.success) {
-          setUserId(res.data.user._id);
+        if (!cancelled && res.data.success) {
+          const backendUrl = (import.meta.env.VITE_BACKEND_URL || "http://localhost:3000")
+            .replace(/\/api\/?$/, "");
+          newSocket = io(
+            backendUrl,
+            {
+              withCredentials: true,
+              reconnection: true,
+              reconnectionAttempts: Infinity,
+              reconnectionDelay: 1000,
+              reconnectionDelayMax: 5000,
+            },
+          );
+
+          newSocket.on("connect_error", (error) => {
+            console.error("Socket connection failed:", error.message);
+          });
+
+          setSocket(newSocket);
         }
       } catch (err) {
         console.error("Not authenticated");
       }
     };
-    verifyUser();
-  }, []);
-
-  useEffect(() => {
-    if (!userId) return;
-
-    const newSocket = io(import.meta.env.VITE_BACKEND_URL || "http://localhost:3000", {
-      withCredentials: true,
-    });
-
-    newSocket.on("connect", () => {
-      newSocket.emit("register", userId);
-    });
-
-    setSocket(newSocket);
+    void verifyUser();
 
     return () => {
-      newSocket.close();
+      cancelled = true;
+      newSocket?.close();
+      setSocket(null);
     };
-  }, [userId]);
+  }, []);
 
   return (
     <SocketContext.Provider value={socket}>

@@ -4,11 +4,13 @@ import TopHeader from "../components/TopHeader";
 import HRContent from "../components/HRContent";
 import { useToast } from "../components/ToastProvider.jsx";
 import { auth } from "../apis/axios.js";
+import LoadingPage from "../components/LoadingPage";
 
 const HRDashboard = () => {
   const [activeSection, setActiveSection] = useState("Dashboard");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [userDetails, setUserDetails] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const { showToast } = useToast();
 
@@ -20,6 +22,8 @@ const HRDashboard = () => {
       }
     } catch (error) {
       console.error("Error fetching user details:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -27,8 +31,17 @@ const HRDashboard = () => {
     fetchUserDetails();
   }, []);
 
+  if (isLoading) {
+    return (
+      <LoadingPage
+        title="Loading HR Dashboard"
+        subtitle="Preparing employees, leave requests, and reports..."
+      />
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-[#F4F8F6]">
+    <div className="min-h-screen bg-[#F4F8F6] dark:bg-[#0f172a]">
       <div className="flex min-h-screen">
         <HRSidebar
           activeItem={activeSection}

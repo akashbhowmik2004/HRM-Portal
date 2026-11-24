@@ -10,7 +10,7 @@ const MetricStatCard = ({
   iconBg = 'bg-blue-50 text-blue-600',
 }) => {
   return (
-    <div className="flex items-center justify-between rounded-xl bg-white p-4 sm:p-5 border border-[#E3E7EB] shadow-card transition-all hover:shadow-elevated">
+    <div className="flex items-center justify-between rounded-xl bg-white p-4 sm:p-5 border border-[#E3E7EB] shadow-card transition-all hover:shadow-elevated dark:bg-[#151d2e] dark:border-gray-800">
       <div className="flex items-center gap-3.5 min-w-0">
         {Icon && (
           <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${iconBg}`}>
@@ -18,11 +18,11 @@ const MetricStatCard = ({
           </div>
         )}
         <div className="min-w-0">
-          <p className="text-xs font-medium text-[#667085] truncate">
+          <p className="text-xs font-medium text-[#667085] truncate dark:text-gray-400">
             {label}
           </p>
           <div className="flex items-baseline gap-2 mt-0.5">
-            <span className="text-2xl font-bold text-[#172033] tracking-tight leading-tight">
+            <span className="text-2xl font-bold text-[#172033] tracking-tight leading-tight dark:text-gray-100">
               {value}
             </span>
             {badge && (
@@ -40,7 +40,7 @@ const MetricStatCard = ({
             )}
           </div>
           {subtext && (
-            <p className="text-[11px] font-medium text-[#667085] mt-0.5 truncate">
+            <p className="text-[11px] font-medium text-[#667085] mt-0.5 truncate dark:text-gray-400">
               {subtext}
             </p>
           )}

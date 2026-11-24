@@ -75,7 +75,7 @@ export const createUser = async (req, res) => {
     const user = await User.create({
       name,
       email,
-      role,
+      role: role.toLowerCase(),
       employmentType: employmentType || null,
     });
     await user.save();

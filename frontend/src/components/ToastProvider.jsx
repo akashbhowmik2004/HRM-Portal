@@ -56,13 +56,13 @@ const ToastCard = ({ toast, onRemove }) => {
 
   return (
     <div
-      className={`pointer-events-auto flex w-80 max-w-sm items-center gap-3 rounded-lg border border-[#E3E7EB] dark:border-gray-800 bg-white dark:bg-[#151d2e] p-3.5 shadow-elevated transition-all duration-200 ease-out ${
+      className={`pointer-events-auto flex w-80 max-w-sm items-center gap-3 rounded-xl border border-[#E2E8E5] bg-white p-3.5 shadow-elevated transition-all duration-200 ease-out ${
         isShowing ? 'translate-x-0 opacity-100' : 'translate-x-6 opacity-0'
       }`}
       role="alert"
     >
       <div className="shrink-0">{icons[toast.type] || icons.info}</div>
-      <div className="flex-1 text-xs font-medium text-[#202A35] dark:text-gray-200">
+      <div className="flex-1 text-xs font-semibold text-[#172B2A]">
         {toast.message}
       </div>
       <button
@@ -70,7 +70,7 @@ const ToastCard = ({ toast, onRemove }) => {
           setIsShowing(false)
           setTimeout(() => onRemove(toast.id), 200)
         }}
-        className="shrink-0 rounded p-1 text-[#687482] hover:bg-[#F0F2F4] hover:text-[#202A35] dark:hover:bg-gray-800"
+        className="shrink-0 rounded p-1 text-[#647572] hover:bg-[#F8FAF9] hover:text-[#172B2A]"
       >
         <X className="h-3.5 w-3.5" />
       </button>

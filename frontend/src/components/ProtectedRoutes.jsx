@@ -1,5 +1,6 @@
 import { Navigate } from "react-router";
 import useAuth from "../context/useAuth";
+import LoadingPage from "./LoadingPage";
 
 const dashboardByRole = {
   employee: "/employee-dashboard",
@@ -12,7 +13,12 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 
   // Wait for /verify to finish
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <LoadingPage
+        title="Verifying your account"
+        subtitle="Checking your secure session..."
+      />
+    );
   }
 
   // Not logged in

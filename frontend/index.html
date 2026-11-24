@@ -2,6 +2,17 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      (() => {
+        try {
+          const theme = localStorage.getItem("hrm-theme");
+          if (theme === "dark") {
+            document.documentElement.classList.add("dark");
+            document.documentElement.style.colorScheme = "dark";
+          }
+        } catch (_) {}
+      })();
+    </script>
     <link rel="icon" type="image/svg+xml" href="/index.jpg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -10,7 +21,15 @@
     <title>HRM Portal</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="initial-loader" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#F6F7FB;z-index:9999;font-family:Inter,Arial,sans-serif">
+        <div style="text-align:center">
+          <div style="margin:0 auto 20px;width:64px;height:64px;display:grid;place-items:center;border-radius:18px;background:linear-gradient(145deg,#315C7D,#2563EB);color:white;font-size:30px;font-weight:800;box-shadow:0 16px 36px rgba(37,99,235,.22)">H</div>
+          <div style="color:#172033;font-size:18px;font-weight:700">HRM Portal</div>
+          <div style="margin-top:4px;color:#667085;font-size:12px;font-weight:500">Preparing your workspace...</div>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

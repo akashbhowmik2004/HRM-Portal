@@ -5,6 +5,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import { Server } from "socket.io";
 import http from "http";
+import jwt from "jsonwebtoken";
 
 import authRoutes from "./src/routes/authRoutes.js";
 import adminRoutes from "./src/routes/adminRoutes.js";
@@ -37,12 +38,6 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-import path from "path";
-import { fileURLToPath } from "url";
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-
 import documentRoutes from "./src/routes/documentRoutes.js";
 
 app.use("/api/auth", authRoutes);
@@ -57,20 +52,36 @@ app.use("/api/documents", requireAuth, documentRoutes);
 export const userSockets = new Map();
 
 io.on("connection", (socket) => {
-  console.log("A user connected", socket.id);
-  
-  socket.on("register", (userId) => {
-    userSockets.set(userId, socket.id);
-    console.log("Registered user", userId, "with socket", socket.id);
-  });
+  const cookies = Object.fromEntries(
+    (socket.handshake.headers.cookie || "")
+      .split(";")
+      .map((cookie) => cookie.trim().split("="))
+      .filter(([name]) => name)
+      .map(([name, value]) => [name, decodeURIComponent(value || "")]),
+  );
+  const token = cookies.jwt;
+
+  let userId = null;
+  try {
+    if (token) {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      userId = decoded.id;
+    }
+  } catch (error) {
+    console.warn("Socket authentication failed:", error.message);
+  }
+
+  if (!userId) {
+    socket.emit("unauthorized");
+    socket.disconnect(true);
+    return;
+  }
+
+  socket.data.userId = userId;
+  socket.join(`user:${userId}`);
+  console.log(`User ${userId} connected to Socket.IO`, socket.id);
 
   socket.on("disconnect", () => {
-    for (const [userId, socketId] of userSockets.entries()) {
-      if (socketId === socket.id) {
-        userSockets.delete(userId);
-        break;
-      }
-    }
     console.log("User disconnected", socket.id);
   });
 });
@@ -78,10 +89,8 @@ io.on("connection", (socket) => {
 export const emitNotification = async (userId, title, message) => {
   try {
     const newNotification = await Notification.create({ userId, title, message });
-    const socketId = userSockets.get(userId.toString());
-    if (socketId) {
-      io.to(socketId).emit("newNotification", newNotification);
-    }
+    io.to(`user:${userId.toString()}`).emit("newNotification", newNotification);
+    return newNotification;
   } catch (error) {
     console.error("Error emitting notification:", error);
   }

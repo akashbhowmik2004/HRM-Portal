@@ -12,25 +12,25 @@ const TaskStatisticsCard = ({
   ]
 }) => {
   return (
-    <div className="rounded-lg bg-white dark:bg-[#151d2e] p-5 shadow-subtle border border-[#E3E7EB] dark:border-gray-800 transition-colors">
-      <h3 className="text-xs font-semibold uppercase tracking-wider text-[#687482] dark:text-gray-400 mb-3.5">
+    <div className="rounded-xl bg-white p-5 shadow-xs border border-[#E2E8E5] transition-colors dark:bg-[#151d2e] dark:border-gray-800">
+      <h3 className="text-xs font-bold uppercase tracking-wider text-[#647572] mb-3.5 dark:text-gray-300">
         Task Statistics
       </h3>
 
       {/* Summary Boxes */}
       <div className="grid grid-cols-2 gap-2.5 mb-4">
-        <div className="rounded-md border border-[#E3E7EB] dark:border-gray-800 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-center">
-          <p className="text-[11px] text-[#687482] dark:text-gray-400 font-medium">Total Tasks</p>
-          <p className="mt-0.5 text-lg font-semibold text-[#202A35] dark:text-gray-100">{totalTask}</p>
+        <div className="rounded-lg border border-[#E2E8E5] bg-[#F8FAF9] p-2.5 text-center dark:border-gray-700 dark:bg-[#0f172a]">
+          <p className="text-[11px] text-[#647572] font-medium dark:text-gray-400">Total Tasks</p>
+          <p className="mt-0.5 text-lg font-bold text-[#172B2A] dark:text-gray-100">{totalTask}</p>
         </div>
-        <div className="rounded-md border border-[#E3E7EB] dark:border-gray-800 bg-[#F0F2F4] dark:bg-[#0c1222] p-2.5 text-center">
-          <p className="text-[11px] text-[#687482] dark:text-gray-400 font-medium">Overdue</p>
-          <p className="mt-0.5 text-lg font-semibold text-rose-600 dark:text-rose-400">{overdueTask}</p>
+        <div className="rounded-lg border border-[#E2E8E5] bg-[#F8FAF9] p-2.5 text-center dark:border-gray-700 dark:bg-[#0f172a]">
+          <p className="text-[11px] text-[#647572] font-medium dark:text-gray-400">Overdue</p>
+          <p className="mt-0.5 text-lg font-bold text-rose-600 dark:text-rose-400">{overdueTask}</p>
         </div>
       </div>
 
       {/* Segmented Color Bar */}
-      <div className="h-1.5 w-full rounded-full overflow-hidden flex mb-4 bg-[#F0F2F4] dark:bg-gray-800">
+      <div className="h-1.5 w-full rounded-full overflow-hidden flex mb-4 bg-[#F8FAF9] dark:bg-[#0f172a]">
         {segments.map((seg, idx) => (
           <div
             key={idx}
@@ -47,9 +47,9 @@ const TaskStatisticsCard = ({
           <div key={idx} className="flex items-center justify-between text-xs">
             <div className="flex items-center gap-2">
               <span className={`h-1.5 w-1.5 rounded-full ${seg.dot}`} />
-              <span className="font-medium text-[#687482] dark:text-gray-300">{seg.label}</span>
+              <span className="font-medium text-[#647572] dark:text-gray-400">{seg.label}</span>
             </div>
-            <span className="font-semibold text-[#202A35] dark:text-gray-200 text-xs">{seg.count}</span>
+            <span className="font-semibold text-[#172B2A] text-xs dark:text-gray-100">{seg.count}</span>
           </div>
         ))}
       </div>

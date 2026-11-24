@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react'
-import { Search, Bell, Menu, X } from 'lucide-react'
+import { Search, Bell, Menu, X, Moon, Sun } from 'lucide-react'
 import { useSocket } from '../context/SocketContext'
 import { api } from '../apis/axios'
 import { useToast } from './ToastProvider'
+import { useTheme } from '../context/ThemeContext'
 
 const TopHeader = ({
-  user = { name: 'John Wick', role: 'Admin', avatar: null },
+  user = { name: 'User', role: 'Portal', avatar: null },
   role = null,
   onOpenMobileMenu = () => {},
   actionButton = null,
@@ -25,6 +26,7 @@ const TopHeader = ({
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const { showToast } = useToast();
+  const { theme, toggleTheme } = useTheme();
 
   const formattedDate = new Date().toLocaleDateString('en-US', {
     weekday: 'short',
@@ -105,7 +107,7 @@ const TopHeader = ({
   };
 
   return (
-    <header className="mb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl bg-white p-2.5 sm:px-4 border border-[#E3E7EB] shadow-subtle transition-colors">
+    <header className="mb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl bg-white p-2.5 sm:px-4 border border-[#E3E7EB] shadow-subtle transition-colors dark:bg-[#151d2e] dark:border-gray-800">
       
       {/* Top Row for Mobile (Menu + Actions) / Left Section for Desktop */}
       <div className="flex items-center justify-between sm:w-auto w-full">
@@ -121,6 +123,14 @@ const TopHeader = ({
 
         {/* Right Actions on Mobile */}
         <div className="flex sm:hidden items-center justify-end gap-2.5 shrink-0 relative" data-notification-container>
+          <button
+            type="button"
+            className="rounded-lg p-2 text-[#667085] hover:bg-[#F0F2F4] hover:text-[#172033] transition dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
+            onClick={toggleTheme}
+            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          </button>
           <button
             className="relative rounded-lg p-2 text-[#667085] hover:bg-[#F0F2F4] hover:text-[#172033] transition"
             onClick={toggleNotifications}
@@ -151,7 +161,7 @@ const TopHeader = ({
         <input
           type="text"
           placeholder={searchPlaceholder}
-          className="w-full rounded-lg border border-[#E3E7EB] bg-[#F6F7FB] py-2 pl-9 pr-3 text-xs text-[#172033] placeholder-[#667085] font-medium outline-none transition focus:border-current focus:bg-white focus:ring-2 focus:ring-black/5"
+          className="w-full rounded-lg border border-[#E3E7EB] bg-[#F6F7FB] py-2 pl-9 pr-3 text-xs text-[#172033] placeholder-[#667085] font-medium outline-none transition focus:border-current focus:bg-white focus:ring-2 focus:ring-black/5 dark:bg-[#0f172a] dark:border-gray-700 dark:text-gray-100 dark:placeholder-gray-400 dark:focus:bg-[#0f172a]"
         />
       </div>
 
@@ -159,12 +169,22 @@ const TopHeader = ({
       <div className="hidden sm:flex items-center justify-end gap-3 shrink-0 order-2 sm:order-3 relative" data-notification-container>
         
         {/* Dynamic Contextual Date Badge */}
-        <div className="text-[11px] font-medium text-[#667085] bg-[#F6F7FB] px-2.5 py-1.5 rounded-md border border-[#E3E7EB]">
+        <div className="text-[11px] font-medium text-[#667085] bg-[#F6F7FB] px-2.5 py-1.5 rounded-md border border-[#E3E7EB] dark:bg-[#0f172a] dark:border-gray-700 dark:text-gray-300">
           {formattedDate}
         </div>
 
         {/* Optional Contextual Action Button (e.g., Add Employee) */}
         {actionButton}
+
+        <button
+          type="button"
+          className="rounded-lg p-2 text-[#667085] hover:bg-[#F0F2F4] hover:text-[#172033] transition dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
+          onClick={toggleTheme}
+          aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          title={theme === "dark" ? "Light mode" : "Dark mode"}
+        >
+          {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        </button>
 
         {/* Notifications Icon Button */}
         <button
@@ -182,7 +202,7 @@ const TopHeader = ({
         </button>
 
         {showNotifications && (
-          <div className="absolute top-12 right-28 w-80 bg-white rounded-xl shadow-elevated border border-[#E3E7EB] z-50 overflow-hidden">
+          <div className="absolute top-12 right-28 w-80 bg-white rounded-xl shadow-elevated border border-[#E3E7EB] z-50 overflow-hidden dark:bg-[#151d2e] dark:border-gray-800">
             <div className="p-3 border-b border-[#E3E7EB] font-semibold text-xs uppercase tracking-wider text-[#172033] flex justify-between items-center">
               <span>Recent Notifications</span>
               {notifications.length > 0 && (
