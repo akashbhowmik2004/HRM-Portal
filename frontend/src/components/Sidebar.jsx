@@ -106,7 +106,7 @@ const roleThemeMap = {
     accentBg: 'bg-[#2563EB]',
     activeClass: 'bg-[#2563EB] text-white font-semibold shadow-sm',
     activeIcon: 'text-white',
-    roleTag: 'System Admin',
+    roleTag: 'System Admin Akash',
   },
   hr: {
     sidebarBg: 'bg-[#0A362C]',
